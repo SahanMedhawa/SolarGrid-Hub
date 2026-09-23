@@ -88,7 +88,10 @@ function renderNavigation() {
         `;
     } else {
         navLinks.innerHTML = '';
-        authButtons.innerHTML = '<a href="pages/login.html" class="btn btn-outline-light me-2">Login</a>';
+        authButtons.innerHTML = `
+            <a href="pages/login.html" class="btn btn-outline-light me-2">Login</a>
+            <a href="pages/register.html" class="btn btn-light">Register</a>
+        `;
     }
 }
 
