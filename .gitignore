@@ -16,3 +16,6 @@
 *.iml
 *.iws
 *.ipr
+
+# Generated files
+.gradle/
