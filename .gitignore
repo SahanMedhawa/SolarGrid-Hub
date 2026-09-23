@@ -10,3 +10,9 @@
 # Configuration / secrets
 **/appsettings.json
 **/appsettings.Development.json
+
+# Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
