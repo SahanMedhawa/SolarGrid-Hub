@@ -5,7 +5,7 @@
 // ============================================================
 
 // Base URL for the Web API — update this when deploying to IIS
-const API_BASE_URL = 'https://localhost:5001/api';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 // Token storage key
 const TOKEN_KEY = 'smts_token';

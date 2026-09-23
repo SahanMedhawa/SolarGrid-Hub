@@ -113,7 +113,13 @@ EAD/
 
 ### B. Run Web Application Frontend
 1. Open `WebApp/js/config.js` and verify `API_BASE_URL` points to your running API (default: `http://localhost:5000/api`).
-2. Open `WebApp/index.html` in any web browser, or serve it via VS Code Live Server or IIS.
+2. Serve the frontend from an HTTP origin rather than opening an HTML file directly:
+    ```powershell
+    cd WebApp
+    .\serve.ps1
+    ```
+    This uses the local Node.js runtime and does not require Python.
+3. Open `http://localhost:5500/index.html` in your browser, or serve it via VS Code Live Server or IIS.
 
 ### C. Run Pure Native Android Mobile App
 1. Open Android Studio.

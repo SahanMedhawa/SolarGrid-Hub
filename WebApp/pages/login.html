@@ -24,7 +24,14 @@
 
                         <form id="loginForm">
                             <div class="mb-3">
-                                <label for="username" class="form-label">Username</label>
+                                <label for="loginType" class="form-label">Account type</label>
+                                <select class="form-select" id="loginType">
+                                    <option value="User">Admin / Grid Operator</option>
+                                    <option value="Prosumer">Prosumer (NIC)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="username" class="form-label" id="usernameLabel">Username</label>
                                 <input type="text" class="form-control" id="username" required
                                        placeholder="Enter your username">
                             </div>
@@ -37,6 +44,10 @@
                                 <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
                             </button>
                         </form>
+
+                        <p class="text-center text-muted mt-4 mb-0">
+                            New to the microgrid? <a href="register.html">Create a prosumer account</a>
+                        </p>
                     </div>
                 </div>
             </div>
@@ -53,6 +64,7 @@
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            const loginType = document.getElementById('loginType').value;
             const errorAlert = document.getElementById('errorAlert');
 
             errorAlert.classList.add('d-none');
@@ -64,7 +76,7 @@
                     body: JSON.stringify({
                         username: username,
                         password: password,
-                        loginType: 'User'
+                        loginType: loginType
                     })
                 });
 
@@ -80,11 +92,25 @@
                     displayName: data.displayName
                 });
 
+                if (data.role === 'Prosumer') {
+                    errorAlert.className = 'alert alert-info';
+                    errorAlert.textContent = 'Prosumer login successful. The web portal is for administrators and grid operators; use the mobile app for prosumer features.';
+                    errorAlert.classList.remove('d-none');
+                    return;
+                }
+
                 window.location.href = 'dashboard.html';
             } catch (error) {
+                errorAlert.className = 'alert alert-danger';
                 errorAlert.textContent = error.message;
                 errorAlert.classList.remove('d-none');
             }
+        });
+
+        document.getElementById('loginType').addEventListener('change', (event) => {
+            const isProsumer = event.target.value === 'Prosumer';
+            document.getElementById('usernameLabel').textContent = isProsumer ? 'NIC number' : 'Username';
+            document.getElementById('username').placeholder = isProsumer ? 'Enter your NIC number' : 'Enter your username';
         });
     </script>
 </body>
