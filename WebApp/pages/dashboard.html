@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Smart Solar Microgrid</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="../css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
+        <div class="container">
+            <a class="navbar-brand" href="../index.html">
+                <i class="bi bi-sun-fill me-2"></i>Smart Solar Microgrid
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto" id="navLinks"></ul>
+                <div id="authButtons"></div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container py-4">
+        <h2 class="mb-4"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h2>
+
+        <!-- Summary Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Total Prosumers</h6>
+                        <p class="display-6 mb-0" id="totalProsumers">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Active Nodes</h6>
+                        <p class="display-6 mb-0" id="activeNodes">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Pending Reservations</h6>
+                        <p class="display-6 mb-0" id="pendingReservations">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card dashboard-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Pending Activations</h6>
+                        <p class="display-6 mb-0" id="pendingActivations">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Prosumer Activations Table -->
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-person-exclamation me-2"></i>Pending Prosumer Activations</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>NIC</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Registered</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingProsumersTable">
+                            <tr><td colspan="6" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white text-center py-3">
+        <p class="mb-0">&copy; 2026 Smart Solar Microgrid Trading System | SE4040 EAD</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/api.js"></script>
+    <script>
+        // Ensure the user is authenticated.
+        requireAuth();
+
+        // Loads dashboard data from the API.
+        async function loadDashboard() {
+            try {
+                // Load summary counts
+                const prosumers = await apiRequest('prosumer');
+                const nodes = await apiRequest('microgridnode/active');
+                const pendingRes = await apiRequest('reservation/status/Pending');
+                const pendingPros = await apiRequest('prosumer/status/Pending');
+
+                document.getElementById('totalProsumers').textContent = prosumers.length;
+                document.getElementById('activeNodes').textContent = nodes.length;
+                document.getElementById('pendingReservations').textContent = pendingRes.length;
+                document.getElementById('pendingActivations').textContent = pendingPros.length;
+
+                // Render pending prosumers table
+                const tbody = document.getElementById('pendingProsumersTable');
+                if (pendingPros.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No pending activations.</td></tr>';
+                } else {
+                    tbody.innerHTML = pendingPros.map(p => `
+                        <tr>
+                            <td>${p.nic}</td>
+                            <td>${p.firstName} ${p.lastName}</td>
+                            <td>${p.email}</td>
+                            <td>${p.phone}</td>
+                            <td>${new Date(p.createdAt).toLocaleDateString()}</td>
+                            <td>
+                                <button class="btn btn-success btn-sm" onclick="activateProsumer('${p.nic}')">
+                                    <i class="bi bi-check-circle"></i> Activate
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Dashboard load error:', error);
+            }
+        }
+
+        // Activates a pending prosumer account.
+        async function activateProsumer(nic) {
+            try {
+                await apiRequest(`prosumer/${nic}/activate`, 'PUT');
+                showToast('Prosumer activated successfully!');
+                loadDashboard();
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        }
+
+        // Load dashboard on page load.
+        loadDashboard();
+    </script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/gray_light">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:gravity="center_horizontal">
+
+        <TextView
+            android:id="@+id/tvDetailTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Booking Details"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:layout_marginBottom="16dp" />
+
+        <ImageView
+            android:id="@+id/ivQrCode"
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:background="@color/white"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/tvQrNotice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="QR code will be generated upon approval"
+            android:textColor="@color/gray_text"
+            android:textSize="12sp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/tvDetailInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:lineSpacingExtra="4dp"
+            android:textSize="15sp"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="* Notice: Modifications and cancellations require at least 12 hours' notice."
+            android:textSize="12sp"
+            android:textColor="@color/status_cancelled"
+            android:layout_marginBottom="16dp" />
+
+        <Button
+            android:id="@+id/btnCancelReservation"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:text="Cancel Booking"
+            android:backgroundTint="@color/status_cancelled"
+            android:textColor="@color/white"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+</ScrollView>

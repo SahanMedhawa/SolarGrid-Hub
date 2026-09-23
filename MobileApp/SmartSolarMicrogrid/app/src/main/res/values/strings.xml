@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">Smart Solar Microgrid</string>
+    <string name="login_title">Smart Solar Trading</string>
+    <string name="login_sub">Sign in to your account</string>
+    <string name="username_hint">Username / NIC</string>
+    <string name="password_hint">Password</string>
+    <string name="sign_in">Sign In</string>
+    <string name="register">Register as Prosumer</string>
+    <string name="dashboard">Prosumer Dashboard</string>
+    <string name="approved_reservations">Approved Future Bookings</string>
+    <string name="pending_reservations">Pending Bookings</string>
+    <string name="book_slot">Book Energy Slot</string>
+    <string name="my_bookings">My Bookings &amp; History</string>
+    <string name="nearby_stations">Nearby Grid Stations</string>
+    <string name="profile">My Profile</string>
+    <string name="operator_mode">Grid Operator Dashboard</string>
+    <string name="scan_qr">Scan Prosumer QR Code</string>
+</resources>

@@ -1,0 +1,30 @@
+## .NET & Visual Studio
+**/bin/
+**/obj/
+*.user
+*.suo
+*.useros
+*.sln.docstates
+.vs/
+**/appsettings.Development.json
+
+## Android & Gradle
+.gradle/
+**/build/
+*.apk
+*.aab
+*.dex
+*.class
+local.properties
+*.iml
+.idea/
+.navigation/
+captures/
+output.json
+
+## OS & General
+.DS_Store
+Thumbs.db
+*.swp
+*.log
+*.tmp
