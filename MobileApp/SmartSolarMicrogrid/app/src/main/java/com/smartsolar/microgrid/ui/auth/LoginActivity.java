@@ -87,10 +87,12 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void navigateByRole(String role) {
-        if ("Prosumer".equalsIgnoreCase(role)) {
-            startActivity(new Intent(this, ProsumerMainActivity.class));
-        } else {
+        if ("Backoffice".equalsIgnoreCase(role)) {
+            startActivity(new Intent(this, com.smartsolar.microgrid.ui.backoffice.BackofficeMainActivity.class));
+        } else if ("GridOperator".equalsIgnoreCase(role) || "Operator".equalsIgnoreCase(role)) {
             startActivity(new Intent(this, OperatorMainActivity.class));
+        } else {
+            startActivity(new Intent(this, ProsumerMainActivity.class));
         }
         finish();
     }
