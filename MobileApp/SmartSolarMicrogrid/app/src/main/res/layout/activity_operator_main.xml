@@ -1,38 +1,146 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="24dp"
-    android:background="@color/gray_light">
+    android:background="@color/gray_light"
+    android:fillViewport="true">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/operator_mode"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:textColor="@color/primary"
-        android:layout_marginBottom="32dp" />
+        android:orientation="vertical"
+        android:padding="20dp">
 
-    <Button
-        android:id="@+id/btnScanQr"
-        android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:text="@string/scan_qr"
-        android:backgroundTint="@color/primary"
-        android:textColor="@color/white"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="24dp" />
+        <!-- Operator Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="@drawable/card_bg"
+            android:elevation="4dp"
+            android:layout_marginBottom="16dp">
 
-    <Button
-        android:id="@+id/btnOperatorLogout"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:text="Logout"
-        android:backgroundTint="@color/status_cancelled"
-        android:textColor="@color/white" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Grid Operator Station Portal"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="@color/accent" />
 
-</LinearLayout>
+            <TextView
+                android:id="@+id/tvOperatorWelcome"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Welcome, Station Operator"
+                android:textSize="14sp"
+                android:textColor="@color/gray_text"
+                android:layout_marginTop="4dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ROLE: GRID OPERATOR"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/primary"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- QR Verification Card (Primary Action) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:background="@drawable/card_bg"
+            android:elevation="3dp"
+            android:layout_marginBottom="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚡ Energy Transfer Verification"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/black"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="When a solar prosumer arrives, scan their digital QR code or enter token manually to complete energy transfer."
+                android:textSize="13sp"
+                android:textColor="@color/gray_text"
+                android:layout_marginBottom="14dp" />
+
+            <Button
+                android:id="@+id/btnScanQr"
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:text="📷 Open Camera QR Scanner"
+                android:backgroundTint="@color/primary"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="10dp" />
+
+            <!-- Manual Token Input Fallback -->
+            <EditText
+                android:id="@+id/etManualQrToken"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:hint="Or paste/enter QR Token (SMTS-...)"
+                android:textSize="13sp"
+                android:padding="10dp"
+                android:background="@color/white"
+                android:layout_marginBottom="8dp" />
+
+            <Button
+                android:id="@+id/btnManualVerify"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:text="Verify &amp; Complete Transfer"
+                android:backgroundTint="@color/accent"
+                android:textColor="@color/white" />
+        </LinearLayout>
+
+        <!-- Station Bookings Queue -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Today's Bookings &amp; Approvals"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/black"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/llOperatorBookingsList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="24dp" />
+
+        <!-- Refresh Button -->
+        <Button
+            android:id="@+id/btnRefreshOperator"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="🔄 Refresh Bookings"
+            android:backgroundTint="@color/primary"
+            android:textColor="@color/white"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Logout Button -->
+        <Button
+            android:id="@+id/btnOperatorLogout"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Logout"
+            android:backgroundTint="@color/status_cancelled"
+            android:textColor="@color/white" />
+
+    </LinearLayout>
+</ScrollView>

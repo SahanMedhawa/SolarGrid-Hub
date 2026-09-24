@@ -16,3 +16,15 @@
 # Configuration / secrets
 **/appsettings.json
 **/appsettings.Development.json
+
+# Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Generated files
+.gradle/
+build/
+gradle-daemon-jvm.properties
+local.properties
