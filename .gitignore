@@ -19,3 +19,6 @@
 
 # Generated files
 .gradle/
+build/
+gradle-daemon-jvm.properties
+local.properties
