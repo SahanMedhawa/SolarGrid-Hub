@@ -92,7 +92,8 @@
                     displayName: data.displayName
                 });
 
-                if (data.role === 'Prosumer') {
+if (data.role === 'Prosumer') {
+                    clearAuth();
                     errorAlert.className = 'alert alert-info';
                     errorAlert.textContent = 'Prosumer login successful. The web portal is for administrators and grid operators; use the mobile app for prosumer features.';
                     errorAlert.classList.remove('d-none');
