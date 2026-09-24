@@ -7,6 +7,12 @@
 *.sln.docstates
 .vs/
 
+# Android / Gradle build files
+**/.gradle/
+**/.idea/
+**/build/
+**/local.properties
+
 # Configuration / secrets
 **/appsettings.json
 **/appsettings.Development.json

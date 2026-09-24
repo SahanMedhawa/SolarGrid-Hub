@@ -2,7 +2,7 @@ package com.smartsolar.microgrid.utils;
 
 public class Constants {
     // When testing on Android Emulator, 10.0.2.2 maps to Windows Host localhost
-    public static final String BASE_URL = "http://10.0.2.2:5000/api/";
+    public static final String BASE_URL = "http://192.168.1.3:5000/api/";
     
     // Preference Keys
     public static final String PREF_NAME = "SmartSolarPrefs";
