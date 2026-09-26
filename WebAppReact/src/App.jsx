@@ -32,6 +32,9 @@ import NodesPage from './pages/NodesPage';
 import ReservationsPage from './pages/ReservationsPage';
 import QrVerifyPage from './pages/QrVerifyPage';
 
+// Self-service profile page — available to any logged-in staff user
+import MyProfilePage from './pages/MyProfilePage';
+
 // Layout wrapper that renders navbar and footer
 function AppLayout({ children }) {
   const { isAuthenticated } = useAuth();
@@ -120,6 +123,12 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
 
+        <Route path="/profile" element={
+          <ProtectedRoute>  
+            <MyProfilePage />      
+          </ProtectedRoute>
+        }/>
+        
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
