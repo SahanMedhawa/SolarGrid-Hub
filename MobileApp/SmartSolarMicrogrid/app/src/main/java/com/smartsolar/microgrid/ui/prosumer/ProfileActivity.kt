@@ -1,0 +1,128 @@
+package com.smartsolar.microgrid.ui.prosumer
+
+import android.content.Intent
+import android.os.Bundle
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import com.smartsolar.microgrid.R
+import com.smartsolar.microgrid.api.ApiClient
+import com.smartsolar.microgrid.data.SessionManager
+import com.smartsolar.microgrid.ui.auth.LoginActivity
+import org.json.JSONObject
+
+/**
+ * Profile Activity - allows prosumers to view/edit their profile data
+ * and request account deactivation via the central Web API.
+ */
+class ProfileActivity : AppCompatActivity() {
+
+    private lateinit var session: SessionManager
+    private lateinit var tvProfileNic: TextView
+    private lateinit var tvProfileStatus: TextView
+    private lateinit var etProfFirstName: EditText
+    private lateinit var etProfLastName: EditText
+    private lateinit var etProfEmail: EditText
+    private lateinit var etProfPhone: EditText
+    private lateinit var etProfAddress: EditText
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        session = SessionManager(this)
+        setContentView(R.layout.activity_profile)
+
+        tvProfileNic = findViewById(R.id.tvProfileNic)
+        tvProfileStatus = findViewById(R.id.tvProfileStatus)
+        etProfFirstName = findViewById(R.id.etProfFirstName)
+        etProfLastName = findViewById(R.id.etProfLastName)
+        etProfEmail = findViewById(R.id.etProfEmail)
+        etProfPhone = findViewById(R.id.etProfPhone)
+        etProfAddress = findViewById(R.id.etProfAddress)
+
+        findViewById<Button>(R.id.btnUpdateProfile).setOnClickListener { updateProfile() }
+        findViewById<Button>(R.id.btnDeactivateAccount).setOnClickListener { confirmDeactivation() }
+
+        loadProfile()
+    }
+
+    // Load the prosumer's profile data from the central API
+    private fun loadProfile() {
+        val nic = session.getUserNic()
+        tvProfileNic.text = "NIC: $nic"
+
+        ApiClient.request("prosumer/$nic", "GET", null, session.getToken(), object : ApiClient.ApiCallback {
+            override fun onSuccess(response: String) {
+                try {
+                    val obj = JSONObject(response)
+                    etProfFirstName.setText(obj.optString("firstName", ""))
+                    etProfLastName.setText(obj.optString("lastName", ""))
+                    etProfEmail.setText(obj.optString("email", ""))
+                    etProfPhone.setText(obj.optString("phone", ""))
+                    etProfAddress.setText(obj.optString("address", ""))
+                    tvProfileStatus.text = "Status: ${obj.optString("status", "Active")}"
+                } catch (_: Exception) { }
+            }
+
+            override fun onError(error: String) {
+                Toast.makeText(this@ProfileActivity, error, Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    // Update the prosumer's profile data via the central API
+    private fun updateProfile() {
+        try {
+            val body = JSONObject().apply {
+                put("firstName", etProfFirstName.text.toString().trim())
+                put("lastName", etProfLastName.text.toString().trim())
+                put("email", etProfEmail.text.toString().trim())
+                put("phone", etProfPhone.text.toString().trim())
+                put("address", etProfAddress.text.toString().trim())
+            }
+
+            ApiClient.request("prosumer/${session.getUserNic()}", "PUT", body, session.getToken(), object : ApiClient.ApiCallback {
+                override fun onSuccess(response: String) {
+                    Toast.makeText(this@ProfileActivity, "Profile updated successfully!", Toast.LENGTH_SHORT).show()
+                }
+
+                override fun onError(error: String) {
+                    Toast.makeText(this@ProfileActivity, error, Toast.LENGTH_LONG).show()
+                }
+            })
+        } catch (e: Exception) {
+            Toast.makeText(this, "Error building request", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Confirm and request account deactivation via the central API
+    private fun confirmDeactivation() {
+        AlertDialog.Builder(this)
+            .setTitle("Deactivate Account")
+            .setMessage("Are you sure you want to request deactivation? Reactivation requires a Backoffice officer.")
+            .setPositiveButton("Yes, Deactivate") { _, _ ->
+                ApiClient.request(
+                    "prosumer/${session.getUserNic()}/deactivate", "PUT", null,
+                    session.getToken(), object : ApiClient.ApiCallback {
+                        override fun onSuccess(response: String) {
+                            Toast.makeText(
+                                this@ProfileActivity,
+                                "Account deactivated. Logging out...",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            session.logout()
+                            startActivity(Intent(this@ProfileActivity, LoginActivity::class.java))
+                            finishAffinity()
+                        }
+
+                        override fun onError(error: String) {
+                            Toast.makeText(this@ProfileActivity, error, Toast.LENGTH_LONG).show()
+                        }
+                    })
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+}
