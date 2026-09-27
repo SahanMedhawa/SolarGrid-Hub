@@ -74,9 +74,9 @@ namespace SmartSolarMicrogridAPI.Controllers
         // PUT api/prosumer/{nic} — Updates prosumer profile.
         [HttpPut("{nic}")]
         [Authorize]
-        public async Task<IActionResult> Update(string nic, [FromBody] Prosumer prosumer)
+        public async Task<IActionResult> Update(string nic, [FromBody] ProsumerUpdateRequest request)
         {
-            var success = await _prosumerService.UpdateAsync(nic, prosumer);
+            var success = await _prosumerService.UpdateAsync(nic, request);
             if (!success)
                 return NotFound(new { message = "Prosumer not found." });
             return Ok(new { message = "Prosumer updated successfully." });

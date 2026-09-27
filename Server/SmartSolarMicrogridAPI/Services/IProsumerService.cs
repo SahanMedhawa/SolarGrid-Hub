@@ -27,7 +27,7 @@ namespace SmartSolarMicrogridAPI.Services
         Task<Prosumer> RegisterAsync(ProsumerRegistrationRequest request);
 
         // Updates prosumer profile.
-        Task<bool> UpdateAsync(string nic, Prosumer prosumer);
+        Task<bool> UpdateAsync(string nic, ProsumerUpdateRequest request);
 
         // Requests account deactivation (sets status to "Deactivated").
         Task<bool> DeactivateAsync(string nic);
