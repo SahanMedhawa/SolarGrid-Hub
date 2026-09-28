@@ -52,18 +52,39 @@ namespace SmartSolarMicrogridAPI.Services
             return node;
         }
 
-        // Updates node properties.
+        // Updates node properties safely without overwriting non-supplied values with null.
         public async Task<bool> UpdateAsync(string id, MicrogridNode node)
         {
+            var existing = await GetByIdAsync(id);
+            if (existing == null) return false;
+
             var update = Builders<MicrogridNode>.Update
-                .Set(n => n.NodeName, node.NodeName)
-                .Set(n => n.Location, node.Location)
-                .Set(n => n.Latitude, node.Latitude)
-                .Set(n => n.Longitude, node.Longitude)
-                .Set(n => n.CapacityKWh, node.CapacityKWh)
-                .Set(n => n.BatterySlots, node.BatterySlots)
-                .Set(n => n.AvailableBatterySlots, node.AvailableBatterySlots)
-                .Set(n => n.Schedule, node.Schedule)
+                .Set(n => n.NodeName, !string.IsNullOrWhiteSpace(node.NodeName) ? node.NodeName : existing.NodeName)
+                .Set(n => n.Location, !string.IsNullOrWhiteSpace(node.Location) ? node.Location : existing.Location)
+                .Set(n => n.Latitude, node.Latitude != 0 ? node.Latitude : existing.Latitude)
+                .Set(n => n.Longitude, node.Longitude != 0 ? node.Longitude : existing.Longitude)
+                .Set(n => n.CapacityKWh, node.CapacityKWh > 0 ? node.CapacityKWh : existing.CapacityKWh)
+                .Set(n => n.BatterySlots, node.BatterySlots > 0 ? node.BatterySlots : existing.BatterySlots)
+                .Set(n => n.AvailableBatterySlots, node.AvailableBatterySlots >= 0 ? node.AvailableBatterySlots : existing.AvailableBatterySlots)
+                .Set(n => n.Schedule, !string.IsNullOrWhiteSpace(node.Schedule) ? node.Schedule : existing.Schedule)
+                .Set(n => n.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.MicrogridNodes.UpdateOneAsync(
+                n => n.Id == id, update);
+            return result.ModifiedCount > 0;
+        }
+
+        // Directly updates available battery slots (Grid Operator / Backoffice responsibility).
+        public async Task<bool> UpdateBatterySlotsAsync(string id, int availableSlots)
+        {
+            var existing = await GetByIdAsync(id);
+            if (existing == null) return false;
+
+            if (availableSlots < 0 || availableSlots > existing.BatterySlots)
+                throw new ArgumentException($"Available slots must be between 0 and maximum battery capacity ({existing.BatterySlots}).");
+
+            var update = Builders<MicrogridNode>.Update
+                .Set(n => n.AvailableBatterySlots, availableSlots)
                 .Set(n => n.UpdatedAt, DateTime.UtcNow);
 
             var result = await _context.MicrogridNodes.UpdateOneAsync(

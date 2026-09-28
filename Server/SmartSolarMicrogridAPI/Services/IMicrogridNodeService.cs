@@ -28,6 +28,9 @@ namespace SmartSolarMicrogridAPI.Services
         // Updates an existing node.
         Task<bool> UpdateAsync(string id, MicrogridNode node);
 
+        // Updates available battery slots directly (Grid Operator / Backoffice).
+        Task<bool> UpdateBatterySlotsAsync(string id, int availableSlots);
+
         // Deactivates a node (blocked if active reservations exist).
         Task<(bool Success, string Message)> DeactivateAsync(string id);
     }

@@ -72,6 +72,14 @@ namespace SmartSolarMicrogridAPI.Controllers
             return Ok(new { count });
         }
 
+        // GET api/reservation/prosumer/{nic}/pending-count — Returns count of pending reservations.
+        [HttpGet("prosumer/{nic}/pending-count")]
+        public async Task<IActionResult> GetPendingCount(string nic)
+        {
+            var count = await _reservationService.GetPendingCountByProsumerAsync(nic);
+            return Ok(new { count });
+        }
+
         // POST api/reservation — Creates a new reservation.
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateReservationRequest request)
@@ -115,7 +123,7 @@ namespace SmartSolarMicrogridAPI.Controllers
 
         // PUT api/reservation/{id}/complete — Completes a reservation via QR verification.
         [HttpPut("{id}/complete")]
-        [Authorize(Roles = "GridOperator")]
+        [Authorize(Roles = "GridOperator,Backoffice")]
         public async Task<IActionResult> Complete(string id, [FromBody] CompleteRequest request)
         {
             var (success, message) = await _reservationService.CompleteAsync(id, request.QrData);
