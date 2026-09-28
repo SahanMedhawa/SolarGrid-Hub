@@ -13,6 +13,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Allow devices on the local network to reach the API.
+builder.WebHost.UseUrls("http://0.0.0.0:5000");
+
 // --------------- MongoDB Configuration ---------------
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
