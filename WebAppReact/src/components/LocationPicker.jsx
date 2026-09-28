@@ -57,16 +57,6 @@ export default function LocationPicker({ latitude, longitude, onChange }) {
 
   return (
     <div className="form-group">
-      <label className="form-label">Pick Location on Map</label>
-      <Autocomplete onLoad={ref => (autocompleteRef.current = ref)} onPlaceChanged={handlePlaceChanged}>
-        <input
-          className="form-input mb-2"
-          placeholder="Search for a place..."
-          value={searchText}
-          onChange={e => setSearchText(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && e.preventDefault()} // don't submit the form
-        />
-      </Autocomplete>
       <GoogleMap
         mapContainerStyle={MAP_STYLE}
         center={position || DEFAULT_CENTER}

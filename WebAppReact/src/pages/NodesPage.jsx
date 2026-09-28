@@ -220,7 +220,7 @@ export default function NodesPage() {
                     </div>
                     <div className="form-group">
                       <label className="form-label">Available kWh</label>
-                      <input type="number" step="0.1" className="form-input" value={slotForm.availableKWh} onChange={e => setSlotForm({ ...slotForm, availableKWh: e.target.value })} required />
+                      <input type="number" min="0" step="0.1" className="form-input" value={slotForm.availableKWh} onChange={e => setSlotForm({ ...slotForm, availableKWh: e.target.value })} required />
                     </div>
                   </div>
                   <div className="modal-footer">
@@ -314,17 +314,17 @@ export default function NodesPage() {
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Capacity (kWh)</label>
-                    <input type="number" step="0.1" className="form-input" value={nodeForm.capacityKWh} onChange={e => setNodeForm({ ...nodeForm, capacityKWh: e.target.value })} required />
+                    <input type="number" min="0" step="50" className="form-input" value={nodeForm.capacityKWh} onChange={e => setNodeForm({ ...nodeForm, capacityKWh: e.target.value })} required />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Total Battery Slots</label>
-                    <input type="number" className="form-input" value={nodeForm.batterySlots} onChange={e => setNodeForm({ ...nodeForm, batterySlots: e.target.value })} required />
+                    <input type="number" min="0" className="form-input" value={nodeForm.batterySlots} onChange={e => setNodeForm({ ...nodeForm, batterySlots: e.target.value })} required />
                   </div>
                 </div>
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Available Battery Slots</label>
-                    <input type="number" className="form-input" value={nodeForm.availableBatterySlots} onChange={e => setNodeForm({ ...nodeForm, availableBatterySlots: e.target.value })} required />
+                    <input type="number" min="0" className="form-input" value={nodeForm.availableBatterySlots} onChange={e => setNodeForm({ ...nodeForm, availableBatterySlots: e.target.value })} required />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Schedule</label>
