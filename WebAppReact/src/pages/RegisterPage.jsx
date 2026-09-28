@@ -10,6 +10,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { registerProsumer } from '../services/api';
 import { toast } from 'react-toastify';
+import { isValidNIC } from '@sliit-foss/lk-nic';
 import {
   Sun,
   Zap,
@@ -43,16 +44,25 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (form.password !== form.confirmPassword) {
       toast.error('Passwords do not match.');
       return;
     }
+
     if (!form.nic || !form.firstName || !form.lastName || !form.email || !form.phone || !form.address || !form.password) {
       toast.warning('Please fill in all fields.');
       return;
     }
 
+    if (!isValidNIC(form.nic.trim())) {
+      toast.error('Please enter a valid Sri Lankan NIC number.');
+      return;
+    }
+
     setLoading(true);
+
+    
     try {
       await registerProsumer({
         nic: form.nic.trim(),
