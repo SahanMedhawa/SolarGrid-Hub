@@ -15,6 +15,7 @@ import {
   cancelReservation,
   updateReservation,
   getProsumerByNic,
+  updateProsumer,
   deactivateProsumer
 } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
@@ -32,6 +33,18 @@ export default function ProsumerPortal() {
   const [myReservations, setMyReservations] = useState([]);
   const [nodes, setNodes] = useState([]);
   const [prosumerProfile, setProsumerProfile] = useState(null);
+
+   // Profile Edit state
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+     firstName: '',
+     lastName: '',
+     email: '',
+     phone: '',
+     address: ''
+    });
+
 
   // QR Modal state
   const [selectedQrPass, setSelectedQrPass] = useState(null);
@@ -82,6 +95,46 @@ export default function ProsumerPortal() {
       setLoading(false);
     }
   }
+  
+
+
+       // --- Handlers: Edit Prosumer Profile ---
+
+  function openProfileEdit() {
+    if (!prosumerProfile) return;
+
+    setProfileForm({
+      firstName: prosumerProfile.firstName || '',
+      lastName: prosumerProfile.lastName || '',
+      email: prosumerProfile.email || '',
+      phone: prosumerProfile.phone || '',
+      address: prosumerProfile.address || ''
+    });
+
+    setIsEditingProfile(true);
+  }
+
+  async function handleSaveProfile(e) {
+    e.preventDefault();
+
+    try {
+      setSavingProfile(true);
+
+      await updateProsumer(prosumerNic, profileForm);
+
+      toast.success('Profile updated successfully!');
+
+      setIsEditingProfile(false);
+      await loadProsumerData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to update profile.');
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
+
+
 
   // Helper: Checks if reservation is at least 12 hours in the future
   function canModifyOrCancel(reservationDate) {
@@ -610,42 +663,182 @@ export default function ProsumerPortal() {
       {activeTab === 'profile' && (
         <div style={{ maxWidth: '650px', margin: '0 auto' }}>
           <div className="card" style={{ padding: '2rem' }}>
-            <h2 style={{ fontSize: '1.4rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span>👤</span> Prosumer Solar Profile
-            </h2>
+           <div
+  style={{
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '1.5rem'
+  }}
+>
+  <h2
+    style={{
+      fontSize: '1.4rem',
+      margin: 0,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem'
+    }}
+  >
+    <span>👤</span> Prosumer Solar Profile
+  </h2>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.95rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-                <span className="text-muted">National Identity Card (NIC):</span>
-                <strong>{prosumerNic}</strong>
-              </div>
+  {!isEditingProfile && (
+    <button
+      className="btn btn-primary btn-sm"
+      onClick={openProfileEdit}
+    >
+      ✏️ Edit Profile
+    </button>
+  )}
+</div>
+        {isEditingProfile ? (
+  <form onSubmit={handleSaveProfile}>
+    <div className="form-group">
+      <label className="form-label">First Name</label>
+      <input
+        type="text"
+        className="form-input"
+        value={profileForm.firstName}
+        onChange={e =>
+          setProfileForm({ ...profileForm, firstName: e.target.value })
+        }
+        required
+      />
+    </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-                <span className="text-muted">Full Name:</span>
-                <strong>{prosumerProfile ? `${prosumerProfile.firstName} ${prosumerProfile.lastName}` : user?.displayName}</strong>
-              </div>
+    <div className="form-group">
+      <label className="form-label">Last Name</label>
+      <input
+        type="text"
+        className="form-input"
+        value={profileForm.lastName}
+        onChange={e =>
+          setProfileForm({ ...profileForm, lastName: e.target.value })
+        }
+        required
+      />
+    </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-                <span className="text-muted">Email Address:</span>
-                <strong>{prosumerProfile?.email || 'N/A'}</strong>
-              </div>
+    <div className="form-group">
+      <label className="form-label">Email Address</label>
+      <input
+        type="email"
+        className="form-input"
+        value={profileForm.email}
+        onChange={e =>
+          setProfileForm({ ...profileForm, email: e.target.value })
+        }
+        required
+      />
+    </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-                <span className="text-muted">Phone Number:</span>
-                <strong>{prosumerProfile?.phone || 'N/A'}</strong>
-              </div>
+    <div className="form-group">
+      <label className="form-label">Phone Number</label>
+      <input
+        type="text"
+        className="form-input"
+        value={profileForm.phone}
+        onChange={e =>
+          setProfileForm({ ...profileForm, phone: e.target.value })
+        }
+        required
+      />
+    </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-                <span className="text-muted">Solar Generation Capacity:</span>
-                <strong style={{ color: 'var(--color-primary-light)' }}>
-                  {prosumerProfile?.solarCapacityKWh ? `${prosumerProfile.solarCapacityKWh} kW` : '10 kW'}
-                </strong>
-              </div>
+    <div className="form-group">
+      <label className="form-label">Address</label>
+      <input
+        type="text"
+        className="form-input"
+        value={profileForm.address}
+        onChange={e =>
+          setProfileForm({ ...profileForm, address: e.target.value })
+        }
+        required
+      />
+    </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-                <span className="text-muted">Account Status:</span>
-                <StatusBadge status={prosumerProfile?.status || 'Active'} />
-              </div>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: '0.75rem',
+        marginTop: '1.5rem'
+      }}
+    >
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={() => setIsEditingProfile(false)}
+      >
+        Cancel
+      </button>
+
+      <button
+        type="submit"
+        className="btn btn-primary"
+        disabled={savingProfile}
+      >
+        {savingProfile ? 'Saving...' : 'Save Changes'}
+      </button>
+    </div>
+  </form>
+) : (
+  <div
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '1rem',
+      fontSize: '0.95rem'
+    }}
+  >
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+      <span className="text-muted">National Identity Card (NIC):</span>
+      <strong>{prosumerNic}</strong>
+    </div>
+
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+      <span className="text-muted">Full Name:</span>
+      <strong>
+        {prosumerProfile
+          ? `${prosumerProfile.firstName} ${prosumerProfile.lastName}`
+          : user?.displayName}
+      </strong>
+    </div>
+
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+      <span className="text-muted">Email Address:</span>
+      <strong>{prosumerProfile?.email || 'N/A'}</strong>
+    </div>
+
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+      <span className="text-muted">Phone Number:</span>
+      <strong>{prosumerProfile?.phone || 'N/A'}</strong>
+    </div>
+
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+      <span className="text-muted">Address:</span>
+      <strong>{prosumerProfile?.address || 'N/A'}</strong>
+    </div>
+
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+      <span className="text-muted">Solar Generation Capacity:</span>
+      <strong style={{ color: 'var(--color-primary-light)' }}>
+        {prosumerProfile?.solarCapacityKWh
+          ? `${prosumerProfile.solarCapacityKWh} kW`
+          : '10 kW'}
+      </strong>
+    </div>
+
+    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+      <span className="text-muted">Account Status:</span>
+      <StatusBadge status={prosumerProfile?.status || 'Active'} />
+    </div>
+  </div>
+)}
+
+            
             </div>
 
             <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border)' }}>
@@ -658,7 +851,7 @@ export default function ProsumerPortal() {
               </button>
             </div>
           </div>
-        </div>
+       
       )}
 
       {/* MODAL: DIGITAL QR PASS */}

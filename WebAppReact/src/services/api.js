@@ -225,3 +225,30 @@ export async function approveReservation(id) {
 export async function completeReservation(id, qrData) {
   return apiRequest(`reservation/${id}/complete`, 'PUT', { qrData });
 }
+
+// ── Profile (self-service) endpoints ──
+
+// Retrieves the logged-in user's own profile.
+export async function getMyProfile() {
+  return apiRequest('profile');
+}
+
+// Updates the logged-in user's own username/email.
+export async function updateMyProfile(data) {
+  return apiRequest('profile', 'PUT', data);
+}
+
+// Changes the logged-in user's own password.
+export async function changeMyPassword(currentPassword, newPassword) {
+  return apiRequest('profile/password', 'PATCH', { currentPassword, newPassword });
+}
+
+// Deactivates the logged-in user's own account.
+export async function deactivateMyAccount() {
+  return apiRequest('profile', 'DELETE');
+}
+
+// Reactivates a previously deactivated system user (Backoffice only).
+export async function activateUser(id) {
+  return apiRequest(`user/${id}/activate`, 'PATCH');
+}

@@ -13,7 +13,7 @@ using SmartSolarMicrogridAPI.Services;
 namespace SmartSolarMicrogridAPI.Controllers
 {
     /// <summary>
-    /// User management API endpoints.
+    /// User management API endpoints. Backoffice-only access.
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
@@ -22,7 +22,6 @@ namespace SmartSolarMicrogridAPI.Controllers
     {
         private readonly IUserService _userService;
 
-        // Constructor — injects user service.
         public UserController(IUserService userService)
         {
             _userService = userService;
@@ -50,46 +49,85 @@ namespace SmartSolarMicrogridAPI.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateUserRequest request)
         {
-            var user = new User
+            try
             {
-                Username = request.Username,
-                Email = request.Email,
-                Role = request.Role
-            };
+                var user = new User
+                {
+                    Username = request.Username,
+                    Email = request.Email,
+                    Role = request.Role
+                };
 
-            var created = await _userService.CreateAsync(user, request.Password);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+                var created = await _userService.CreateAsync(user, request.Password);
+                return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
-        // PUT api/user/{id} — Updates a user.
+        // PUT api/user/{id} — Updates a user's editable fields only.
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, [FromBody] User user)
+        public async Task<IActionResult> Update(string id, [FromBody] UpdateUserRequest request)
         {
-            var success = await _userService.UpdateAsync(id, user);
-            if (!success)
-                return NotFound(new { message = "User not found." });
-            return Ok(new { message = "User updated successfully." });
+            try
+            {
+                var success = await _userService.UpdateAsync(id, request.Username, request.Email, request.Role);
+                if (!success)
+                    return NotFound(new { message = "User not found." });
+                return Ok(new { message = "User updated successfully." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
-        // DELETE api/user/{id} — Deactivates a user.
+        // DELETE api/user/{id} — Deactivates a user. Blocked if it's the last active Backoffice account.
         [HttpDelete("{id}")]
         public async Task<IActionResult> Deactivate(string id)
         {
-            var success = await _userService.DeactivateAsync(id);
+            try
+            {
+                var success = await _userService.DeactivateAsync(id);
+                if (!success)
+                    return NotFound(new { message = "User not found." });
+                return Ok(new { message = "User deactivated successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // PATCH api/user/{id}/activate — Reactivates a previously deactivated user.
+        [HttpPatch("{id}/activate")]
+        public async Task<IActionResult> Activate(string id)
+        {
+            var success = await _userService.ActivateAsync(id);
             if (!success)
                 return NotFound(new { message = "User not found." });
-            return Ok(new { message = "User deactivated successfully." });
+            return Ok(new { message = "User activated successfully." });
         }
     }
 
-    /// <summary>
-    /// DTO for creating a new web application user.
-    /// </summary>
     public class CreateUserRequest
     {
         public string Username { get; set; } = null!;
         public string Email { get; set; } = null!;
         public string Password { get; set; } = null!;
+        public string Role { get; set; } = null!;
+    }
+
+    public class UpdateUserRequest
+    {
+        public string Username { get; set; } = null!;
+        public string Email { get; set; } = null!;
         public string Role { get; set; } = null!;
     }
 }

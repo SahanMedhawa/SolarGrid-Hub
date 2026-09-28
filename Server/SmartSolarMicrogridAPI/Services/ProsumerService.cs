@@ -65,21 +65,22 @@ namespace SmartSolarMicrogridAPI.Services
         }
 
         // Updates editable fields of a prosumer profile.
-        public async Task<bool> UpdateAsync(string nic, Prosumer prosumer)
-        {
-            var update = Builders<Prosumer>.Update
-                .Set(p => p.FirstName, prosumer.FirstName)
-                .Set(p => p.LastName, prosumer.LastName)
-                .Set(p => p.Email, prosumer.Email)
-                .Set(p => p.Phone, prosumer.Phone)
-                .Set(p => p.Address, prosumer.Address)
-                .Set(p => p.UpdatedAt, DateTime.UtcNow);
+        // Updates editable fields of a prosumer profile.
+public async Task<bool> UpdateAsync(string nic, ProsumerUpdateRequest request)
+{
+    var update = Builders<Prosumer>.Update
+        .Set(p => p.FirstName, request.FirstName)
+        .Set(p => p.LastName, request.LastName)
+        .Set(p => p.Email, request.Email)
+        .Set(p => p.Phone, request.Phone)
+        .Set(p => p.Address, request.Address)
+        .Set(p => p.UpdatedAt, DateTime.UtcNow);
 
-            var result = await _context.Prosumers.UpdateOneAsync(
-                p => p.NIC == nic, update);
-            return result.ModifiedCount > 0;
-        }
+    var result = await _context.Prosumers.UpdateOneAsync(
+        p => p.NIC == nic, update);
 
+    return result.ModifiedCount > 0;
+}
         // Sets prosumer status to "Deactivated".
         public async Task<bool> DeactivateAsync(string nic)
         {

@@ -17,7 +17,9 @@ import {
   reactivateProsumer,
   getUsers,
   createUser,
+  updateUser,
   deleteUser,
+  activateUser,
   getReservations,
   approveReservation
 } from '../services/api';
@@ -60,6 +62,7 @@ export default function BackofficePortal() {
   // Filter states
   const [prosumerFilter, setProsumerFilter] = useState('All');
   const [reservationFilter, setReservationFilter] = useState('All');
+  const [editingUser, setEditingUser] = useState(null);
 
   useEffect(() => {
     loadAllData();
@@ -155,20 +158,52 @@ export default function BackofficePortal() {
   }
 
   // --- Handlers: System Users ---
-  async function handleCreateUser(e) {
+  function openCreateUserModal() {
+    setEditingUser(null);
+    setNewUser({ username: '', password: '', role: 'GridOperator' });
+    setShowUserModal(true);
+  }
+
+  function openEditUserModal(u) {
+    setEditingUser(u);
+    setNewUser({ username: u.username, email: u.email || '', password: '', role: u.role });
+    setShowUserModal(true);
+  }
+
+  async function handleSaveUser(e) {
     e.preventDefault();
-    if (!newUser.username || !newUser.password) {
+    if (!newUser.username || (!editingUser && !newUser.password)) {
       toast.warning('Username and password are required.');
       return;
     }
     try {
-      await createUser(newUser);
-      toast.success(`User ${newUser.username} created successfully!`);
+      if (editingUser) {
+        await updateUser(editingUser.id, {
+          username: newUser.username,
+          email: newUser.email,
+          role: newUser.role
+        });
+        toast.success(`User "${newUser.username}" updated successfully!`);
+      } else {
+        await createUser(newUser);
+        toast.success(`User "${newUser.username}" created successfully!`);
+      }
       setShowUserModal(false);
+      setEditingUser(null);
       setNewUser({ username: '', password: '', role: 'GridOperator' });
       loadAllData();
     } catch (err) {
-      toast.error(err.message || 'Failed to create user.');
+      toast.error(err.message || 'Failed to save user.');
+    }
+  }
+
+  async function handleActivateUser(id, username) {
+    try {
+      await activateUser(id);
+      toast.success(`User "${username}" reactivated.`);
+      loadAllData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to reactivate user.');
     }
   }
 
@@ -598,7 +633,7 @@ export default function BackofficePortal() {
                 Manage Backoffice administrators and Grid Operators.
               </span>
             </div>
-            <button className="btn btn-primary" onClick={() => setShowUserModal(true)}>
+            <button className="btn btn-primary" onClick={openCreateUserModal}>
               ➕ Create Staff User
             </button>
           </div>
@@ -626,16 +661,18 @@ export default function BackofficePortal() {
                         </span>
                       </td>
                       <td><StatusBadge status={u.isActive ? 'Active' : 'Deactivated'} /></td>
-                      <td>
+                      <td style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => openEditUserModal(u)}>
+                          ✏️ Edit
+                        </button>
                         {u.isActive ? (
-                          <button
-                            className="btn btn-danger btn-sm"
-                            onClick={() => handleDeleteUser(u.id, u.username)}
-                          >
+                          <button className="btn btn-danger btn-sm" onClick={() => handleDeleteUser(u.id, u.username)}>
                             Deactivate
                           </button>
                         ) : (
-                          <span className="text-muted" style={{ fontSize: '0.8rem' }}>Deactivated</span>
+                          <button className="btn btn-secondary btn-sm" onClick={() => handleActivateUser(u.id, u.username)}>
+                            🔄 Reactivate
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -833,10 +870,12 @@ export default function BackofficePortal() {
         <div className="modal-overlay" onClick={() => setShowUserModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3 className="modal-title">👥 Create System Staff User</h3>
+              <h3 className="modal-title">
+                {editingUser ? '✏️ Edit Staff User' : '👥 Create System Staff User'}
+              </h3>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowUserModal(false)}>✕</button>
             </div>
-            <form onSubmit={handleCreateUser}>
+            <form onSubmit={handleSaveUser}>
               <div className="modal-body">
                 <div className="form-group">
                   <label className="form-label">Username</label>
@@ -850,16 +889,28 @@ export default function BackofficePortal() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Temporary Password</label>
+                  <label className="form-label">Email</label>
                   <input
-                    type="password"
+                    type="email"
                     className="form-input"
-                    placeholder="Enter password"
-                    value={newUser.password}
-                    onChange={e => setNewUser({ ...newUser, password: e.target.value })}
-                    required
+                    placeholder="e.g. operator@solargrid.com"
+                    value={newUser.email || ''}
+                    onChange={e => setNewUser({ ...newUser, email: e.target.value })}
                   />
                 </div>
+                {!editingUser && (
+                  <div className="form-group">
+                    <label className="form-label">Temporary Password</label>
+                    <input
+                      type="password"
+                      className="form-input"
+                      placeholder="Enter password"
+                      value={newUser.password}
+                      onChange={e => setNewUser({ ...newUser, password: e.target.value })}
+                      required
+                    />
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="form-label">Role</label>
                   <select
@@ -877,7 +928,7 @@ export default function BackofficePortal() {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Create User
+                  {editingUser ? 'Update User' : 'Create User'}
                 </button>
               </div>
             </form>

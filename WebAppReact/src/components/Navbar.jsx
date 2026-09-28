@@ -2,7 +2,8 @@
 // File: Navbar.jsx
 // Project: Smart Solar Microgrid Trading System - React Web App
 // Description: Top navigation bar with dynamic role-based links,
-//              role badge indicators, and portal navigation.
+//              role badge indicators, portal navigation, and a
+//              self-service profile link for every logged-in user.
 // ============================================================
 
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -66,11 +67,6 @@ export default function Navbar() {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/users" className={isActive('/users')}>
-                    👥 Staff
-                  </Link>
-                </li>
-                <li>
                   <Link to="/reservations" className={isActive('/reservations')}>
                     📅 Reservations
                   </Link>
@@ -120,12 +116,12 @@ export default function Navbar() {
         <div className="navbar-right">
           {isAuthenticated && user ? (
             <>
-              <div className="user-badge">
+              <Link to="/profile" className="user-badge" style={{ textDecoration: 'none', cursor: 'pointer' }}>
                 <span>👤 {user.displayName}</span>
                 <span className="role-tag" style={getRoleBadgeStyle(user.role)}>
                   {user.role}
                 </span>
-              </div>
+              </Link>
               <button className="btn btn-ghost btn-sm" onClick={handleLogout}>
                 Logout
               </button>
