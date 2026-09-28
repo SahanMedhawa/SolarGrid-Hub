@@ -21,7 +21,7 @@ import org.json.JSONObject
 /**
  * Login Activity - handles user authentication via the central Web API.
  * Routes users to role-specific dashboards (Prosumer, Operator, Backoffice).
- * Supports dynamic server IP configuration for physical devices and emulators.
+ * Backed by automatic zero-configuration server discovery.
  */
 class LoginActivity : AppCompatActivity() {
 
@@ -29,15 +29,15 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var etUsername: EditText
     private lateinit var etPassword: EditText
     private lateinit var rbProsumer: RadioButton
-    private lateinit var btnServerConfig: Button
+    private lateinit var btnLogin: Button
     private lateinit var session: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         session = SessionManager(this)
 
-        // Initialize API Base URL from preferences
-        Constants.initBaseUrl(this)
+        // Warm up zero-configuration server discovery in the background
+        Thread { Constants.ensureBaseUrl(this) }.start()
 
         // Check if session already exists
         if (session.isLoggedIn()) {
@@ -50,44 +50,11 @@ class LoginActivity : AppCompatActivity() {
         etUsername = findViewById(R.id.etUsername)
         etPassword = findViewById(R.id.etPassword)
         rbProsumer = findViewById(R.id.rbProsumer)
-        val btnLogin: Button = findViewById(R.id.btnLogin)
+        btnLogin = findViewById(R.id.btnLogin)
         val btnRegister: Button = findViewById(R.id.btnRegister)
-        btnServerConfig = findViewById(R.id.btnServerConfig)
-
-        updateServerButtonText()
 
         btnLogin.setOnClickListener { handleLogin() }
         btnRegister.setOnClickListener { startActivity(Intent(this, RegisterActivity::class.java)) }
-        btnServerConfig.setOnClickListener { showServerConfigDialog() }
-    }
-
-    private fun updateServerButtonText() {
-        val currentHost = Constants.getServerHost(this)
-        btnServerConfig.text = "🌐 Server: $currentHost:${Constants.DEFAULT_SERVER_PORT}"
-    }
-
-    // Dialog to change server IP (e.g. PC's Wi-Fi IP 192.168.244.93, 10.0.2.2 for emulator, or 127.0.0.1 for adb reverse)
-    private fun showServerConfigDialog() {
-        val input = EditText(this).apply {
-            setText(Constants.getServerHost(this@LoginActivity))
-            hint = "e.g. 192.168.244.93 or 10.0.2.2 or 127.0.0.1"
-            setPadding(40, 30, 40, 30)
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle("Configure Server Host IP")
-            .setMessage("For physical devices on Wi-Fi, enter your PC's Wi-Fi IPv4 address.\nFor Android Emulator, use 10.0.2.2.\nFor USB/Wi-Fi adb reverse, use 127.0.0.1.")
-            .setView(input)
-            .setPositiveButton("Save") { _, _ ->
-                val newHost = input.text.toString().trim()
-                if (newHost.isNotEmpty()) {
-                    Constants.setServerHost(this, newHost)
-                    updateServerButtonText()
-                    Toast.makeText(this, "Server updated to: ${Constants.BASE_URL}", Toast.LENGTH_LONG).show()
-                }
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
     }
 
     // Validate inputs and send login request to the central API
@@ -101,7 +68,9 @@ class LoginActivity : AppCompatActivity() {
             return
         }
 
-        Log.i(TAG, "Attempting login for '$username' as $loginType via ${Constants.BASE_URL}")
+        Log.i(TAG, "Attempting login for '$username' as $loginType")
+        btnLogin.isEnabled = false
+        btnLogin.text = "Signing In..."
 
         try {
             val payload = JSONObject().apply {
@@ -112,6 +81,8 @@ class LoginActivity : AppCompatActivity() {
 
             ApiClient.request("auth/login", "POST", payload, null, object : ApiClient.ApiCallback {
                 override fun onSuccess(response: String) {
+                    btnLogin.isEnabled = true
+                    btnLogin.text = getString(R.string.sign_in)
                     try {
                         val res = JSONObject(response)
                         val token = res.getString("token")
@@ -129,16 +100,19 @@ class LoginActivity : AppCompatActivity() {
                 }
 
                 override fun onError(error: String) {
+                    btnLogin.isEnabled = true
+                    btnLogin.text = getString(R.string.sign_in)
                     Log.e(TAG, "Login failed: $error")
                     AlertDialog.Builder(this@LoginActivity)
                         .setTitle("Sign In Failed")
                         .setMessage(error)
                         .setPositiveButton("OK", null)
-                        .setNeutralButton("Change Server IP") { _, _ -> showServerConfigDialog() }
                         .show()
                 }
             })
         } catch (e: Exception) {
+            btnLogin.isEnabled = true
+            btnLogin.text = getString(R.string.sign_in)
             Log.e(TAG, "Request build error", e)
             Toast.makeText(this, "Request error: ${e.message}", Toast.LENGTH_SHORT).show()
         }
