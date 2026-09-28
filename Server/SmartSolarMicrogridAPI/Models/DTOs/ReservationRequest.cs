@@ -36,6 +36,7 @@ namespace SmartSolarMicrogridAPI.Models.DTOs
     public class UpdateReservationRequest
     {
         public string? SlotId { get; set; }
+        public string? NodeId { get; set; }
         public DateTime? ReservationDate { get; set; }
         public double? EnergyKWh { get; set; }
     }

@@ -168,15 +168,17 @@ namespace SmartSolarMicrogridAPI.Data
             if (firstNode != null && await context.Reservations.CountDocumentsAsync(_ => true) == 0)
             {
                 var slot = await context.EnergySlots.Find(_ => true).FirstOrDefaultAsync();
+                var resId = MongoDB.Bson.ObjectId.GenerateNewId().ToString();
                 var reservation = new Reservation
                 {
+                    Id = resId,
                     ProsumerNic = "199012345678",
                     SlotId = slot?.Id ?? "SLOT-001",
                     NodeId = firstNode.Id!,
                     ReservationDate = DateTime.UtcNow.Date.AddDays(3),
                     EnergyKWh = 25.0,
                     Status = "Approved",
-                    QrCodeData = $"SMTS-SEEDRES-199012345678-{Guid.NewGuid():N}",
+                    QrCodeData = $"SMTS-{resId}-199012345678-{Guid.NewGuid():N}",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
