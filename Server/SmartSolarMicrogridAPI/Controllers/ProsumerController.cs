@@ -21,11 +21,15 @@ namespace SmartSolarMicrogridAPI.Controllers
     public class ProsumerController : ControllerBase
     {
         private readonly IProsumerService _prosumerService;
+        private readonly IReservationService _reservationService;
 
-        // Constructor — injects prosumer service.
-        public ProsumerController(IProsumerService prosumerService)
+        // Constructor — injects required services.
+        public ProsumerController(
+        IProsumerService prosumerService,
+        IReservationService reservationService)
         {
             _prosumerService = prosumerService;
+            _reservationService = reservationService;
         }
 
         // GET api/prosumer — Returns all prosumers (Backoffice only).
@@ -83,14 +87,33 @@ namespace SmartSolarMicrogridAPI.Controllers
         }
 
         // PUT api/prosumer/{nic}/deactivate — Requests deactivation.
+        // PUT api/prosumer/{nic}/deactivate — Deactivates prosumer account.
         [HttpPut("{nic}/deactivate")]
         [Authorize]
         public async Task<IActionResult> Deactivate(string nic)
         {
+            var reservations = await _reservationService.GetByProsumerNicAsync(nic);
+
+            var hasActiveReservations = reservations.Any(r =>
+               r.Status == "Pending" || r.Status == "Approved");
+
+            if (hasActiveReservations)
+            {
+                return BadRequest(new
+                {
+                    message = "Account cannot be deactivated while pending or approved reservations exist."
+                });
+            }
+
             var success = await _prosumerService.DeactivateAsync(nic);
+
             if (!success)
                 return NotFound(new { message = "Prosumer not found." });
-            return Ok(new { message = "Prosumer deactivation requested." });
+
+            return Ok(new
+            {
+                message = "Prosumer account deactivated successfully."
+            });
         }
 
         // PUT api/prosumer/{nic}/activate — Reactivates account (Backoffice only).
