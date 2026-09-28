@@ -34,16 +34,16 @@ export default function ProsumerPortal() {
   const [nodes, setNodes] = useState([]);
   const [prosumerProfile, setProsumerProfile] = useState(null);
 
-   // Profile Edit state
+  // Profile Edit state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({
-     firstName: '',
-     lastName: '',
-     email: '',
-     phone: '',
-     address: ''
-    });
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: ''
+  });
 
 
   // QR Modal state
@@ -67,6 +67,8 @@ export default function ProsumerPortal() {
     energyKWh: 15.0
   });
   const [submittingBooking, setSubmittingBooking] = useState(false);
+
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 
   useEffect(() => {
     loadProsumerData();
@@ -95,10 +97,10 @@ export default function ProsumerPortal() {
       setLoading(false);
     }
   }
-  
 
 
-       // --- Handlers: Edit Prosumer Profile ---
+
+  // --- Handlers: Edit Prosumer Profile ---
 
   function openProfileEdit() {
     if (!prosumerProfile) return;
@@ -236,18 +238,20 @@ export default function ProsumerPortal() {
   }
 
   // --- Handlers: Request Deactivation ---
+  // --- Handlers: Request Deactivation ---
   async function handleDeactivateAccount() {
-    if (!window.confirm('Request account deactivation? Note: You cannot have pending/approved reservations.')) {
-      return;
-    }
     try {
       await deactivateProsumer(prosumerNic);
-      toast.info('Account deactivation requested.');
+      toast.success('Account deactivated successfully.');
+      setShowDeactivateModal(false);
       loadProsumerData();
     } catch (err) {
-      toast.error(err.message || 'Deactivation request failed.');
+      toast.error(err.message || 'Account deactivation failed.');
+      setShowDeactivateModal(false);
     }
   }
+
+
 
   // Calculations
   const approvedBookings = myReservations.filter(r => r.status === 'Approved');
@@ -663,197 +667,239 @@ export default function ProsumerPortal() {
       {activeTab === 'profile' && (
         <div style={{ maxWidth: '650px', margin: '0 auto' }}>
           <div className="card" style={{ padding: '2rem' }}>
-           <div
-  style={{
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '1.5rem'
-  }}
->
-  <h2
-    style={{
-      fontSize: '1.4rem',
-      margin: 0,
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem'
-    }}
-  >
-    <span>👤</span> Prosumer Solar Profile
-  </h2>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1.5rem'
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: '1.4rem',
+                  margin: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <span>👤</span> Prosumer Solar Profile
+              </h2>
 
-  {!isEditingProfile && (
-    <button
-      className="btn btn-primary btn-sm"
-      onClick={openProfileEdit}
-    >
-      ✏️ Edit Profile
-    </button>
-  )}
-</div>
-        {isEditingProfile ? (
-  <form onSubmit={handleSaveProfile}>
-    <div className="form-group">
-      <label className="form-label">First Name</label>
-      <input
-        type="text"
-        className="form-input"
-        value={profileForm.firstName}
-        onChange={e =>
-          setProfileForm({ ...profileForm, firstName: e.target.value })
-        }
-        required
-      />
-    </div>
-
-    <div className="form-group">
-      <label className="form-label">Last Name</label>
-      <input
-        type="text"
-        className="form-input"
-        value={profileForm.lastName}
-        onChange={e =>
-          setProfileForm({ ...profileForm, lastName: e.target.value })
-        }
-        required
-      />
-    </div>
-
-    <div className="form-group">
-      <label className="form-label">Email Address</label>
-      <input
-        type="email"
-        className="form-input"
-        value={profileForm.email}
-        onChange={e =>
-          setProfileForm({ ...profileForm, email: e.target.value })
-        }
-        required
-      />
-    </div>
-
-    <div className="form-group">
-      <label className="form-label">Phone Number</label>
-      <input
-        type="text"
-        className="form-input"
-        value={profileForm.phone}
-        onChange={e =>
-          setProfileForm({ ...profileForm, phone: e.target.value })
-        }
-        required
-      />
-    </div>
-
-    <div className="form-group">
-      <label className="form-label">Address</label>
-      <input
-        type="text"
-        className="form-input"
-        value={profileForm.address}
-        onChange={e =>
-          setProfileForm({ ...profileForm, address: e.target.value })
-        }
-        required
-      />
-    </div>
-
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'flex-end',
-        gap: '0.75rem',
-        marginTop: '1.5rem'
-      }}
-    >
-      <button
-        type="button"
-        className="btn btn-secondary"
-        onClick={() => setIsEditingProfile(false)}
-      >
-        Cancel
-      </button>
-
-      <button
-        type="submit"
-        className="btn btn-primary"
-        disabled={savingProfile}
-      >
-        {savingProfile ? 'Saving...' : 'Save Changes'}
-      </button>
-    </div>
-  </form>
-) : (
-  <div
-    style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '1rem',
-      fontSize: '0.95rem'
-    }}
-  >
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-      <span className="text-muted">National Identity Card (NIC):</span>
-      <strong>{prosumerNic}</strong>
-    </div>
-
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-      <span className="text-muted">Full Name:</span>
-      <strong>
-        {prosumerProfile
-          ? `${prosumerProfile.firstName} ${prosumerProfile.lastName}`
-          : user?.displayName}
-      </strong>
-    </div>
-
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-      <span className="text-muted">Email Address:</span>
-      <strong>{prosumerProfile?.email || 'N/A'}</strong>
-    </div>
-
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-      <span className="text-muted">Phone Number:</span>
-      <strong>{prosumerProfile?.phone || 'N/A'}</strong>
-    </div>
-
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-      <span className="text-muted">Address:</span>
-      <strong>{prosumerProfile?.address || 'N/A'}</strong>
-    </div>
-
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-      <span className="text-muted">Solar Generation Capacity:</span>
-      <strong style={{ color: 'var(--color-primary-light)' }}>
-        {prosumerProfile?.solarCapacityKWh
-          ? `${prosumerProfile.solarCapacityKWh} kW`
-          : '10 kW'}
-      </strong>
-    </div>
-
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
-      <span className="text-muted">Account Status:</span>
-      <StatusBadge status={prosumerProfile?.status || 'Active'} />
-    </div>
-  </div>
-)}
-
-            
+              {!isEditingProfile && (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={openProfileEdit}
+                >
+                  ✏️ Edit Profile
+                </button>
+              )}
             </div>
+            {isEditingProfile ? (
+              <form onSubmit={handleSaveProfile}>
+                <div className="form-group">
+                  <label className="form-label">First Name</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={profileForm.firstName}
+                    onChange={e =>
+                      setProfileForm({ ...profileForm, firstName: e.target.value })
+                    }
+                    required
+                  />
+                </div>
 
-            <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border)' }}>
-              <h4 style={{ color: 'var(--color-danger-light)', marginBottom: '0.5rem' }}>Account Lifecycle Management</h4>
-              <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>
-                You can request deactivation of your prosumer account if you no longer wish to trade energy. Only allowed if there are no pending or approved reservations.
-              </p>
-              <button className="btn btn-danger" onClick={handleDeactivateAccount}>
-                Request Account Deactivation
+                <div className="form-group">
+                  <label className="form-label">Last Name</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={profileForm.lastName}
+                    onChange={e =>
+                      setProfileForm({ ...profileForm, lastName: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Email Address</label>
+                  <input
+                    type="email"
+                    className="form-input"
+                    value={profileForm.email}
+                    onChange={e =>
+                      setProfileForm({ ...profileForm, email: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Phone Number</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={profileForm.phone}
+                    onChange={e =>
+                      setProfileForm({ ...profileForm, phone: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Address</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={profileForm.address}
+                    onChange={e =>
+                      setProfileForm({ ...profileForm, address: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '0.75rem',
+                    marginTop: '1.5rem'
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setIsEditingProfile(false)}
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={savingProfile}
+                  >
+                    {savingProfile ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem',
+                  fontSize: '0.95rem'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+                  <span className="text-muted">National Identity Card (NIC):</span>
+                  <strong>{prosumerNic}</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+                  <span className="text-muted">Full Name:</span>
+                  <strong>
+                    {prosumerProfile
+                      ? `${prosumerProfile.firstName} ${prosumerProfile.lastName}`
+                      : user?.displayName}
+                  </strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+                  <span className="text-muted">Email Address:</span>
+                  <strong>{prosumerProfile?.email || 'N/A'}</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+                  <span className="text-muted">Phone Number:</span>
+                  <strong>{prosumerProfile?.phone || 'N/A'}</strong>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+                  <span className="text-muted">Address:</span>
+                  <strong>{prosumerProfile?.address || 'N/A'}</strong>
+                </div>
+
+
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)' }}>
+                  <span className="text-muted">Account Status:</span>
+                  <StatusBadge status={prosumerProfile?.status || 'Active'} />
+                </div>
+              </div>
+            )}
+
+
+          </div>
+
+          <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border)' }}>
+            <h4 style={{ color: 'var(--color-danger-light)', marginBottom: '0.5rem' }}>Account Lifecycle Management</h4>
+            <p className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>
+              You can request deactivation of your prosumer account if you no longer wish to trade energy. Only allowed if there are no pending or approved reservations.
+            </p>
+            <button className="btn btn-danger" onClick={() => setShowDeactivateModal(true)}>
+              Request Account Deactivation
+            </button>
+          </div>
+        </div>
+
+      )}
+      {/* MODAL: ACCOUNT DEACTIVATION CONFIRMATION */}
+      {showDeactivateModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowDeactivateModal(false)}
+        >
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: '450px', textAlign: 'center' }}
+          >
+            <h3>Deactivate Account?</h3>
+
+            <p className="text-muted">
+              Are you sure you want to deactivate your prosumer account?
+            </p>
+
+            <p className="text-muted">
+              You cannot deactivate your account while pending or approved
+              reservations exist.
+            </p>
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: '1rem',
+                marginTop: '1.5rem'
+              }}
+            >
+              <button
+                className="btn"
+                onClick={() => setShowDeactivateModal(false)}
+              >
+                Cancel
+              </button>
+
+              <button
+                className="btn btn-danger"
+                onClick={async () => {
+                  setShowDeactivateModal(false);
+                  await handleDeactivateAccount();
+                }}
+              >
+                Yes, Deactivate
               </button>
             </div>
           </div>
-       
+        </div>
       )}
-
       {/* MODAL: DIGITAL QR PASS */}
       {selectedQrPass && (
         <div className="modal-overlay" onClick={() => setSelectedQrPass(null)}>
