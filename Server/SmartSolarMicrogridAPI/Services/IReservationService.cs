@@ -29,6 +29,9 @@ namespace SmartSolarMicrogridAPI.Services
         // Gets the count of approved future reservations for a prosumer.
         Task<long> GetApprovedFutureCountAsync(string nic);
 
+        // Gets the count of pending reservations for a prosumer.
+        Task<long> GetPendingCountByProsumerAsync(string nic);
+
         // Creates a new reservation (must be within 7 days).
         Task<(bool Success, string Message, Reservation? Reservation)> CreateAsync(CreateReservationRequest request);
 

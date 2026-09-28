@@ -142,6 +142,11 @@ export async function updateNode(id, nodeData) {
   return apiRequest(`microgridnode/${id}`, 'PUT', nodeData);
 }
 
+// Directly updates available battery slots on a microgrid node.
+export async function updateBatterySlots(id, availableBatterySlots) {
+  return apiRequest(`microgridnode/${id}/battery-slots`, 'PATCH', { availableBatterySlots });
+}
+
 // Deactivates a microgrid node (blocked if active reservations exist).
 export async function deactivateNode(id) {
   return apiRequest(`microgridnode/${id}`, 'DELETE');
@@ -199,6 +204,11 @@ export async function getReservationsByStatus(status) {
 // Gets the count of approved future reservations for a prosumer.
 export async function getApprovedFutureCount(nic) {
   return apiRequest(`reservation/prosumer/${nic}/future-count`);
+}
+
+// Gets the count of pending reservations for a prosumer.
+export async function getPendingCount(nic) {
+  return apiRequest(`reservation/prosumer/${nic}/pending-count`);
 }
 
 // Creates a new reservation (7-day rule enforced server-side).
