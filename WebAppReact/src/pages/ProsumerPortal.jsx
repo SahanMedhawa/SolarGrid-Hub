@@ -23,7 +23,7 @@ import { toast } from 'react-toastify';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function ProsumerPortal() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const prosumerNic = user?.userId || user?.nic || user?.displayName;
 
   const [activeTab, setActiveTab] = useState('bookings');
@@ -237,14 +237,17 @@ export default function ProsumerPortal() {
     }
   }
 
-  // --- Handlers: Request Deactivation ---
+
   // --- Handlers: Request Deactivation ---
   async function handleDeactivateAccount() {
     try {
       await deactivateProsumer(prosumerNic);
       toast.success('Account deactivated successfully.');
       setShowDeactivateModal(false);
-      loadProsumerData();
+
+      setTimeout(() => {
+        logout();
+      }, 1500);
     } catch (err) {
       toast.error(err.message || 'Account deactivation failed.');
       setShowDeactivateModal(false);
