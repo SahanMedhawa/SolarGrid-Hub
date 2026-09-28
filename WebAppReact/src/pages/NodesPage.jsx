@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { getNodes, createNode, updateNode, deactivateNode, getSlotsByNode, createSlot, updateSlot, deleteSlot } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { toast } from 'react-toastify';
+import LocationPicker from '../components/LocationPicker';
 
 // Renders the microgrid node management page with slot management.
 export default function NodesPage() {
@@ -67,6 +68,12 @@ export default function NodesPage() {
   // Handles node form submission.
   async function handleNodeSubmit(e) {
     e.preventDefault();
+
+    if (nodeForm.latitude === '' || nodeForm.longitude === '') {
+      toast.error('Please pick a location on the map.');
+      return;
+    }
+
     const payload = {
       ...nodeForm,
       latitude: parseFloat(nodeForm.latitude),
@@ -291,16 +298,19 @@ export default function NodesPage() {
                   <label className="form-label">Location</label>
                   <input className="form-input" value={nodeForm.location} onChange={e => setNodeForm({ ...nodeForm, location: e.target.value })} required />
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Latitude</label>
-                    <input type="number" step="any" className="form-input" value={nodeForm.latitude} onChange={e => setNodeForm({ ...nodeForm, latitude: e.target.value })} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Longitude</label>
-                    <input type="number" step="any" className="form-input" value={nodeForm.longitude} onChange={e => setNodeForm({ ...nodeForm, longitude: e.target.value })} required />
-                  </div>
-                </div>
+                <LocationPicker
+                  latitude={nodeForm.latitude}
+                  longitude={nodeForm.longitude}
+                  onChange={({ latitude, longitude, address }) =>
+                    setNodeForm(prev => ({
+                      ...prev,
+                      latitude,
+                      longitude,
+                      // only auto-fill the location text if it's empty or an address was resolved
+                      location: address ? address : prev.location
+                    }))
+                  }
+                />
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Capacity (kWh)</label>

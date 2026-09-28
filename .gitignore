@@ -29,3 +29,11 @@
 build/
 gradle-daemon-jvm.properties
 local.properties
+
+# Configuration / secrets
+**/appsettings.json
+**/appsettings.Development.json
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
