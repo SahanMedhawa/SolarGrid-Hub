@@ -1,14 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#198754</color>
-    <color name="primary_dark">#146c43</color>
-    <color name="accent">#0d6efd</color>
+    <!-- Material 3 Light Theme Palette (Clean Energy Emerald & Solar Teal) -->
+    <color name="md_theme_light_primary">#006D44</color>
+    <color name="md_theme_light_onPrimary">#FFFFFF</color>
+    <color name="md_theme_light_primaryContainer">#9DF7CD</color>
+    <color name="md_theme_light_onPrimaryContainer">#002112</color>
+
+    <color name="md_theme_light_secondary">#006590</color>
+    <color name="md_theme_light_onSecondary">#FFFFFF</color>
+    <color name="md_theme_light_secondaryContainer">#C7E7FF</color>
+    <color name="md_theme_light_onSecondaryContainer">#001E2E</color>
+
+    <color name="md_theme_light_tertiary">#8B5000</color>
+    <color name="md_theme_light_onTertiary">#FFFFFF</color>
+    <color name="md_theme_light_tertiaryContainer">#FFDCBE</color>
+    <color name="md_theme_light_onTertiaryContainer">#2C1600</color>
+
+    <color name="md_theme_light_error">#BA1A1A</color>
+    <color name="md_theme_light_onError">#FFFFFF</color>
+    <color name="md_theme_light_errorContainer">#FFDAD6</color>
+    <color name="md_theme_light_onErrorContainer">#410002</color>
+
+    <color name="md_theme_light_background">#F8FAF8</color>
+    <color name="md_theme_light_onBackground">#191C1B</color>
+    <color name="md_theme_light_surface">#FFFFFF</color>
+    <color name="md_theme_light_onSurface">#191C1B</color>
+    <color name="md_theme_light_surfaceVariant">#DBE5DF</color>
+    <color name="md_theme_light_onSurfaceVariant">#3F4944</color>
+    <color name="md_theme_light_outline">#707974</color>
+    <color name="md_theme_light_outlineVariant">#BFC9C3</color>
+
+    <!-- Semantic App Colors (Light Mode) -->
+    <color name="primary">#006D44</color>
+    <color name="primary_dark">#005232</color>
+    <color name="accent">#006590</color>
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
-    <color name="gray_light">#F8F9FA</color>
-    <color name="gray_text">#6C757D</color>
-    <color name="status_pending">#FFC107</color>
-    <color name="status_active">#198754</color>
-    <color name="status_cancelled">#DC3545</color>
-    <color name="status_approved">#0D6EFD</color>
+    <color name="gray_light">#F8FAF8</color>
+    <color name="gray_text">#5A625D</color>
+
+    <!-- Adaptive Semantic Colors (Light) -->
+    <color name="app_background">#F8FAF8</color>
+    <color name="card_background">#FFFFFF</color>
+    <color name="card_border">#E2E8E4</color>
+    <color name="card_background_elevated">#F1F5F2</color>
+    <color name="text_primary">#191C1B</color>
+    <color name="text_secondary">#5A625D</color>
+    <color name="text_hint">#8A938D</color>
+    <color name="input_background">#F1F5F2</color>
+    <color name="divider_color">#E5EAE6</color>
+
+    <!-- Status Colors (Light Mode) -->
+    <color name="status_pending">#D97706</color>
+    <color name="status_pending_bg">#FEF3C7</color>
+    <color name="status_pending_text">#92400E</color>
+
+    <color name="status_active">#006D44</color>
+    <color name="status_approved">#0284C7</color>
+    <color name="status_approved_bg">#E0F2FE</color>
+    <color name="status_approved_text">#0369A1</color>
+
+    <color name="status_completed">#059669</color>
+    <color name="status_completed_bg">#D1FAE5</color>
+    <color name="status_completed_text">#065F46</color>
+
+    <color name="status_cancelled">#DC2626</color>
+    <color name="status_cancelled_bg">#FEE2E2</color>
+    <color name="status_cancelled_text">#991B1B</color>
+
+    <!-- Solar Theme Extras -->
+    <color name="solar_gold">#F59E0B</color>
+    <color name="solar_gold_container">#FEF3C7</color>
+    <color name="battery_green">#10B981</color>
+    <color name="battery_green_container">#D1FAE5</color>
+    <color name="qr_background">#FFFFFF</color>
 </resources>

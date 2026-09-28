@@ -9,6 +9,8 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import com.google.android.material.card.MaterialCardView
 import com.smartsolar.microgrid.R
 import com.smartsolar.microgrid.api.ApiClient
 import com.smartsolar.microgrid.data.SessionManager
@@ -140,10 +142,11 @@ class BackofficeMainActivity : AppCompatActivity() {
 
         tvPendingProsumersCount.text = pendingCount.toString()
 
+        val textSecondaryColor = ContextCompat.getColor(this, R.color.text_secondary)
         if (pendingCount == 0) {
             val emptyTv = TextView(this).apply {
                 text = "No pending prosumer registrations."
-                setTextColor(Color.GRAY)
+                setTextColor(textSecondaryColor)
                 setPadding(10, 10, 10, 10)
             }
             llPendingProsumersList.addView(emptyTv)
@@ -152,50 +155,64 @@ class BackofficeMainActivity : AppCompatActivity() {
         if (deactivatedCount == 0) {
             val emptyTv = TextView(this).apply {
                 text = "No deactivated accounts."
-                setTextColor(Color.GRAY)
+                setTextColor(textSecondaryColor)
                 setPadding(10, 10, 10, 10)
             }
             llDeactivatedProsumersList.addView(emptyTv)
         }
     }
 
-    // Add a single prosumer card item to the specified container layout
+    // Add a single prosumer card item
     private fun addProsumerItem(
         container: LinearLayout, nic: String, name: String,
         status: String, phone: String, isActivate: Boolean
     ) {
-        val item = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(14, 14, 14, 14)
-            setBackgroundResource(R.drawable.card_bg)
+        val textPrimaryColor = ContextCompat.getColor(this, R.color.text_primary)
+        val textSecondaryColor = ContextCompat.getColor(this, R.color.text_secondary)
+
+        val card = MaterialCardView(this).apply {
+            radius = 14f * resources.displayMetrics.density
+            strokeWidth = (1f * resources.displayMetrics.density).toInt()
+            strokeColor = ContextCompat.getColor(this@BackofficeMainActivity, R.color.card_border)
+            setCardBackgroundColor(ContextCompat.getColor(this@BackofficeMainActivity, R.color.card_background))
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { setMargins(0, 0, 0, 10) }
+            ).apply { setMargins(0, 0, 0, (10 * resources.displayMetrics.density).toInt()) }
+        }
+
+        val item = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val p = (14 * resources.displayMetrics.density).toInt()
+            setPadding(p, p, p, p)
         }
 
         val tvTitle = TextView(this).apply {
             text = "$name ($nic)"
             textSize = 14f
-            setTextColor(Color.BLACK)
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(textPrimaryColor)
         }
         item.addView(tvTitle)
 
         val tvSub = TextView(this).apply {
             text = "Status: $status | Phone: $phone"
             textSize = 12f
-            setTextColor(Color.DKGRAY)
+            setTextColor(textSecondaryColor)
+            val m = (4 * resources.displayMetrics.density).toInt()
+            setPadding(0, m, 0, m)
         }
         item.addView(tvSub)
 
         val btnAction = Button(this).apply {
             text = if (isActivate) "✅ Approve & Activate" else "🔄 Reactivate Account"
-            setBackgroundColor(if (isActivate) Color.parseColor("#198754") else Color.parseColor("#0d6efd"))
+            setBackgroundColor(if (isActivate) ContextCompat.getColor(this@BackofficeMainActivity, R.color.primary) else ContextCompat.getColor(this@BackofficeMainActivity, R.color.accent))
             setTextColor(Color.WHITE)
             textSize = 12f
             layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 110
-            ).apply { setMargins(0, 8, 0, 0) }
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                (46 * resources.displayMetrics.density).toInt()
+            ).apply { setMargins(0, (6 * resources.displayMetrics.density).toInt(), 0, 0) }
         }
 
         btnAction.setOnClickListener {
@@ -204,7 +221,6 @@ class BackofficeMainActivity : AppCompatActivity() {
                 .setTitle("$actionName Prosumer")
                 .setMessage("Are you sure you want to ${actionName.lowercase()} prosumer $nic?")
                 .setPositiveButton("Confirm") { _, _ ->
-                    // PUT prosumer/{nic}/activate handles both activate and reactivate
                     ApiClient.request("prosumer/$nic/activate", "PUT", null, session.getToken(), object : ApiClient.ApiCallback {
                         override fun onSuccess(response: String) {
                             Toast.makeText(
@@ -225,13 +241,17 @@ class BackofficeMainActivity : AppCompatActivity() {
         }
 
         item.addView(btnAction)
-        container.addView(item)
+        card.addView(item)
+        container.addView(card)
     }
 
-    // Render microgrid nodes list and count active nodes
+    // Render microgrid nodes list
     private fun renderNodes(nodes: JSONArray) {
         llNodesList.removeAllViews()
         var activeCount = 0
+
+        val textPrimaryColor = ContextCompat.getColor(this, R.color.text_primary)
+        val textSecondaryColor = ContextCompat.getColor(this, R.color.text_secondary)
 
         for (i in 0 until nodes.length()) {
             try {
@@ -239,20 +259,28 @@ class BackofficeMainActivity : AppCompatActivity() {
                 val isActive = node.optBoolean("isActive", true)
                 if (isActive) activeCount++
 
-                val item = LinearLayout(this).apply {
-                    orientation = LinearLayout.VERTICAL
-                    setPadding(14, 14, 14, 14)
-                    setBackgroundResource(R.drawable.card_bg)
+                val card = MaterialCardView(this).apply {
+                    radius = 14f * resources.displayMetrics.density
+                    strokeWidth = (1f * resources.displayMetrics.density).toInt()
+                    strokeColor = ContextCompat.getColor(this@BackofficeMainActivity, R.color.card_border)
+                    setCardBackgroundColor(ContextCompat.getColor(this@BackofficeMainActivity, R.color.card_background))
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
-                    ).apply { setMargins(0, 0, 0, 10) }
+                    ).apply { setMargins(0, 0, 0, (10 * resources.displayMetrics.density).toInt()) }
+                }
+
+                val item = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    val p = (14 * resources.displayMetrics.density).toInt()
+                    setPadding(p, p, p, p)
                 }
 
                 val tvNodeName = TextView(this).apply {
                     text = "${node.optString("nodeName")} (${if (isActive) "ACTIVE" else "INACTIVE"})"
                     textSize = 14f
-                    setTextColor(if (isActive) Color.parseColor("#198754") else Color.RED)
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(if (isActive) ContextCompat.getColor(this@BackofficeMainActivity, R.color.primary) else ContextCompat.getColor(this@BackofficeMainActivity, R.color.status_cancelled))
                 }
                 item.addView(tvNodeName)
 
@@ -263,11 +291,13 @@ class BackofficeMainActivity : AppCompatActivity() {
                             " | Available: ${node.optInt("availableBatterySlots", 0)}" +
                             "\nSchedule: ${node.optString("schedule", "06:00-18:00")}"
                     textSize = 12f
-                    setTextColor(Color.DKGRAY)
+                    setTextColor(textSecondaryColor)
+                    setLineSpacing(3f, 1f)
                 }
                 item.addView(tvNodeInfo)
 
-                llNodesList.addView(item)
+                card.addView(item)
+                llNodesList.addView(card)
             } catch (_: Exception) { }
         }
 

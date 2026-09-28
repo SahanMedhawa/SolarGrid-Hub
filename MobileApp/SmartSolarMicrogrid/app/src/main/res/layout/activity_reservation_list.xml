@@ -1,38 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/gray_light">
+    android:background="@color/app_background"
+    android:padding="16dp">
 
-    <!-- Search / Filter Bar -->
+    <!-- Screen Title Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="12dp"
-        android:background="@color/white">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
 
-        <EditText
-            android:id="@+id/etSearchQuery"
+        <TextView
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Search status, ID..."
-            android:background="@android:drawable/editbox_background"
-            android:padding="8dp" />
+            android:text="My Bookings &amp; Passes"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNewBooking"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="+ Book Slot"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:cornerRadius="20dp"
+            android:textColor="@color/primary" />
+    </LinearLayout>
+
+    <!-- Search Input -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Search bookings by ID, slot, or status..."
+        app:startIconDrawable="@android:drawable/ic_menu_search"
+        app:startIconTint="@color/text_secondary"
+        app:boxCornerRadiusTopStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusBottomEnd="12dp"
+        android:layout_marginBottom="12dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etSearchQuery"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary"
+            android:singleLine="true"
+            android:textSize="14sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Filter Status Spinner / Bar -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="12dp"
+        app:cardBackgroundColor="@color/card_background"
+        app:strokeColor="@color/card_border"
+        app:strokeWidth="1dp"
+        app:cardElevation="0dp"
+        android:layout_marginBottom="14dp">
 
         <Spinner
             android:id="@+id/spinnerFilterStatus"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="44dp"
-            android:layout_marginStart="8dp" />
-    </LinearLayout>
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp" />
+    </com.google.android.material.card.MaterialCardView>
 
+    <!-- Empty State View -->
+    <TextView
+        android:id="@+id/tvEmptyState"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="No reservations match the filter criteria."
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone" />
+
+    <!-- Reservations Recycler View -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvReservations"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="6dp" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="16dp" />
 
 </LinearLayout>
