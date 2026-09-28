@@ -4,13 +4,28 @@ import android.content.Context
 import com.smartsolar.microgrid.utils.Constants
 
 /**
- * Manages user authentication session and SharedPreferences.
+ * Manages user authentication session using SharedPreferences backed by pure native SQLite persistence.
  */
 class SessionManager(context: Context) {
 
     private val pref = context.getSharedPreferences(Constants.PREF_NAME, Context.MODE_PRIVATE)
     private val editor = pref.edit()
-    private val dbHelper = DatabaseHelper(context)
+    val dbHelper = DatabaseHelper(context)
+
+    init {
+        // If SharedPreferences is empty but SQLite has local user, restore session
+        if (!isLoggedIn()) {
+            val localUser = dbHelper.getLocalUser()
+            if (localUser != null && !localUser["token"].isNullOrEmpty()) {
+                editor.putString(Constants.KEY_TOKEN, localUser["token"])
+                editor.putString(Constants.KEY_USER_ID, localUser["id"])
+                editor.putString(Constants.KEY_USER_NIC, localUser["nic"])
+                editor.putString(Constants.KEY_USER_ROLE, localUser["role"])
+                editor.putString(Constants.KEY_DISPLAY_NAME, localUser["name"])
+                editor.apply()
+            }
+        }
+    }
 
     // Create a new login session by storing credentials in SharedPreferences and SQLite
     fun createLoginSession(token: String, userId: String, nic: String, role: String, displayName: String) {
@@ -21,7 +36,7 @@ class SessionManager(context: Context) {
         editor.putString(Constants.KEY_DISPLAY_NAME, displayName)
         editor.commit()
 
-        // Also persist in local SQLite
+        // Persist in local SQLite
         dbHelper.saveUser(userId, nic, displayName, role, token)
     }
 
@@ -55,5 +70,6 @@ class SessionManager(context: Context) {
         editor.clear()
         editor.commit()
         dbHelper.clearUser()
+        dbHelper.clearCachedReservations()
     }
 }

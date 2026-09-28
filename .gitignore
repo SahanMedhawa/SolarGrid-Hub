@@ -12,7 +12,6 @@
 **/.idea/
 **/build/
 **/local.properties
-**/gradle/wrapper/gradle-wrapper.properties
 
 # Configuration / secrets
 **/appsettings.json

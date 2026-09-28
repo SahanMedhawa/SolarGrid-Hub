@@ -1,6 +1,7 @@
 package com.smartsolar.microgrid.ui.prosumer
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -9,10 +10,12 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.Button
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.smartsolar.microgrid.R
@@ -23,13 +26,14 @@ import org.json.JSONArray
 
 /**
  * Reservation List Activity - displays the prosumer's booking history
- * with search and status filter functionality using RecyclerView.
+ * with real-time search, status filtering, and offline SQLite cache support.
  */
 class ReservationListActivity : AppCompatActivity() {
 
     private lateinit var rvReservations: RecyclerView
     private lateinit var etSearchQuery: EditText
     private lateinit var spinnerFilterStatus: Spinner
+    private lateinit var tvEmptyState: TextView
     private lateinit var session: SessionManager
     private val allList = ArrayList<Reservation>()
     private val filteredList = ArrayList<Reservation>()
@@ -43,12 +47,18 @@ class ReservationListActivity : AppCompatActivity() {
         rvReservations = findViewById(R.id.rvReservations)
         etSearchQuery = findViewById(R.id.etSearchQuery)
         spinnerFilterStatus = findViewById(R.id.spinnerFilterStatus)
+        tvEmptyState = findViewById(R.id.tvEmptyState)
+        val btnNewBooking = findViewById<Button>(R.id.btnNewBooking)
+
+        btnNewBooking.setOnClickListener {
+            startActivity(Intent(this, CreateReservationActivity::class.java))
+        }
 
         rvReservations.layoutManager = LinearLayoutManager(this)
         adapter = ReservationAdapter()
         rvReservations.adapter = adapter
 
-        val statuses = arrayOf("All", "Pending", "Approved", "Completed", "Cancelled")
+        val statuses = arrayOf("All Statuses", "Pending", "Approved", "Completed", "Cancelled")
         val statusAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, statuses)
         spinnerFilterStatus.adapter = statusAdapter
 
@@ -56,7 +66,6 @@ class ReservationListActivity : AppCompatActivity() {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 applyFilter()
             }
-
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
@@ -72,9 +81,10 @@ class ReservationListActivity : AppCompatActivity() {
         loadReservations()
     }
 
-    // Load the prosumer's reservations from the central API
+    // Load reservations from API, falling back to local SQLite cache if offline
     private fun loadReservations() {
-        ApiClient.request("reservation/prosumer/${session.getUserNic()}", "GET", null, session.getToken(), object : ApiClient.ApiCallback {
+        val nic = session.getUserNic()
+        ApiClient.request("reservation/prosumer/$nic", "GET", null, session.getToken(), object : ApiClient.ApiCallback {
             override fun onSuccess(response: String) {
                 try {
                     val arr = JSONArray(response)
@@ -83,44 +93,68 @@ class ReservationListActivity : AppCompatActivity() {
                         val obj = arr.getJSONObject(i)
                         val r = Reservation(
                             id = obj.getString("id"),
-                            prosumerNic = obj.getString("prosumerNic"),
-                            nodeId = obj.getString("nodeId"),
-                            reservationDate = obj.getString("reservationDate"),
-                            energyKWh = obj.getDouble("energyKWh"),
-                            status = obj.getString("status"),
+                            prosumerNic = obj.optString("prosumerNic", nic),
+                            slotId = obj.optString("slotId", "SLOT-01"),
+                            nodeId = obj.optString("nodeId", ""),
+                            reservationDate = obj.optString("reservationDate", ""),
+                            energyKWh = obj.optDouble("energyKWh", 0.0),
+                            status = obj.optString("status", "Pending"),
                             qrCodeData = obj.optString("qrCodeData", "")
                         )
                         allList.add(r)
                     }
+
+                    // Cache in local SQLite
+                    session.dbHelper.cacheReservations(allList)
                     applyFilter()
-                } catch (_: Exception) { }
+                } catch (_: Exception) {
+                    loadFromLocalDatabase()
+                }
             }
 
-            override fun onError(error: String) { }
+            override fun onError(error: String) {
+                loadFromLocalDatabase()
+            }
         })
     }
 
-    // Apply search query and status filter to the reservation list
+    // Load cached reservations from local SQLite
+    private fun loadFromLocalDatabase() {
+        allList.clear()
+        allList.addAll(session.dbHelper.getCachedReservations(session.getUserNic()))
+        applyFilter()
+    }
+
+    // Apply search query and status filter
     private fun applyFilter() {
         val query = etSearchQuery.text.toString().lowercase().trim()
-        val selectedStatus = spinnerFilterStatus.selectedItem?.toString() ?: "All"
+        val selectedStatus = spinnerFilterStatus.selectedItem?.toString() ?: "All Statuses"
 
         filteredList.clear()
         for (r in allList) {
-            val matchesStatus = "All".equals(selectedStatus, ignoreCase = true) ||
+            val matchesStatus = selectedStatus == "All Statuses" ||
                     r.status.equals(selectedStatus, ignoreCase = true)
             val matchesQuery = query.isEmpty() ||
                     r.id.lowercase().contains(query) ||
+                    r.slotId.lowercase().contains(query) ||
                     r.status.lowercase().contains(query)
 
             if (matchesStatus && matchesQuery) {
                 filteredList.add(r)
             }
         }
+
+        if (filteredList.isEmpty()) {
+            tvEmptyState.visibility = View.VISIBLE
+            rvReservations.visibility = View.GONE
+        } else {
+            tvEmptyState.visibility = View.GONE
+            rvReservations.visibility = View.VISIBLE
+        }
         adapter.notifyDataSetChanged()
     }
 
-    // RecyclerView Adapter for displaying reservation items
+    // RecyclerView Adapter for reservations
     inner class ReservationAdapter : RecyclerView.Adapter<ReservationAdapter.ViewHolder>() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -132,8 +166,29 @@ class ReservationListActivity : AppCompatActivity() {
             val r = filteredList[position]
             holder.tvResId.text = "Booking #${if (r.id.length > 8) r.id.substring(0, 8) else r.id}"
             holder.tvResStatus.text = r.status
-            holder.tvResDate.text = "Date: ${if (r.reservationDate.length >= 10) r.reservationDate.substring(0, 10) else r.reservationDate}"
-            holder.tvResKWh.text = "Energy: ${r.energyKWh} kWh"
+            val formattedDate = if (r.reservationDate.length >= 10) r.reservationDate.substring(0, 10) else r.reservationDate
+            holder.tvResDate.text = "📅 $formattedDate"
+            holder.tvResSlot.text = "Slot: ${r.slotId}"
+            holder.tvResKWh.text = "⚡ ${r.energyKWh} kWh"
+
+            // Status color-coding
+            val statusColor = when (r.status.lowercase()) {
+                "approved" -> ContextCompat.getColor(this@ReservationListActivity, R.color.status_approved)
+                "pending" -> ContextCompat.getColor(this@ReservationListActivity, R.color.status_pending)
+                "completed" -> ContextCompat.getColor(this@ReservationListActivity, R.color.status_completed)
+                "cancelled" -> ContextCompat.getColor(this@ReservationListActivity, R.color.status_cancelled)
+                else -> ContextCompat.getColor(this@ReservationListActivity, R.color.text_secondary)
+            }
+            holder.tvResStatus.setTextColor(statusColor)
+
+            // QR badge visibility hint
+            if (r.status.equals("Approved", ignoreCase = true)) {
+                holder.tvQrBadge.visibility = View.VISIBLE
+                holder.tvQrBadge.text = "View QR Pass ›"
+            } else {
+                holder.tvQrBadge.visibility = View.VISIBLE
+                holder.tvQrBadge.text = "View Details ›"
+            }
 
             holder.itemView.setOnClickListener {
                 val intent = Intent(this@ReservationListActivity, ReservationDetailActivity::class.java)
@@ -144,12 +199,13 @@ class ReservationListActivity : AppCompatActivity() {
 
         override fun getItemCount(): Int = filteredList.size
 
-        // ViewHolder class for reservation item views
         inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             val tvResId: TextView = itemView.findViewById(R.id.tvResId)
             val tvResStatus: TextView = itemView.findViewById(R.id.tvResStatus)
             val tvResDate: TextView = itemView.findViewById(R.id.tvResDate)
+            val tvResSlot: TextView = itemView.findViewById(R.id.tvResSlot)
             val tvResKWh: TextView = itemView.findViewById(R.id.tvResKWh)
+            val tvQrBadge: TextView = itemView.findViewById(R.id.tvQrBadge)
         }
     }
 }

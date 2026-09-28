@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Material 3 Dark Theme Palette (Luminous Emerald & Electric Cyan) -->
+    <color name="md_theme_dark_primary">#48DCA2</color>
+    <color name="md_theme_dark_onPrimary">#003821</color>
+    <color name="md_theme_dark_primaryContainer">#005232</color>
+    <color name="md_theme_dark_onPrimaryContainer">#9DF7CD</color>
+
+    <color name="md_theme_dark_secondary">#85CEFF</color>
+    <color name="md_theme_dark_onSecondary">#00344D</color>
+    <color name="md_theme_dark_secondaryContainer">#004C6E</color>
+    <color name="md_theme_dark_onSecondaryContainer">#C7E7FF</color>
+
+    <color name="md_theme_dark_tertiary">#FFB77D</color>
+    <color name="md_theme_dark_onTertiary">#4A2800</color>
+    <color name="md_theme_dark_tertiaryContainer">#6A3C00</color>
+    <color name="md_theme_dark_onTertiaryContainer">#FFDCBE</color>
+
+    <color name="md_theme_dark_error">#FFB4AB</color>
+    <color name="md_theme_dark_onError">#690005</color>
+    <color name="md_theme_dark_errorContainer">#93000A</color>
+    <color name="md_theme_dark_onErrorContainer">#FFDAD6</color>
+
+    <color name="md_theme_dark_background">#111413</color>
+    <color name="md_theme_dark_onBackground">#E1E3DF</color>
+    <color name="md_theme_dark_surface">#191C1B</color>
+    <color name="md_theme_dark_onSurface">#E1E3DF</color>
+    <color name="md_theme_dark_surfaceVariant">#3F4944</color>
+    <color name="md_theme_dark_onSurfaceVariant">#BFC9C3</color>
+    <color name="md_theme_dark_outline">#89938D</color>
+    <color name="md_theme_dark_outlineVariant">#3F4944</color>
+
+    <!-- Semantic App Colors (Dark Mode) -->
+    <color name="primary">#48DCA2</color>
+    <color name="primary_dark">#003821</color>
+    <color name="accent">#85CEFF</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="gray_light">#191C1B</color>
+    <color name="gray_text">#A0A8A2</color>
+
+    <!-- Adaptive Semantic Colors (Dark Mode) -->
+    <color name="app_background">#111413</color>
+    <color name="card_background">#191C1B</color>
+    <color name="card_border">#2A2F2D</color>
+    <color name="card_background_elevated">#232826</color>
+    <color name="text_primary">#E1E3DF</color>
+    <color name="text_secondary">#A0A8A2</color>
+    <color name="text_hint">#6E7671</color>
+    <color name="input_background">#232826</color>
+    <color name="divider_color">#2A2F2D</color>
+
+    <!-- Status Colors (Dark Mode) -->
+    <color name="status_pending">#FBBF24</color>
+    <color name="status_pending_bg">#452800</color>
+    <color name="status_pending_text">#FDE68A</color>
+
+    <color name="status_active">#48DCA2</color>
+    <color name="status_approved">#38BDF8</color>
+    <color name="status_approved_bg">#0C4A6E</color>
+    <color name="status_approved_text">#BAE6FD</color>
+
+    <color name="status_completed">#34D399</color>
+    <color name="status_completed_bg">#064E3B</color>
+    <color name="status_completed_text">#A7F3D0</color>
+
+    <color name="status_cancelled">#F87171</color>
+    <color name="status_cancelled_bg">#4C0519</color>
+    <color name="status_cancelled_text">#FECDD3</color>
+
+    <!-- Solar Theme Extras (Dark Mode) -->
+    <color name="solar_gold">#FBBF24</color>
+    <color name="solar_gold_container">#452800</color>
+    <color name="battery_green">#34D399</color>
+    <color name="battery_green_container">#064E3B</color>
+    <color name="qr_background">#FFFFFF</color> <!-- QR code background must always remain white for optical scanner contrast -->
+</resources>
