@@ -160,7 +160,18 @@
             android:text="@string/register"
             android:textSize="14sp"
             app:cornerRadius="14dp"
-            android:textColor="@color/accent" />
+            android:textColor="@color/accent"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Server IP Quick Config Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnServerConfig"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="🌐 Server: 192.168.244.93:5000"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary" />
 
     </LinearLayout>
 </ScrollView>
