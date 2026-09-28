@@ -1,8 +1,9 @@
 // ============================================================
 // File: RegisterPage.jsx
 // Project: Smart Solar Microgrid Trading System - React Web App
-// Description: Modern, user-friendly prosumer registration page
-//              built with Tailwind CSS and NIC-primary key support.
+// Description: Clean, modern, cognitive-friendly prosumer
+//              registration page. Clean form layout with
+//              NIC primary key and password validation.
 // ============================================================
 
 import React, { useState } from 'react';
@@ -19,8 +20,7 @@ import {
   MapPin,
   Lock,
   ArrowRight,
-  ShieldAlert,
-  CheckCircle2
+  ShieldCheck
 } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -48,7 +48,7 @@ export default function RegisterPage() {
       return;
     }
     if (!form.nic || !form.firstName || !form.lastName || !form.email || !form.phone || !form.address || !form.password) {
-      toast.warning('Please fill in all required fields.');
+      toast.warning('Please fill in all fields.');
       return;
     }
 
@@ -63,7 +63,7 @@ export default function RegisterPage() {
         address: form.address.trim(),
         password: form.password
       });
-      toast.success('Registration submitted! Your account is pending activation by a Backoffice officer.');
+      toast.success('Registration submitted! Awaiting Backoffice approval.');
       navigate('/login');
     } catch (error) {
       toast.error(error.message || 'Registration failed.');
@@ -73,44 +73,40 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
-      {/* Background Decorative Lighting */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-gradient-to-b from-amber-500/10 via-emerald-500/5 to-transparent blur-3xl pointer-events-none" />
-
-      {/* Header / Logo */}
-      <div className="text-center mb-6 relative z-10">
-        <Link to="/" className="inline-flex items-center gap-3 group mb-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-amber-500/25 group-hover:scale-105 transition-transform duration-200">
-            <Sun className="w-6 h-6 text-slate-950 fill-current" />
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 antialiased">
+      {/* Brand Icon & Heading */}
+      <div className="text-center mb-6">
+        <Link to="/" className="inline-flex items-center gap-2 mb-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-slate-950">
+            <Sun className="w-5 h-5 fill-current" />
           </div>
         </Link>
-        <h1 className="text-3xl font-extrabold tracking-tight text-white">Join as Solar Prosumer</h1>
-        <p className="text-slate-400 text-sm mt-1">Register your solar setup to trade excess energy on the microgrid</p>
+        <h1 className="text-2xl font-bold text-white tracking-tight">Prosumer Registration</h1>
+        <p className="text-xs text-slate-400 mt-1">Register to trade surplus solar energy</p>
       </div>
 
-      {/* Main Form Card */}
-      <div className="w-full max-w-xl bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl relative z-10">
-        <div className="flex items-center gap-3 p-3.5 mb-6 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
-          <ShieldAlert className="w-5 h-5 shrink-0 text-amber-400" />
-          <span>
-            <strong>Note:</strong> Prosumer accounts require verification &amp; activation by the Backoffice Admin before energy slot reservations can be booked.
-          </span>
+      {/* Main Card */}
+      <div className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-7 shadow-xl">
+        <div className="flex items-center gap-2.5 p-3 mb-5 rounded-xl bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 text-xs">
+          <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-400" />
+          <span>New accounts are activated by the Backoffice Admin before booking.</span>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          {/* NIC Field */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              National ID Card (NIC) <span className="text-emerald-400">* Primary Key</span>
+            <label className="block text-xs font-medium text-slate-300 mb-1">
+              National ID Card (NIC) <span className="text-emerald-400">*</span>
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                 <CreditCard className="w-4 h-4" />
               </div>
               <input
                 name="nic"
                 type="text"
-                className="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
-                placeholder="e.g. 199012345678 or 901234567V"
+                className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="e.g. 199012345678"
                 value={form.nic}
                 onChange={handleChange}
                 required
@@ -118,40 +114,36 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* First & Last Name */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                First Name *
-              </label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">First Name *</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                   <User className="w-4 h-4" />
                 </div>
                 <input
                   name="firstName"
                   type="text"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
-                  placeholder="John"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                  placeholder="First name"
                   value={form.firstName}
                   onChange={handleChange}
                   required
                 />
               </div>
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Last Name *
-              </label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Last Name *</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                   <User className="w-4 h-4" />
                 </div>
                 <input
                   name="lastName"
                   type="text"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
-                  placeholder="Doe"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                  placeholder="Last name"
                   value={form.lastName}
                   onChange={handleChange}
                   required
@@ -160,39 +152,35 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Email & Phone */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Email Address *
-              </label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Email Address *</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
                   name="email"
                   type="email"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
-                  placeholder="john@example.com"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                  placeholder="email@example.com"
                   value={form.email}
                   onChange={handleChange}
                   required
                 />
               </div>
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Phone Number *
-              </label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Phone Number *</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                   <Phone className="w-4 h-4" />
                 </div>
                 <input
                   name="phone"
                   type="tel"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
                   placeholder="0771234567"
                   value={form.phone}
                   onChange={handleChange}
@@ -202,19 +190,18 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* Address */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              Physical Location / Address *
-            </label>
+            <label className="block text-xs font-medium text-slate-300 mb-1">Physical Address *</label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                 <MapPin className="w-4 h-4" />
               </div>
               <input
                 name="address"
                 type="text"
-                className="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
-                placeholder="e.g. 123 Solar Ave, Colombo 03"
+                className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="123 Solar Way, Colombo"
                 value={form.address}
                 onChange={handleChange}
                 required
@@ -222,19 +209,18 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Password & Confirm */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Password *
-              </label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Password *</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
                   name="password"
                   type="password"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
                   placeholder="••••••••"
                   value={form.password}
                   onChange={handleChange}
@@ -242,19 +228,16 @@ export default function RegisterPage() {
                 />
               </div>
             </div>
-
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                Confirm Password *
-              </label>
+              <label className="block text-xs font-medium text-slate-300 mb-1">Confirm Password *</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                   <Lock className="w-4 h-4" />
                 </div>
                 <input
                   name="confirmPassword"
                   type="password"
-                  className="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                  className="w-full pl-9 pr-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
                   placeholder="••••••••"
                   value={form.confirmPassword}
                   onChange={handleChange}
@@ -264,35 +247,33 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all flex items-center justify-center gap-2 mt-6 cursor-pointer disabled:opacity-50"
+            className="w-full py-2.5 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition-colors flex items-center justify-center gap-2 mt-4 cursor-pointer disabled:opacity-50"
           >
             {loading ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                Registering Account...
-              </span>
+              <span>Registering...</span>
             ) : (
               <>
-                <span>Complete Prosumer Registration</span>
+                <span>Complete Registration</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
+        <div className="mt-4 text-center text-xs text-slate-400">
           Already registered?{' '}
-          <Link to="/login" className="text-emerald-400 hover:text-emerald-300 font-semibold underline underline-offset-2">
-            Sign in to your account
+          <Link to="/login" className="text-emerald-400 hover:underline">
+            Sign in
           </Link>
-        </p>
+        </div>
       </div>
 
-      <div className="mt-6 text-center text-xs text-slate-500">
-        <Link to="/" className="hover:text-slate-400 transition-colors">
+      <div className="mt-4 text-center">
+        <Link to="/" className="text-xs text-slate-500 hover:text-slate-400 transition-colors">
           ← Back to Homepage
         </Link>
       </div>

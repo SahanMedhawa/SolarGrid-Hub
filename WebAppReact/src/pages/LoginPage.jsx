@@ -1,9 +1,9 @@
 // ============================================================
 // File: LoginPage.jsx
 // Project: Smart Solar Microgrid Trading System - React Web App
-// Description: Modern, user-friendly authentication page with
-//              Tailwind CSS, role switcher, 1-click demo logins,
-//              and automatic redirection to role-specific portals.
+// Description: Clean, minimalist, cognitive-friendly login page.
+//              Role-based authentication, 1-click test fill,
+//              and automatic redirection to dedicated portals.
 // ============================================================
 
 import React, { useState } from 'react';
@@ -15,15 +15,13 @@ import { toast } from 'react-toastify';
 import {
   Zap,
   Sun,
-  ShieldCheck,
+  Shield,
   Building2,
   Lock,
   User,
   CreditCard,
   ArrowRight,
-  Sparkles,
-  Info,
-  CheckCircle
+  Sparkles
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -34,14 +32,13 @@ export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  // Quick fill helper for testing / presentation
+  // Quick fill helper for presentation and testing
   const handleQuickFill = (type, u, p) => {
     setLoginType(type);
     setUsername(u);
     setPassword(p);
   };
 
-  // Handles form submission and authenticates credentials via the API.
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username || !password) {
@@ -61,7 +58,7 @@ export default function LoginPage() {
         });
 
         const targetPortal = getRolePortalPath(data.role);
-        toast.success(`Welcome back, ${data.displayName}! (${getRoleDisplayName(data.role)})`);
+        toast.success(`Welcome, ${data.displayName}!`);
         navigate(targetPortal);
       } else {
         toast.error('Invalid credentials.');
@@ -74,31 +71,28 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden">
-      {/* Background Decorative Lighting */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-gradient-to-b from-emerald-500/10 via-teal-500/5 to-transparent blur-3xl pointer-events-none" />
-
-      {/* Header / Logo */}
-      <div className="text-center mb-8 relative z-10">
-        <Link to="/" className="inline-flex items-center gap-3 group mb-4">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/25 group-hover:scale-105 transition-transform duration-200">
-            <Zap className="w-6 h-6 text-slate-950 fill-current" />
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center px-4 py-12 antialiased">
+      {/* Brand Icon & Heading */}
+      <div className="text-center mb-6">
+        <Link to="/" className="inline-flex items-center gap-2 mb-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center text-slate-950">
+            <Zap className="w-5 h-5 fill-current" />
           </div>
         </Link>
-        <h1 className="text-3xl font-extrabold tracking-tight text-white">Welcome Back</h1>
-        <p className="text-slate-400 text-sm mt-1">Sign in to the Smart Solar Microgrid Trading System</p>
+        <h1 className="text-2xl font-bold text-white tracking-tight">Sign In</h1>
+        <p className="text-xs text-slate-400 mt-1">Smart Solar Microgrid Trading Platform</p>
       </div>
 
-      {/* Main Login Card */}
-      <div className="w-full max-w-md bg-slate-900/80 border border-slate-800 rounded-3xl p-6 sm:p-8 backdrop-blur-xl shadow-2xl relative z-10">
-        {/* Role Type Toggle */}
-        <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-800 mb-6">
+      {/* Main Card */}
+      <div className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        {/* Role Type Tabs */}
+        <div className="grid grid-cols-2 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-5">
           <button
             type="button"
-            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+            className={`py-2 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
               loginType === 'User'
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-950'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-slate-800 text-white shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
             onClick={() => {
               setLoginType('User');
@@ -106,15 +100,15 @@ export default function LoginPage() {
               setPassword('');
             }}
           >
-            <Building2 className="w-4 h-4" />
+            <Building2 className="w-3.5 h-3.5" />
             <span>Staff Portal</span>
           </button>
           <button
             type="button"
-            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+            className={`py-2 text-xs font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
               loginType === 'Prosumer'
-                ? 'bg-gradient-to-r from-amber-500 to-emerald-500 text-slate-950 shadow-md shadow-amber-950'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-emerald-500 text-slate-950 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
             }`}
             onClick={() => {
               setLoginType('Prosumer');
@@ -122,25 +116,25 @@ export default function LoginPage() {
               setPassword('');
             }}
           >
-            <Sun className="w-4 h-4 fill-current" />
+            <Sun className="w-3.5 h-3.5" />
             <span>Solar Prosumer</span>
           </button>
         </div>
 
-        {/* Login Form */}
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-              {loginType === 'Prosumer' ? 'National ID Card (NIC)' : 'Staff Username'}
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+              {loginType === 'Prosumer' ? 'National ID Card (NIC)' : 'Username'}
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                 {loginType === 'Prosumer' ? <CreditCard className="w-4 h-4" /> : <User className="w-4 h-4" />}
               </div>
               <input
                 id="loginUsername"
                 type="text"
-                className="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
                 placeholder={loginType === 'Prosumer' ? 'e.g. 199012345678' : 'e.g. admin or operator1'}
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -151,19 +145,17 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                Password
-              </label>
-            </div>
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+              Password
+            </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                 <Lock className="w-4 h-4" />
               </div>
               <input
                 id="loginPassword"
                 type="password"
-                className="w-full pl-10 pr-4 py-3 bg-slate-950/80 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors"
+                className="w-full pl-9 pr-3 py-2.5 bg-slate-950 border border-slate-800 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -177,76 +169,61 @@ export default function LoginPage() {
             id="loginSubmit"
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all flex items-center justify-center gap-2 mt-6 cursor-pointer disabled:opacity-50"
+            className="w-full py-2.5 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition-colors flex items-center justify-center gap-2 mt-4 cursor-pointer disabled:opacity-50"
           >
             {loading ? (
-              <span className="inline-flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
-                Authenticating...
-              </span>
+              <span>Signing in...</span>
             ) : (
               <>
-                <span>Sign In to {loginType === 'Prosumer' ? 'Prosumer Portal' : 'Staff Portal'}</span>
+                <span>Sign In</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
           </button>
         </form>
 
-        {/* Quick Demo Fill Credentials Shortcut */}
-        <div className="mt-6 pt-5 border-t border-slate-800/80">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>1-Click Test Credentials:</span>
+        {/* 1-Click Test Credentials */}
+        <div className="mt-5 pt-4 border-t border-slate-800 text-center">
+          <div className="flex items-center justify-center gap-1 text-[11px] text-slate-400 mb-2 font-medium">
+            <Sparkles className="w-3 h-3 text-amber-400" />
+            <span>Test accounts:</span>
           </div>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5 text-[11px]">
             <button
               type="button"
               onClick={() => handleQuickFill('User', 'admin', 'admin123')}
-              className="px-2 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 text-xs text-center transition-colors"
+              className="px-2 py-1 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 transition-colors"
             >
-              <div className="font-semibold text-blue-400">Backoffice</div>
-              <div className="text-[10px] text-slate-500">admin</div>
+              Admin
             </button>
             <button
               type="button"
               onClick={() => handleQuickFill('User', 'operator1', 'operator123')}
-              className="px-2 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 text-xs text-center transition-colors"
+              className="px-2 py-1 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 transition-colors"
             >
-              <div className="font-semibold text-emerald-400">Operator</div>
-              <div className="text-[10px] text-slate-500">operator1</div>
+              Operator
             </button>
             <button
               type="button"
               onClick={() => handleQuickFill('Prosumer', '199012345678', 'prosumer123')}
-              className="px-2 py-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 text-xs text-center transition-colors"
+              className="px-2 py-1 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 transition-colors"
             >
-              <div className="font-semibold text-amber-400">Prosumer</div>
-              <div className="text-[10px] text-slate-500">NIC Login</div>
+              Prosumer
             </button>
           </div>
         </div>
 
-        {/* Footer Info */}
-        <div className="mt-6 text-center text-xs text-slate-400">
-          {loginType === 'Prosumer' ? (
-            <p>
-              New solar owner?{' '}
-              <Link to="/register" className="text-emerald-400 hover:text-emerald-300 font-semibold underline underline-offset-2">
-                Register as Prosumer
-              </Link>
-            </p>
-          ) : (
-            <p className="flex items-center justify-center gap-1 text-[11px] text-slate-500">
-              <Info className="w-3.5 h-3.5" />
-              Staff accounts are provisioned via the Backoffice Administrator.
-            </p>
-          )}
+        {/* Footer Link */}
+        <div className="mt-4 text-center text-xs text-slate-400">
+          New prosumer?{' '}
+          <Link to="/register" className="text-emerald-400 hover:underline">
+            Register here
+          </Link>
         </div>
       </div>
 
-      <div className="mt-6 text-center text-xs text-slate-500">
-        <Link to="/" className="hover:text-slate-400 transition-colors">
+      <div className="mt-4 text-center">
+        <Link to="/" className="text-xs text-slate-500 hover:text-slate-400 transition-colors">
           ← Back to Homepage
         </Link>
       </div>
