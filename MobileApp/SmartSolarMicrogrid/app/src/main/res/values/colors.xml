@@ -1,5 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <resources>
+
+    <!-- Web-aligned registration palette -->
+    <color name="register_background">#020817</color>
+    <color name="register_surface">#111A2E</color>
+    <color name="register_input">#050B1D</color>
+    <color name="register_border">#263550</color>
+    <color name="register_primary">#00C78B</color>
+    <color name="register_primary_pressed">#00A977</color>
+    <color name="register_text_primary">#F8FAFC</color>
+    <color name="register_text_secondary">#8CA0C3</color>
+    <color name="register_text_hint">#667A9D</color>
+    <color name="register_notice_background">#06251F</color>
+    <color name="register_notice_border">#075B49</color>
+    <color name="register_error">#EF4444</color>
+
+
+
+
+
+
+
     <!-- Material 3 Light Theme Palette (Clean Energy Emerald & Solar Teal) -->
     <color name="md_theme_light_primary">#006D44</color>
     <color name="md_theme_light_onPrimary">#FFFFFF</color>

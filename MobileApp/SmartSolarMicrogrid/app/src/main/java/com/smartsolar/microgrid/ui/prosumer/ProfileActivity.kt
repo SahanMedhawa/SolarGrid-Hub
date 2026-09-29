@@ -16,14 +16,19 @@ import com.smartsolar.microgrid.ui.auth.LoginActivity
 import org.json.JSONObject
 
 /**
- * Profile Activity - allows prosumers to view/edit their profile data
- * and request account deactivation via the central Web API.
+ * Profile Activity
+ *
+ * Displays the currently logged-in prosumer's profile information.
+ * Profile editing is handled separately by EditProfileActivity.
+ * The prosumer can also request account deactivation from this screen.
  */
 class ProfileActivity : AppCompatActivity() {
 
     private lateinit var session: SessionManager
+
     private lateinit var tvProfileNic: TextView
     private lateinit var tvProfileStatus: TextView
+
     private lateinit var etProfFirstName: EditText
     private lateinit var etProfLastName: EditText
     private lateinit var etProfEmail: EditText
@@ -32,118 +37,274 @@ class ProfileActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         session = SessionManager(this)
+
         setContentView(R.layout.activity_profile)
 
+        // Initialize profile views
         tvProfileNic = findViewById(R.id.tvProfileNic)
         tvProfileStatus = findViewById(R.id.tvProfileStatus)
+
         etProfFirstName = findViewById(R.id.etProfFirstName)
         etProfLastName = findViewById(R.id.etProfLastName)
         etProfEmail = findViewById(R.id.etProfEmail)
         etProfPhone = findViewById(R.id.etProfPhone)
         etProfAddress = findViewById(R.id.etProfAddress)
 
-        findViewById<Button>(R.id.btnUpdateProfile).setOnClickListener { updateProfile() }
-        findViewById<Button>(R.id.btnDeactivateAccount).setOnClickListener { confirmDeactivation() }
+        // Make Profile page view-only
+        setProfileFieldsReadOnly()
+
+        // Open Edit Profile screen
+        findViewById<Button>(R.id.btnUpdateProfile).setOnClickListener {
+
+            val intent = Intent(
+                this@ProfileActivity,
+                EditProfileActivity::class.java
+            )
+
+            startActivity(intent)
+        }
+
+        // Account deactivation
+        findViewById<Button>(R.id.btnDeactivateAccount)
+            .setOnClickListener {
+                confirmDeactivation()
+            }
 
         loadProfile()
     }
 
-    // Load prosumer profile data from central API
-    private fun loadProfile() {
-        val nic = session.getUserNic()
-        tvProfileNic.text = "NIC: $nic"
+    /**
+     * Reload profile whenever the user returns from EditProfileActivity.
+     *
+     * This ensures that newly updated information is displayed.
+     */
+    override fun onResume() {
+        super.onResume()
 
-        ApiClient.request("prosumer/$nic", "GET", null, session.getToken(), object : ApiClient.ApiCallback {
-            override fun onSuccess(response: String) {
-                try {
-                    val obj = JSONObject(response)
-                    etProfFirstName.setText(obj.optString("firstName", ""))
-                    etProfLastName.setText(obj.optString("lastName", ""))
-                    etProfEmail.setText(obj.optString("email", ""))
-                    etProfPhone.setText(obj.optString("phone", ""))
-                    etProfAddress.setText(obj.optString("address", ""))
-
-                    val status = obj.optString("status", "Active")
-                    tvProfileStatus.text = "Status: $status"
-                    if (status.equals("Active", ignoreCase = true)) {
-                        tvProfileStatus.setTextColor(ContextCompat.getColor(this@ProfileActivity, R.color.status_active))
-                    } else {
-                        tvProfileStatus.setTextColor(ContextCompat.getColor(this@ProfileActivity, R.color.status_cancelled))
-                    }
-                } catch (_: Exception) { }
-            }
-
-            override fun onError(error: String) {
-                Toast.makeText(this@ProfileActivity, error, Toast.LENGTH_SHORT).show()
-            }
-        })
+        if (::session.isInitialized &&
+            ::tvProfileNic.isInitialized
+        ) {
+            loadProfile()
+        }
     }
 
-    // Update prosumer's profile data via API
-    private fun updateProfile() {
-        val firstName = etProfFirstName.text.toString().trim()
-        val lastName = etProfLastName.text.toString().trim()
-        val email = etProfEmail.text.toString().trim()
-        val phone = etProfPhone.text.toString().trim()
-        val address = etProfAddress.text.toString().trim()
+    /**
+     * Prevent profile fields from being edited directly on the
+     * Profile screen.
+     */
+    private fun setProfileFieldsReadOnly() {
 
-        if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || phone.isEmpty() || address.isEmpty()) {
-            Toast.makeText(this, "Please fill in all profile fields", Toast.LENGTH_SHORT).show()
+        val fields = listOf(
+            etProfFirstName,
+            etProfLastName,
+            etProfEmail,
+            etProfPhone,
+            etProfAddress
+        )
+
+        fields.forEach { field ->
+            field.isFocusable = false
+            field.isFocusableInTouchMode = false
+            field.isClickable = false
+            field.isLongClickable = false
+            field.isCursorVisible = false
+        }
+    }
+
+    /**
+     * Loads the current prosumer information from the central API.
+     */
+    private fun loadProfile() {
+
+        val nic = session.getUserNic()
+
+        if (nic.isBlank()) {
+
+            Toast.makeText(
+                this,
+                "Unable to identify the logged-in prosumer.",
+                Toast.LENGTH_LONG
+            ).show()
+
             return
         }
 
-        try {
-            val body = JSONObject().apply {
-                put("firstName", firstName)
-                put("lastName", lastName)
-                put("email", email)
-                put("phone", phone)
-                put("address", address)
-            }
+        tvProfileNic.text = "NIC: $nic"
 
-            ApiClient.request("prosumer/${session.getUserNic()}", "PUT", body, session.getToken(), object : ApiClient.ApiCallback {
+        ApiClient.request(
+            "prosumer/$nic",
+            "GET",
+            null,
+            session.getToken(),
+            object : ApiClient.ApiCallback {
+
                 override fun onSuccess(response: String) {
-                    Toast.makeText(this@ProfileActivity, "Profile updated successfully! ✅", Toast.LENGTH_SHORT).show()
+
+                    try {
+
+                        val obj = JSONObject(response)
+
+                        etProfFirstName.setText(
+                            obj.optString("firstName", "")
+                        )
+
+                        etProfLastName.setText(
+                            obj.optString("lastName", "")
+                        )
+
+                        etProfEmail.setText(
+                            obj.optString("email", "")
+                        )
+
+                        etProfPhone.setText(
+                            obj.optString("phone", "")
+                        )
+
+                        etProfAddress.setText(
+                            obj.optString("address", "")
+                        )
+
+                        val status =
+                            obj.optString("status", "Active")
+
+                        tvProfileStatus.text =
+                            "Status: $status"
+
+                        when {
+
+                            status.equals(
+                                "Active",
+                                ignoreCase = true
+                            ) -> {
+
+                                tvProfileStatus.setTextColor(
+                                    ContextCompat.getColor(
+                                        this@ProfileActivity,
+                                        R.color.status_active
+                                    )
+                                )
+                            }
+
+                            status.equals(
+                                "Pending",
+                                ignoreCase = true
+                            ) -> {
+
+                                tvProfileStatus.setTextColor(
+                                    ContextCompat.getColor(
+                                        this@ProfileActivity,
+                                        R.color.status_pending
+                                    )
+                                )
+                            }
+
+                            else -> {
+
+                                tvProfileStatus.setTextColor(
+                                    ContextCompat.getColor(
+                                        this@ProfileActivity,
+                                        R.color.status_cancelled
+                                    )
+                                )
+                            }
+                        }
+
+                    } catch (e: Exception) {
+
+                        Toast.makeText(
+                            this@ProfileActivity,
+                            "Unable to read profile information.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
 
                 override fun onError(error: String) {
-                    Toast.makeText(this@ProfileActivity, "Update failed: $error", Toast.LENGTH_LONG).show()
+
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Unable to load profile: $error",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
-            })
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error building request: ${e.message}", Toast.LENGTH_SHORT).show()
-        }
+            }
+        )
     }
 
-    // Confirm and request account deactivation via API
+    /**
+     * Shows confirmation before deactivating the prosumer account.
+     */
     private fun confirmDeactivation() {
+
         AlertDialog.Builder(this)
             .setTitle("Deactivate Account")
-            .setMessage("Are you sure you want to deactivate your prosumer account?\n\nOnce deactivated, your active reservations will be frozen and reactivation requires a Backoffice officer.")
-            .setPositiveButton("Yes, Deactivate") { _, _ ->
-                ApiClient.request(
-                    "prosumer/${session.getUserNic()}/deactivate", "PUT", null,
-                    session.getToken(), object : ApiClient.ApiCallback {
-                        override fun onSuccess(response: String) {
-                            Toast.makeText(
-                                this@ProfileActivity,
-                                "Account deactivated. Logging out...",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            session.logout()
-                            val intent = Intent(this@ProfileActivity, LoginActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            startActivity(intent)
-                            finish()
-                        }
+            .setMessage(
+                "Are you sure you want to deactivate your prosumer account?\n\n" +
+                        "Once deactivated, your active reservations will be frozen " +
+                        "and reactivation requires a Backoffice Administrator."
+            )
+            .setPositiveButton(
+                "Yes, Deactivate"
+            ) { _, _ ->
 
-                        override fun onError(error: String) {
-                            Toast.makeText(this@ProfileActivity, error, Toast.LENGTH_LONG).show()
-                        }
-                    })
+                deactivateAccount()
             }
-            .setNegativeButton("Cancel", null)
+            .setNegativeButton(
+                "Cancel",
+                null
+            )
             .show()
+    }
+
+    /**
+     * Sends the account deactivation request to the central API.
+     */
+    private fun deactivateAccount() {
+
+        val nic = session.getUserNic()
+
+        ApiClient.request(
+            "prosumer/$nic/deactivate",
+            "PUT",
+            null,
+            session.getToken(),
+            object : ApiClient.ApiCallback {
+
+                override fun onSuccess(response: String) {
+
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Account deactivated. Logging out...",
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                    session.logout()
+
+                    val intent = Intent(
+                        this@ProfileActivity,
+                        LoginActivity::class.java
+                    )
+
+                    intent.flags =
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+                    startActivity(intent)
+
+                    finish()
+                }
+
+                override fun onError(error: String) {
+
+                    Toast.makeText(
+                        this@ProfileActivity,
+                        "Deactivation failed: $error",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        )
     }
 }
