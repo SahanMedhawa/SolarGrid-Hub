@@ -12,6 +12,7 @@ import {
   getNodes,
   createNode,
   deactivateNode,
+  reactivateNode,
   getProsumers,
   activateProsumer,
   reactivateProsumer,
@@ -154,6 +155,19 @@ export default function BackofficePortal() {
     } catch (err) {
       // Backend enforces active reservation check
       toast.error(err.message || 'Cannot deactivate node.');
+    }
+  }
+
+  async function handleReactivateNode(id, name) {
+    if (!window.confirm(`Reactivate node "${name}"? It will become available for new reservations.`)) {
+      return;
+    }
+    try {
+      await reactivateNode(id);
+      toast.success(`Node "${name}" reactivated successfully.`);
+      loadAllData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to reactivate node.');
     }
   }
 
@@ -527,7 +541,12 @@ export default function BackofficePortal() {
                             Deactivate
                           </button>
                         ) : (
-                          <span className="text-muted" style={{ fontSize: '0.8rem' }}>Inactive</span>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleReactivateNode(n.id, n.nodeName)}
+                          >
+                            Reactivate
+                          </button>
                         )}
                       </td>
                     </tr>

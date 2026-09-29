@@ -147,6 +147,11 @@ export async function deactivateNode(id) {
   return apiRequest(`microgridnode/${id}`, 'DELETE');
 }
 
+// Reactivates a deactivated microgrid node (Backoffice only).
+export async function reactivateNode(id) {
+  return apiRequest(`microgridnode/${id}/activate`, 'PUT');
+}
+
 // ── Energy Slot endpoints ──
 
 // Retrieves all slots for a node.

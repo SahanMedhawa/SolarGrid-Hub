@@ -98,8 +98,11 @@ export default function ProsumerPortal() {
       setNodes(nodesData || []);
       setProsumerProfile(profileData);
 
-      if (nodesData && nodesData.length > 0 && !bookingForm.nodeId) {
-        setBookingForm(prev => ({ ...prev, nodeId: nodesData[0].id }));
+      const firstActiveNode = (nodesData || []).find(node => node.isActive);
+      if (firstActiveNode && (!bookingForm.nodeId || !nodesData.some(node => node.id === bookingForm.nodeId && node.isActive))) {
+        setBookingForm(prev => ({ ...prev, nodeId: firstActiveNode.id }));
+      } else if (!firstActiveNode) {
+        setBookingForm(prev => ({ ...prev, nodeId: '' }));
       }
     } catch (err) {
       toast.error('Failed to load prosumer details: ' + err.message);
@@ -272,7 +275,8 @@ export default function ProsumerPortal() {
     return r.status === statusFilter;
   });
 
-  const mappedNodes = nodes.filter(n => Number.isFinite(Number(n.latitude)) && Number.isFinite(Number(n.longitude)));
+  const activeNodes = nodes.filter(n => n.isActive);
+  const mappedNodes = activeNodes.filter(n => Number.isFinite(Number(n.latitude)) && Number.isFinite(Number(n.longitude)));
   const mapCenter = selectedMapNode
     ? { lat: Number(selectedMapNode.latitude), lng: Number(selectedMapNode.longitude) }
     : mappedNodes.length > 0
@@ -342,7 +346,7 @@ export default function ProsumerPortal() {
         <div className="stat-card" onClick={() => setActiveTab('stations')} style={{ cursor: 'pointer' }}>
           <div className="stat-icon green">🔋</div>
           <div className="stat-info">
-            <div className="stat-value">{nodes.filter(n => n.isActive).length}</div>
+            <div className="stat-value">{activeNodes.length}</div>
             <div className="stat-label">Nearby Grid Hubs</div>
           </div>
         </div>
@@ -366,7 +370,7 @@ export default function ProsumerPortal() {
           className={`role-tab ${activeTab === 'stations' ? 'active' : ''}`}
           onClick={() => setActiveTab('stations')}
         >
-          📍 Find Grid Stations ({nodes.length})
+          📍 Find Grid Stations ({activeNodes.length})
         </button>
         <button
           className={`role-tab ${activeTab === 'profile' ? 'active' : ''}`}
@@ -551,7 +555,7 @@ export default function ProsumerPortal() {
                   required
                 >
                   <option value="">-- Choose a Station --</option>
-                  {nodes.map(n => (
+                  {activeNodes.map(n => (
                     <option key={n.id} value={n.id}>
                       {n.nodeName} ({n.location}) — {n.availableBatterySlots} slots avail
                     </option>
@@ -633,7 +637,7 @@ export default function ProsumerPortal() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-            {nodes.map(n => (
+            {activeNodes.map(n => (
               <div key={n.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <h3 style={{ margin: 0, fontSize: '1.15rem' }}>{n.nodeName}</h3>

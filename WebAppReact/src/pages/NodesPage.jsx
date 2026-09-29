@@ -123,6 +123,10 @@ export default function NodesPage() {
   // Creates a new energy slot for the selected node.
   async function handleCreateSlot(e) {
     e.preventDefault();
+    if (!selectedNode?.isActive) {
+      toast.error('Cannot add slots to an inactive node. Reactivate the node first.');
+      return;
+    }
     try {
       await createSlot({
         nodeId: selectedNode.id,
@@ -166,9 +170,11 @@ export default function NodesPage() {
           <div className="card">
             <div className="card-header">
               <h3 className="card-title">🔌 Slots — {selectedNode.nodeName}</h3>
-              <button className="btn btn-primary btn-sm" onClick={() => { setSlotForm({ slotDate: '', startTime: '', endTime: '', availableKWh: '', status: 'Available' }); setShowSlotModal(true); }}>
-                + Add Slot
-              </button>
+              {selectedNode.isActive && (
+                <button className="btn btn-primary btn-sm" onClick={() => { setSlotForm({ slotDate: '', startTime: '', endTime: '', availableKWh: '', status: 'Available' }); setShowSlotModal(true); }}>
+                  + Add Slot
+                </button>
+              )}
             </div>
             <div className="table-container">
               <table>

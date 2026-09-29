@@ -96,5 +96,17 @@ namespace SmartSolarMicrogridAPI.Services
                 ? (true, "Node deactivated successfully.")
                 : (false, "Node not found.");
         }
+
+        // Reactivates a deactivated node.
+        public async Task<bool> ActivateAsync(string id)
+        {
+            var update = Builders<MicrogridNode>.Update
+                .Set(n => n.IsActive, true)
+                .Set(n => n.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.MicrogridNodes.UpdateOneAsync(
+                n => n.Id == id, update);
+            return result.ModifiedCount > 0;
+        }
     }
 }

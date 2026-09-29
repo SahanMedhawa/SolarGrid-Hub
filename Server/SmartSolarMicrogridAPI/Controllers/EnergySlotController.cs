@@ -66,6 +66,16 @@ namespace SmartSolarMicrogridAPI.Controllers
         [Authorize(Roles = "Backoffice,GridOperator")]
         public async Task<IActionResult> Create([FromBody] EnergySlot slot)
         {
+            var node = await _context.MicrogridNodes
+                .Find(n => n.Id == slot.NodeId)
+                .FirstOrDefaultAsync();
+
+            if (node == null)
+                return NotFound(new { message = "Microgrid node not found." });
+
+            if (!node.IsActive)
+                return BadRequest(new { message = "Cannot add slots to an inactive microgrid node." });
+
             slot.CreatedAt = DateTime.UtcNow;
             await _context.EnergySlots.InsertOneAsync(slot);
             return CreatedAtAction(nameof(GetById), new { id = slot.Id }, slot);

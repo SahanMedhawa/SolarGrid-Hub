@@ -84,5 +84,16 @@ namespace SmartSolarMicrogridAPI.Controllers
                 return BadRequest(new { message });
             return Ok(new { message });
         }
+
+        // PUT api/microgridnode/{id}/activate — Reactivates a node (Backoffice only).
+        [HttpPut("{id}/activate")]
+        [Authorize(Roles = "Backoffice")]
+        public async Task<IActionResult> Activate(string id)
+        {
+            var success = await _nodeService.ActivateAsync(id);
+            if (!success)
+                return NotFound(new { message = "Node not found." });
+            return Ok(new { message = "Node reactivated successfully." });
+        }
     }
 }
