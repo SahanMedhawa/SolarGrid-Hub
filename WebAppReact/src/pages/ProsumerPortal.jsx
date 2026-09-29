@@ -21,6 +21,11 @@ import {
 import StatusBadge from '../components/StatusBadge';
 import { toast } from 'react-toastify';
 import { QRCodeSVG } from 'qrcode.react';
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+
+const MAP_LIBRARIES = ['places'];
+const MAP_CONTAINER_STYLE = { width: '100%', height: '420px' };
+const DEFAULT_MAP_CENTER = { lat: 7.8731, lng: 80.7718 };
 
 export default function ProsumerPortal() {
   const { user, logout } = useAuth();
@@ -48,6 +53,13 @@ export default function ProsumerPortal() {
 
   // QR Modal state
   const [selectedQrPass, setSelectedQrPass] = useState(null);
+
+  // Nearby microgrid map modal state
+  const [selectedMapNode, setSelectedMapNode] = useState(null);
+  const { isLoaded: isMapLoaded, loadError: mapLoadError } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+    libraries: MAP_LIBRARIES
+  });
 
   // Modify Booking Modal state
   const [modifyingRes, setModifyingRes] = useState(null);
@@ -88,8 +100,11 @@ export default function ProsumerPortal() {
       setNodes(nodesData || []);
       setProsumerProfile(profileData);
 
-      if (nodesData && nodesData.length > 0 && !bookingForm.nodeId) {
-        setBookingForm(prev => ({ ...prev, nodeId: nodesData[0].id }));
+      const firstActiveNode = (nodesData || []).find(node => node.isActive);
+      if (firstActiveNode && (!bookingForm.nodeId || !nodesData.some(node => node.id === bookingForm.nodeId && node.isActive))) {
+        setBookingForm(prev => ({ ...prev, nodeId: firstActiveNode.id }));
+      } else if (!firstActiveNode) {
+        setBookingForm(prev => ({ ...prev, nodeId: '' }));
       }
     } catch (err) {
       toast.error('Failed to load prosumer details: ' + err.message);
@@ -267,6 +282,14 @@ export default function ProsumerPortal() {
     return r.status === statusFilter;
   });
 
+  const activeNodes = nodes.filter(n => n.isActive);
+  const mappedNodes = activeNodes.filter(n => Number.isFinite(Number(n.latitude)) && Number.isFinite(Number(n.longitude)));
+  const mapCenter = selectedMapNode
+    ? { lat: Number(selectedMapNode.latitude), lng: Number(selectedMapNode.longitude) }
+    : mappedNodes.length > 0
+      ? { lat: Number(mappedNodes[0].latitude), lng: Number(mappedNodes[0].longitude) }
+      : DEFAULT_MAP_CENTER;
+
   if (loading) {
     return (
       <div className="page-content">
@@ -330,7 +353,7 @@ export default function ProsumerPortal() {
         <div className="stat-card" onClick={() => setActiveTab('stations')} style={{ cursor: 'pointer' }}>
           <div className="stat-icon green">🔋</div>
           <div className="stat-info">
-            <div className="stat-value">{nodes.filter(n => n.isActive).length}</div>
+            <div className="stat-value">{activeNodes.length}</div>
             <div className="stat-label">Nearby Grid Hubs</div>
           </div>
         </div>
@@ -354,7 +377,7 @@ export default function ProsumerPortal() {
           className={`role-tab ${activeTab === 'stations' ? 'active' : ''}`}
           onClick={() => setActiveTab('stations')}
         >
-          📍 Find Grid Stations ({nodes.length})
+          📍 Find Grid Stations ({activeNodes.length})
         </button>
         <button
           className={`role-tab ${activeTab === 'profile' ? 'active' : ''}`}
@@ -539,7 +562,7 @@ export default function ProsumerPortal() {
                   required
                 >
                   <option value="">-- Choose a Station --</option>
-                  {nodes.map(n => (
+                  {activeNodes.map(n => (
                     <option key={n.id} value={n.id}>
                       {n.nodeName} ({n.location}) — {n.availableBatterySlots} slots avail
                     </option>
@@ -621,7 +644,7 @@ export default function ProsumerPortal() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
-            {nodes.map(n => (
+            {activeNodes.map(n => (
               <div key={n.id} className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <h3 style={{ margin: 0, fontSize: '1.15rem' }}>{n.nodeName}</h3>
@@ -650,16 +673,26 @@ export default function ProsumerPortal() {
                   🌐 Coordinates: <strong>{n.latitude?.toFixed(4)}, {n.longitude?.toFixed(4)}</strong>
                 </div>
 
-                <button
-                  className="btn btn-primary"
-                  style={{ marginTop: 'auto', justifyContent: 'center' }}
-                  onClick={() => {
-                    setBookingForm(prev => ({ ...prev, nodeId: n.id }));
-                    setActiveTab('book');
-                  }}
-                >
-                  ⚡ Book at this Station
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
+                  <button
+                    className="btn btn-secondary"
+                    style={{ flex: 1, justifyContent: 'center' }}
+                    onClick={() => setSelectedMapNode(n)}
+                    disabled={!Number.isFinite(Number(n.latitude)) || !Number.isFinite(Number(n.longitude))}
+                  >
+                    🗺️ View Map
+                  </button>
+                  <button
+                    className="btn btn-primary"
+                    style={{ flex: 1, justifyContent: 'center' }}
+                    onClick={() => {
+                      setBookingForm(prev => ({ ...prev, nodeId: n.id }));
+                      setActiveTab('book');
+                    }}
+                  >
+                    ⚡ Book Here
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -967,6 +1000,66 @@ export default function ProsumerPortal() {
               <button className="btn btn-primary" onClick={() => setSelectedQrPass(null)}>
                 Done
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: NEARBY MICROGRID MAP */}
+      {selectedMapNode && (
+        <div className="modal-overlay" onClick={() => setSelectedMapNode(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '850px' }}>
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">🗺️ Nearby Microgrid Stations</h3>
+                <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+                  {selectedMapNode.nodeName} selected
+                </span>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setSelectedMapNode(null)}>✕</button>
+            </div>
+            <div className="modal-body" style={{ padding: '1rem' }}>
+              {mapLoadError && (
+                <p className="text-muted" style={{ marginBottom: '1rem' }}>
+                  Google Maps could not be loaded. Check the Maps API key configuration.
+                </p>
+              )}
+              {!mapLoadError && !isMapLoaded && (
+                <div className="loading-spinner" style={{ minHeight: '420px' }}>
+                  <div className="spinner"></div>
+                </div>
+              )}
+              {!mapLoadError && isMapLoaded && (
+                <GoogleMap
+                  mapContainerStyle={MAP_CONTAINER_STYLE}
+                  center={mapCenter}
+                  zoom={selectedMapNode ? 13 : 7}
+                  options={{ streetViewControl: false, mapTypeControl: false, fullscreenControl: true }}
+                >
+                  {mappedNodes.map(node => (
+                    <Marker
+                      key={node.id}
+                      position={{ lat: Number(node.latitude), lng: Number(node.longitude) }}
+                      title={node.nodeName}
+                      onClick={() => setSelectedMapNode(node)}
+                    />
+                  ))}
+                </GoogleMap>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+                <div>
+                  <strong>{selectedMapNode.nodeName}</strong>
+                  <div className="text-muted" style={{ fontSize: '0.85rem' }}>{selectedMapNode.location}</div>
+                </div>
+                <a
+                  className="btn btn-primary"
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${selectedMapNode.latitude},${selectedMapNode.longitude}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  ↗ Get Directions
+                </a>
+              </div>
             </div>
           </div>
         </div>
