@@ -92,7 +92,7 @@ namespace SmartSolarMicrogridAPI.Services
             return result.ModifiedCount > 0;
         }
 
-        // Deactivates a node only if no active reservations reference it.
+        // Deactivates a node only if no active reservations or slots reference it.
         public async Task<(bool Success, string Message)> DeactivateAsync(string id)
         {
             // Check for active reservations on this node
@@ -104,6 +104,17 @@ namespace SmartSolarMicrogridAPI.Services
             if (activeReservations > 0)
             {
                 return (false, $"Cannot deactivate: {activeReservations} active reservation(s) exist on this node.");
+            }
+
+            // Check for active energy slots on this node
+            var activeSlots = await _context.EnergySlots
+                .Find(s => s.NodeId == id &&
+                          (s.Status == "Available" || s.Status == "Reserved"))
+                .CountDocumentsAsync();
+
+            if (activeSlots > 0)
+            {
+                return (false, $"Cannot deactivate: {activeSlots} active energy slot(s) exist on this node.");
             }
 
             var update = Builders<MicrogridNode>.Update

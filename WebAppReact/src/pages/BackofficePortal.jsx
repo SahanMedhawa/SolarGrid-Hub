@@ -145,7 +145,15 @@ export default function BackofficePortal() {
   }
 
   async function handleDeactivateNode(id, name) {
-    if (!window.confirm(`Are you sure you want to deactivate node "${name}"? Active reservations rule will apply.`)) {
+    const hasActiveBooking = reservations.some(
+      r => r.nodeId === id && (r.status === 'Pending' || r.status === 'Approved')
+    );
+    if (hasActiveBooking) {
+      toast.error(`Cannot deactivate node "${name}". It has active reservations.`);
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to deactivate node "${name}"?`)) {
       return;
     }
     try {
@@ -153,7 +161,6 @@ export default function BackofficePortal() {
       toast.success(`Node "${name}" deactivated successfully.`);
       loadAllData();
     } catch (err) {
-      // Backend enforces active reservation check
       toast.error(err.message || 'Cannot deactivate node.');
     }
   }
