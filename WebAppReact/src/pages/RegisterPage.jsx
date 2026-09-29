@@ -55,14 +55,37 @@ export default function RegisterPage() {
       return;
     }
 
+
+    // NIC validation using @sliit-foss/lk-nic
     if (!isValidNIC(form.nic.trim())) {
       toast.error('Please enter a valid Sri Lankan NIC number.');
       return;
     }
 
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email.trim())) {
+      toast.error('Enter a valid email address.');
+      return;
+    }
+
+    // Sri Lankan mobile number validation
+    const phoneRegex = /^(?:\+94|0)7\d{8}$/;
+    if (!phoneRegex.test(form.phone.trim())) {
+      toast.error('Enter a valid Sri Lankan mobile number.');
+      return;
+    }
+
+
+    // Password must contain at least 6 characters
+    if (form.password.length < 6) {
+      toast.error('Password must be at least 6 characters long.');
+      return;
+    }
+
     setLoading(true);
 
-    
+
     try {
       await registerProsumer({
         nic: form.nic.trim(),
