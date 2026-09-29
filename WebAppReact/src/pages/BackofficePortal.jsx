@@ -464,10 +464,10 @@ export default function BackofficePortal() {
                   <table>
                     <thead>
                       <tr>
-                        <th>ID</th>
                         <th>Prosumer NIC</th>
-                        <th>Slot</th>
-                        <th>Scheduled Date</th>
+                        <th>Station</th>
+                        <th>Scheduled Date &amp; Time</th>
+                        <th>Slots</th>
                         <th>Energy (kWh)</th>
                         <th>Status</th>
                         <th>Action</th>
@@ -476,10 +476,27 @@ export default function BackofficePortal() {
                     <tbody>
                       {pendingReservations.slice(0, 5).map(r => (
                         <tr key={r.id}>
-                          <td className="truncate" style={{ maxWidth: '120px' }}>{r.id}</td>
                           <td><strong>{r.prosumerNic}</strong></td>
-                          <td>{r.slotId}</td>
-                          <td>{new Date(r.reservationDate).toLocaleString()}</td>
+                          <td>{nodes.find(n => n.id === r.nodeId)?.nodeName || r.nodeId}</td>
+                          <td>
+                            <div>{new Date(r.reservationDate).toLocaleDateString()}</div>
+                            {r.startTime && r.endTime && (
+                              <small className="text-muted" style={{ display: 'block' }}>⏱️ {r.startTime} - {r.endTime}</small>
+                            )}
+                          </td>
+                          <td>
+                            {r.allocatedSlotNames?.length > 0 ? (
+                              <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                                {r.allocatedSlotNames.join(', ')}
+                              </span>
+                            ) : r.allocatedSlotIds?.length > 0 ? (
+                              <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                                {r.allocatedSlotIds.length} slot(s)
+                              </span>
+                            ) : (
+                              <span className="text-muted">Auto</span>
+                            )}
+                          </td>
                           <td>{r.energyKWh} kWh</td>
                           <td><StatusBadge status={r.status} /></td>
                           <td>
@@ -744,7 +761,6 @@ export default function BackofficePortal() {
                 <table>
                   <thead>
                     <tr>
-                      <th>ID</th>
                       <th>Prosumer NIC</th>
                       <th>Station</th>
                       <th>Date &amp; Time Window</th>
@@ -759,7 +775,6 @@ export default function BackofficePortal() {
                       const stationName = nodes.find(n => n.id === r.nodeId)?.nodeName || r.nodeId;
                       return (
                         <tr key={r.id}>
-                          <td className="truncate" style={{ maxWidth: '100px' }}>{r.id.substring(0, 8)}...</td>
                           <td><strong>{r.prosumerNic}</strong></td>
                           <td>{stationName}</td>
                           <td>
@@ -769,7 +784,11 @@ export default function BackofficePortal() {
                             )}
                           </td>
                           <td>
-                            {r.allocatedSlotIds?.length > 0 ? (
+                            {r.allocatedSlotNames?.length > 0 ? (
+                              <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                                {r.allocatedSlotNames.join(', ')}
+                              </span>
+                            ) : r.allocatedSlotIds?.length > 0 ? (
                               <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
                                 {r.allocatedSlotIds.length} slot(s)
                               </span>

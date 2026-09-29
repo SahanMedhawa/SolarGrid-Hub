@@ -413,7 +413,6 @@ export default function ReservationsPage() {
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Prosumer NIC</th>
                   <th>Station</th>
                   <th>Date & Time</th>
@@ -426,10 +425,9 @@ export default function ReservationsPage() {
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan="9" className="text-center text-muted" style={{ padding: '2rem' }}>No reservations found</td></tr>
+                  <tr><td colSpan="8" className="text-center text-muted" style={{ padding: '2rem' }}>No reservations found</td></tr>
                 ) : filtered.map(r => (
                   <tr key={r.id}>
-                    <td><span className="truncate" title={r.id}>{r.id.substring(0, 8)}...</span></td>
                     <td><strong>{r.prosumerNic}</strong></td>
                     <td>{getNodeName(r.nodeId)}</td>
                     <td>
@@ -440,7 +438,11 @@ export default function ReservationsPage() {
                     </td>
                     <td>{r.energyKWh} kWh</td>
                     <td>
-                      {r.allocatedSlotIds?.length > 0 ? (
+                      {r.allocatedSlotNames?.length > 0 ? (
+                        <span className="badge badge-info" style={{ fontSize: '0.8rem' }}>
+                          {r.allocatedSlotNames.join(', ')}
+                        </span>
+                      ) : r.allocatedSlotIds?.length > 0 ? (
                         <span className="badge badge-info" style={{ fontSize: '0.8rem' }}>
                           {r.allocatedSlotIds.length} slot(s)
                         </span>

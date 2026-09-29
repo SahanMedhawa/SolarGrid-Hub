@@ -550,7 +550,6 @@ export default function ProsumerPortal() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Booking ID</th>
                       <th>Grid Station</th>
                       <th>Scheduled Date &amp; Time</th>
                       <th>Energy (kWh)</th>
@@ -570,7 +569,6 @@ export default function ProsumerPortal() {
 
                       return (
                         <tr key={r.id}>
-                          <td className="truncate" style={{ maxWidth: '100px' }}>{r.id.substring(0, 8)}...</td>
                           <td>
                             <strong>{stationName}</strong>
                           </td>
@@ -582,7 +580,11 @@ export default function ProsumerPortal() {
                           </td>
                           <td><strong style={{ color: 'var(--color-primary-light)' }}>{r.energyKWh} kWh</strong></td>
                           <td>
-                            {r.allocatedSlotIds?.length > 0 ? (
+                            {r.allocatedSlotNames?.length > 0 ? (
+                              <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                                {r.allocatedSlotNames.join(', ')}
+                              </span>
+                            ) : r.allocatedSlotIds?.length > 0 ? (
                               <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
                                 {r.allocatedSlotIds.length} slot(s)
                               </span>
@@ -1349,11 +1351,10 @@ export default function ProsumerPortal() {
 
               {/* Pass Metadata */}
               <div style={{ fontSize: '0.85rem', textAlign: 'left', background: 'var(--color-surface)', padding: '1rem', borderRadius: 'var(--radius-sm)', lineHeight: '1.8' }}>
-                <div>Booking: <strong>#{selectedQrPass.id}</strong></div>
                 <div>Prosumer NIC: <strong>{selectedQrPass.prosumerNic}</strong></div>
                 <div>Station: <strong>{nodes.find(n => n.id === selectedQrPass.nodeId)?.nodeName || selectedQrPass.nodeId}</strong></div>
                 <div>Time Window: <strong>{selectedQrPass.startTime && selectedQrPass.endTime ? `${selectedQrPass.startTime} - ${selectedQrPass.endTime}` : 'Full Day'}</strong></div>
-                <div>Allocated Slots: <strong>{selectedQrPass.allocatedSlotIds?.length > 0 ? `${selectedQrPass.allocatedSlotIds.length} slot(s)` : 'Auto-allocated'}</strong></div>
+                <div>Allocated Slots: <strong>{selectedQrPass.allocatedSlotNames?.length > 0 ? selectedQrPass.allocatedSlotNames.join(', ') : (selectedQrPass.allocatedSlotIds?.length > 0 ? `${selectedQrPass.allocatedSlotIds.length} slot(s)` : 'Auto-allocated')}</strong></div>
                 <div>Energy to Transfer: <strong style={{ color: 'var(--color-primary)' }}>{selectedQrPass.energyKWh} kWh</strong></div>
                 <div>Scheduled Date: <strong>{new Date(selectedQrPass.reservationDate).toLocaleDateString()}</strong></div>
               </div>
