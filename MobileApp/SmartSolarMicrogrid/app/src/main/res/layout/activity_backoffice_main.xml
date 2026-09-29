@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/gray_light"
+    android:background="@color/app_background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -12,41 +13,49 @@
         android:padding="20dp">
 
         <!-- Header Card -->
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp"
-            android:background="@drawable/card_bg"
-            android:elevation="4dp"
+            app:cardCornerRadius="16dp"
+            app:cardBackgroundColor="@color/card_background"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1dp"
+            app:cardElevation="2dp"
             android:layout_marginBottom="16dp">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Backoffice Admin Portal"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:textColor="@color/primary" />
+                android:orientation="vertical"
+                android:padding="16dp">
 
-            <TextView
-                android:id="@+id/tvAdminWelcome"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Welcome, Backoffice Admin"
-                android:textSize="14sp"
-                android:textColor="@color/gray_text"
-                android:layout_marginTop="4dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Backoffice Admin Portal"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/primary" />
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="ROLE: BACKOFFICE"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                android:textColor="@color/accent"
-                android:layout_marginTop="2dp" />
-        </LinearLayout>
+                <TextView
+                    android:id="@+id/tvAdminWelcome"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Welcome, Backoffice Admin"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ROLE: BACKOFFICE"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/accent"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- KPI Metrics Grid -->
         <LinearLayout
@@ -57,105 +66,126 @@
             android:layout_marginBottom="16dp">
 
             <!-- Card 1: Active Nodes -->
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="vertical"
-                android:padding="12dp"
-                android:gravity="center"
-                android:background="@drawable/card_bg"
-                android:elevation="2dp"
-                android:layout_marginEnd="6dp">
+                android:layout_marginEnd="4dp"
+                app:cardCornerRadius="12dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:strokeColor="@color/card_border"
+                app:strokeWidth="1dp">
 
-                <TextView
-                    android:id="@+id/tvActiveNodesCount"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="--"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/primary" />
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:gravity="center">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Active Nodes"
-                    android:textSize="11sp"
-                    android:textColor="@color/gray_text"
-                    android:gravity="center" />
-            </LinearLayout>
+                    <TextView
+                        android:id="@+id/tvActiveNodesCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/primary" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Active Nodes"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"
+                        android:gravity="center" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Card 2: Pending Prosumers -->
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="vertical"
-                android:padding="12dp"
-                android:gravity="center"
-                android:background="@drawable/card_bg"
-                android:elevation="2dp"
-                android:layout_marginStart="3dp"
-                android:layout_marginEnd="3dp">
+                android:layout_marginStart="2dp"
+                android:layout_marginEnd="2dp"
+                app:cardCornerRadius="12dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:strokeColor="@color/card_border"
+                app:strokeWidth="1dp">
 
-                <TextView
-                    android:id="@+id/tvPendingProsumersCount"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="--"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/status_pending" />
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:gravity="center">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Pending Reg"
-                    android:textSize="11sp"
-                    android:textColor="@color/gray_text"
-                    android:gravity="center" />
-            </LinearLayout>
+                    <TextView
+                        android:id="@+id/tvPendingProsumersCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/status_pending" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Pending Reg"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"
+                        android:gravity="center" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Card 3: Pending Bookings -->
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:orientation="vertical"
-                android:padding="12dp"
-                android:gravity="center"
-                android:background="@drawable/card_bg"
-                android:elevation="2dp"
-                android:layout_marginStart="6dp">
+                android:layout_marginStart="4dp"
+                app:cardCornerRadius="12dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:strokeColor="@color/card_border"
+                app:strokeWidth="1dp">
 
-                <TextView
-                    android:id="@+id/tvPendingBookingsCount"
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="--"
-                    android:textSize="22sp"
-                    android:textStyle="bold"
-                    android:textColor="@color/accent" />
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:gravity="center">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Pending Bookings"
-                    android:textSize="11sp"
-                    android:textColor="@color/gray_text"
-                    android:gravity="center" />
-            </LinearLayout>
+                    <TextView
+                        android:id="@+id/tvPendingBookingsCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/accent" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Pending Slots"
+                        android:textSize="11sp"
+                        android:textColor="@color/text_secondary"
+                        android:gravity="center" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
         <!-- Section: Pending Prosumer Approvals -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pending Prosumer Approvals"
+            android:text="Pending Prosumer Registrations"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="@color/black"
+            android:textColor="@color/text_primary"
             android:layout_marginBottom="8dp" />
 
         <LinearLayout
@@ -172,7 +202,7 @@
             android:text="Deactivated Accounts (Can Reactivate)"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="@color/black"
+            android:textColor="@color/text_primary"
             android:layout_marginBottom="8dp" />
 
         <LinearLayout
@@ -189,7 +219,7 @@
             android:text="Microgrid Node Hubs"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="@color/black"
+            android:textColor="@color/text_primary"
             android:layout_marginBottom="8dp" />
 
         <LinearLayout
@@ -200,23 +230,24 @@
             android:layout_marginBottom="24dp" />
 
         <!-- Refresh Button -->
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRefreshBackoffice"
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:text="🔄 Refresh Portal Data"
+            app:cornerRadius="12dp"
             android:backgroundTint="@color/primary"
             android:textColor="@color/white"
             android:layout_marginBottom="12dp" />
 
         <!-- Logout Button -->
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnBackofficeLogout"
+            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="Logout"
-            android:backgroundTint="@color/status_cancelled"
-            android:textColor="@color/white" />
+            android:text="Log Out"
+            android:textColor="@color/status_cancelled" />
 
     </LinearLayout>
 </ScrollView>

@@ -14,8 +14,8 @@ import com.smartsolar.microgrid.data.SessionManager
 import org.json.JSONObject
 
 /**
- * QR Scanner Activity - allows Grid Operators to scan prosumer QR codes
- * and verify/complete energy transfer transactions via the central API.
+ * QR Scanner Activity - allows Grid Operators to scan prosumer QR transaction passes,
+ * verify server data records, and finalize energy transfer business logic.
  */
 class QrScannerActivity : AppCompatActivity() {
 
@@ -43,16 +43,68 @@ class QrScannerActivity : AppCompatActivity() {
         })
     }
 
-    // Process the scanned QR code data and call the server completion API
+    // Process the scanned QR code, verify against server data, and confirm energy transfer
     private fun processQrCode(qrData: String) {
-        // Expected QR format: SMTS-{reservationId}-{prosumerNic}-{guid}
         val parts = qrData.split("-")
         if (parts.size < 2) {
-            showResultDialog("Invalid QR", "Scanned QR code does not match system format.", false)
+            showResultDialog("Invalid QR Format", "Scanned QR code does not match expected SMTS system token format.", false)
             return
         }
 
         val resId = parts[1]
+
+        // 1. Verify Server Data first
+        ApiClient.request("reservation/$resId", "GET", null, session.getToken(), object : ApiClient.ApiCallback {
+            override fun onSuccess(response: String) {
+                try {
+                    val detail = JSONObject(response)
+                    val status = detail.optString("status", "")
+                    val nic = detail.optString("prosumerNic", "")
+                    val energy = detail.optDouble("energyKWh", 0.0)
+                    val slot = detail.optString("slotId", "")
+
+                    if (!status.equals("Approved", ignoreCase = true)) {
+                        showResultDialog(
+                            "Cannot Finalize",
+                            "Reservation #$resId is currently in '$status' status.\nOnly 'Approved' reservations can complete energy transfer.",
+                            false
+                        )
+                        return
+                    }
+
+                    // Prompt operator with verified server records
+                    AlertDialog.Builder(this@QrScannerActivity)
+                        .setTitle("Verified Server Records ⚡")
+                        .setMessage(
+                            "Prosumer: $nic\n" +
+                            "Booking ID: #$resId\n" +
+                            "Battery Slot: $slot\n" +
+                            "Transfer Energy: $energy kWh\n\n" +
+                            "Confirm finalize energy transfer and release battery storage slot?"
+                        )
+                        .setPositiveButton("Finalize Transfer") { _, _ ->
+                            executeCompletion(resId, qrData)
+                        }
+                        .setNegativeButton("Cancel") { _, _ ->
+                            isProcessing = false
+                        }
+                        .setCancelable(false)
+                        .show()
+
+                } catch (e: Exception) {
+                    executeCompletion(resId, qrData)
+                }
+            }
+
+            override fun onError(error: String) {
+                // If detail lookup fails, attempt direct completion with token
+                executeCompletion(resId, qrData)
+            }
+        })
+    }
+
+    // Call server PUT /api/reservation/{id}/complete to finalize energy transfer
+    private fun executeCompletion(resId: String, qrData: String) {
         try {
             val body = JSONObject().apply {
                 put("qrData", qrData)
@@ -61,22 +113,22 @@ class QrScannerActivity : AppCompatActivity() {
             ApiClient.request("reservation/$resId/complete", "PUT", body, session.getToken(), object : ApiClient.ApiCallback {
                 override fun onSuccess(response: String) {
                     showResultDialog(
-                        "Energy Transfer Verified",
-                        "Reservation $resId verified on server.\nEnergy transfer finalized and marked Completed!",
+                        "Energy Transfer Finalized! ⚡",
+                        "Successfully verified and completed energy transfer for reservation #$resId.\nStation battery slot capacity has been updated.",
                         true
                     )
                 }
 
                 override fun onError(error: String) {
-                    showResultDialog("Verification Failed", error, false)
+                    showResultDialog("Transfer Failed", error, false)
                 }
             })
         } catch (e: Exception) {
-            showResultDialog("Error", "Failed to process QR data", false)
+            showResultDialog("Error", "Failed to process transfer request", false)
         }
     }
 
-    // Show a result dialog and either finish or reset processing state
+    // Show a result dialog and either finish activity or reset scanner state
     private fun showResultDialog(title: String, message: String, success: Boolean) {
         AlertDialog.Builder(this)
             .setTitle(title)

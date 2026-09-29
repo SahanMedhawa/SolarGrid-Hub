@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.smartsolar.microgrid.R
 import com.smartsolar.microgrid.api.ApiClient
@@ -64,7 +63,7 @@ class ProsumerMainActivity : AppCompatActivity() {
         loadDashboardData()
     }
 
-    // Fetch dashboard counts (approved future bookings and pending bookings) from the central API
+    // Fetch dashboard counts from the central API, falling back to local SQLite cache
     private fun loadDashboardData() {
         val nic = session.getUserNic()
         val token = session.getToken()
@@ -78,7 +77,12 @@ class ProsumerMainActivity : AppCompatActivity() {
                 } catch (_: Exception) { }
             }
 
-            override fun onError(error: String) { }
+            override fun onError(error: String) {
+                // Fallback to SQLite cache
+                val cached = session.dbHelper.getCachedReservations(nic)
+                val approved = cached.count { it.status.equals("Approved", ignoreCase = true) }
+                tvApprovedCount.text = approved.toString()
+            }
         })
 
         // 2. Fetch Prosumer's pending reservations count
@@ -96,7 +100,12 @@ class ProsumerMainActivity : AppCompatActivity() {
                 } catch (_: Exception) { }
             }
 
-            override fun onError(error: String) { }
+            override fun onError(error: String) {
+                // Fallback to SQLite cache
+                val cached = session.dbHelper.getCachedReservations(nic)
+                val pending = cached.count { it.status.equals("Pending", ignoreCase = true) }
+                tvPendingCount.text = pending.toString()
+            }
         })
     }
 }

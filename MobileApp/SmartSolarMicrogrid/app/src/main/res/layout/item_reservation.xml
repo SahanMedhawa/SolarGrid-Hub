@@ -1,52 +1,107 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="6dp">
+    android:layout_marginBottom="10dp"
+    app:cardCornerRadius="16dp"
+    app:cardBackgroundColor="@color/card_background"
+    app:strokeColor="@color/card_border"
+    app:strokeWidth="1dp"
+    app:cardElevation="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="14dp">
+        android:padding="16dp">
 
+        <!-- Top Row: Booking ID and Status Badge -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="8dp">
+
             <TextView
                 android:id="@+id/tvResId"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Booking #1234"
+                android:text="Booking #SMTS-1234"
+                android:textSize="15sp"
                 android:textStyle="bold"
-                android:textColor="@color/black" />
+                android:textColor="@color/text_primary" />
+
+            <!-- Status Pill Badge -->
             <TextView
                 android:id="@+id/tvResStatus"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Pending"
+                android:text="Approved"
+                android:textSize="12sp"
                 android:textStyle="bold"
-                android:textColor="@color/status_pending" />
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp"
+                android:background="@drawable/badge_status_bg"
+                android:textColor="@color/status_approved" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/tvResDate"
+        <!-- Middle Row: Date & Slot -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Date: 2026-09-25"
-            android:textColor="@color/gray_text"
-            android:layout_marginTop="4dp" />
+            android:orientation="horizontal"
+            android:layout_marginBottom="8dp">
 
-        <TextView
-            android:id="@+id/tvResKWh"
+            <TextView
+                android:id="@+id/tvResDate"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="📅 2026-09-30"
+                android:textSize="13sp"
+                android:textColor="@color/text_secondary" />
+
+            <TextView
+                android:id="@+id/tvResSlot"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Slot: SLOT-01"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/text_secondary" />
+        </LinearLayout>
+
+        <!-- Bottom Row: Energy & Action Hint -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Capacity: 20.0 kWh"
-            android:textColor="@color/primary"
-            android:textStyle="bold"
-            android:layout_marginTop="2dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tvResKWh"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="⚡ 25.0 kWh"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/primary" />
+
+            <TextView
+                android:id="@+id/tvQrBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="View QR Pass ›"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:textColor="@color/accent" />
+        </LinearLayout>
 
     </LinearLayout>
-</androidx.cardview.widget.CardView>
+</com.google.android.material.card.MaterialCardView>

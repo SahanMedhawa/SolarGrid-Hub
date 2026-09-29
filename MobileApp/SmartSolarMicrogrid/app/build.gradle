@@ -55,3 +55,21 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 }
+
+// Auto-configure ADB reverse port forwarding for connected devices
+afterEvaluate {
+    tasks.matching { it.name.startsWith("install") || it.name.startsWith("assemble") }.configureEach { task ->
+        task.doLast {
+            try {
+                def adb = android.getAdbExecutable()?.absolutePath
+                if (adb && new File(adb).exists()) {
+                    project.exec {
+                        commandLine adb, 'reverse', 'tcp:5000', 'tcp:5000'
+                        ignoreExitValue = true
+                    }
+                }
+            } catch (Exception ignored) { }
+        }
+    }
+}
+

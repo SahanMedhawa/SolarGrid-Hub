@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/gray_light">
+    android:background="@color/app_background"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -10,129 +12,225 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <TextView
-            android:id="@+id/tvWelcome"
-            android:layout_width="wrap_content"
+        <!-- Top Greeting Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Welcome Prosumer"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="@color/primary"
-            android:layout_marginBottom="20dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="20dp">
 
-        <!-- Cards Row -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvWelcome"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Welcome Prosumer"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Solar Microgrid Trading Portal"
+                    android:textSize="13sp"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                app:cardCornerRadius="22dp"
+                app:cardBackgroundColor="@color/md_theme_light_primaryContainer"
+                app:strokeColor="@color/primary"
+                app:strokeWidth="1dp"
+                app:cardElevation="0dp">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="☀️"
+                    android:textSize="20sp"
+                    android:gravity="center" />
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+
+        <!-- KPI Metrics Row -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:weightSum="2"
-            android:layout_marginBottom="20dp">
+            android:layout_marginBottom="24dp">
 
-            <androidx.cardview.widget.CardView
+            <!-- Approved Future Bookings Card -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginEnd="8dp">
+                android:layout_marginEnd="6dp"
+                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:strokeColor="@color/card_border"
+                app:strokeWidth="1dp"
+                app:cardElevation="1dp">
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center">
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✅ APPROVED"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/status_approved" />
+
                     <TextView
                         android:id="@+id/tvApprovedCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textSize="28sp"
+                        android:textSize="32sp"
                         android:textStyle="bold"
-                        android:textColor="@color/primary" />
+                        android:textColor="@color/text_primary"
+                        android:layout_marginTop="4dp" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Approved Future"
+                        android:text="Active QR Passes"
                         android:textSize="12sp"
-                        android:gravity="center" />
+                        android:textColor="@color/text_secondary" />
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
-            <androidx.cardview.widget.CardView
+            <!-- Pending Bookings Card -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="8dp">
+                android:layout_marginStart="6dp"
+                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="@color/card_background"
+                app:strokeColor="@color/card_border"
+                app:strokeWidth="1dp"
+                app:cardElevation="1dp">
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp"
-                    android:gravity="center">
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="⏳ PENDING"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/status_pending" />
+
                     <TextView
                         android:id="@+id/tvPendingCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0"
-                        android:textSize="28sp"
+                        android:textSize="32sp"
                         android:textStyle="bold"
-                        android:textColor="@color/status_pending" />
+                        android:textColor="@color/text_primary"
+                        android:layout_marginTop="4dp" />
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Pending Bookings"
+                        android:text="Awaiting Operator"
                         android:textSize="12sp"
-                        android:gravity="center" />
+                        android:textColor="@color/text_secondary" />
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <!-- Navigation Buttons -->
-        <Button
+        <!-- Actions Section Title -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Quick Actions"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="12dp" />
+
+        <!-- Book Energy Slot Button -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnBookSlot"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:text="@string/book_slot"
+            android:text="⚡  Reserve Energy Slot"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:cornerRadius="14dp"
             android:backgroundTint="@color/primary"
             android:textColor="@color/white"
-            android:textStyle="bold"
             android:layout_marginBottom="12dp" />
 
-        <Button
+        <!-- My Bookings & QR Passes Button -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnMyBookings"
+            style="@style/Widget.Material3.Button.TonalButton"
             android:layout_width="match_parent"
             android:layout_height="56dp"
-            android:text="@string/my_bookings"
-            android:backgroundTint="@color/accent"
-            android:textColor="@color/white"
+            android:text="📋  My Bookings &amp; QR Passes"
+            android:textSize="15sp"
             android:textStyle="bold"
+            app:cornerRadius="14dp"
+            android:textColor="@color/accent"
             android:layout_marginBottom="12dp" />
 
-        <Button
+        <!-- Nearby Stations Map Button -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnNearbyNodes"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="@string/nearby_stations"
-            android:backgroundTint="#6F42C1"
-            android:textColor="@color/white"
-            android:textStyle="bold"
+            android:layout_height="54dp"
+            android:text="🗺️  Nearby Grid Stations Map"
+            android:textSize="14sp"
+            app:cornerRadius="14dp"
+            app:strokeColor="@color/card_border"
+            android:textColor="@color/text_primary"
             android:layout_marginBottom="12dp" />
 
-        <Button
+        <!-- Profile Button -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnProfile"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="@string/profile"
-            android:backgroundTint="#343A40"
-            android:textColor="@color/white"
-            android:textStyle="bold"
+            android:layout_height="54dp"
+            android:text="👤  Profile &amp; Account Settings"
+            android:textSize="14sp"
+            app:cornerRadius="14dp"
+            app:strokeColor="@color/card_border"
+            android:textColor="@color/text_primary"
             android:layout_marginBottom="24dp" />
 
-        <Button
+        <!-- Logout Button -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnLogout"
+            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:text="Logout"
-            android:backgroundTint="@color/status_cancelled"
-            android:textColor="@color/white" />
+            android:layout_height="48dp"
+            android:text="Log Out"
+            android:textColor="@color/status_cancelled"
+            android:textSize="14sp" />
 
     </LinearLayout>
 </ScrollView>

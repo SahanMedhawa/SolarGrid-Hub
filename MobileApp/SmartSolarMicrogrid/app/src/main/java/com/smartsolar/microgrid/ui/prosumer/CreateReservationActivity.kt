@@ -2,6 +2,8 @@ package com.smartsolar.microgrid.ui.prosumer
 
 import android.app.DatePickerDialog
 import android.os.Bundle
+import android.view.View
+import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
@@ -12,6 +14,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.smartsolar.microgrid.R
 import com.smartsolar.microgrid.api.ApiClient
 import com.smartsolar.microgrid.data.SessionManager
+import com.smartsolar.microgrid.models.MicrogridNode
+import com.smartsolar.microgrid.models.Reservation
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -20,16 +24,19 @@ import java.util.Locale
 
 /**
  * Create Reservation Activity - allows prosumers to reserve energy drop-off/charging slots.
- * Enforces the 7-day scheduling rule via date picker constraints.
+ * Enforces the 7-day scheduling rule and node capacity constraints via interactive validation.
  */
 class CreateReservationActivity : AppCompatActivity() {
 
     private lateinit var spinnerNodes: Spinner
+    private lateinit var spinnerSlots: Spinner
     private lateinit var etDate: EditText
     private lateinit var etEnergyKWh: EditText
     private lateinit var session: SessionManager
-    private val nodeIds = ArrayList<String>()
-    private val nodeNames = ArrayList<String>()
+
+    private val nodesList = ArrayList<MicrogridNode>()
+    private val nodeDisplayNames = ArrayList<String>()
+    private val slotOptions = ArrayList<String>()
     private val selectedCalendar: Calendar = Calendar.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,12 +45,22 @@ class CreateReservationActivity : AppCompatActivity() {
         setContentView(R.layout.activity_create_reservation)
 
         spinnerNodes = findViewById(R.id.spinnerNodes)
+        spinnerSlots = findViewById(R.id.spinnerSlots)
         etDate = findViewById(R.id.etDate)
         etEnergyKWh = findViewById(R.id.etEnergyKWh)
         val btnSubmit: Button = findViewById(R.id.btnSubmitReservation)
 
         etDate.setOnClickListener { showDatePicker() }
         btnSubmit.setOnClickListener { submitBooking() }
+
+        spinnerNodes.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (position in nodesList.indices) {
+                    updateSlotOptions(nodesList[position])
+                }
+            }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
 
         loadActiveNodes()
     }
@@ -72,25 +89,40 @@ class CreateReservationActivity : AppCompatActivity() {
         datePickerDialog.show()
     }
 
-    // Load active microgrid nodes from the central API to populate the spinner
+    // Load active microgrid nodes from the central API
     private fun loadActiveNodes() {
         ApiClient.request("microgridnode/active", "GET", null, session.getToken(), object : ApiClient.ApiCallback {
             override fun onSuccess(response: String) {
                 try {
                     val arr = JSONArray(response)
-                    nodeIds.clear()
-                    nodeNames.clear()
+                    nodesList.clear()
+                    nodeDisplayNames.clear()
+
                     for (i in 0 until arr.length()) {
-                        val node = arr.getJSONObject(i)
-                        nodeIds.add(node.getString("id"))
-                        nodeNames.add("${node.getString("nodeName")} (${node.getString("location")})")
+                        val obj = arr.getJSONObject(i)
+                        val node = MicrogridNode(
+                            id = obj.getString("id"),
+                            nodeName = obj.optString("nodeName", "Node"),
+                            location = obj.optString("location", ""),
+                            capacityKWh = obj.optDouble("capacityKWh", 100.0),
+                            batterySlots = obj.optInt("batterySlots", 8),
+                            availableBatterySlots = obj.optInt("availableBatterySlots", 8),
+                            isActive = obj.optBoolean("isActive", true)
+                        )
+                        nodesList.add(node)
+                        nodeDisplayNames.add("${node.nodeName} (${node.location}) — ${node.availableBatterySlots} slots open")
                     }
+
                     val adapter = ArrayAdapter(
                         this@CreateReservationActivity,
                         android.R.layout.simple_spinner_dropdown_item,
-                        nodeNames
+                        nodeDisplayNames
                     )
                     spinnerNodes.adapter = adapter
+
+                    if (nodesList.isNotEmpty()) {
+                        updateSlotOptions(nodesList[0])
+                    }
                 } catch (_: Exception) { }
             }
 
@@ -100,43 +132,102 @@ class CreateReservationActivity : AppCompatActivity() {
         })
     }
 
-    // Validate inputs and submit the reservation to the central API
+    // Populate slot options (SLOT-01 up to total batterySlots) for the selected station
+    private fun updateSlotOptions(node: MicrogridNode) {
+        slotOptions.clear()
+        val totalSlots = if (node.batterySlots > 0) node.batterySlots else 6
+        for (i in 1..totalSlots) {
+            val slotId = String.format(Locale.US, "SLOT-%02d", i)
+            slotOptions.add(slotId)
+        }
+
+        val slotAdapter = ArrayAdapter(
+            this@CreateReservationActivity,
+            android.R.layout.simple_spinner_dropdown_item,
+            slotOptions
+        )
+        spinnerSlots.adapter = slotAdapter
+    }
+
+    // Validate inputs and submit the reservation
     private fun submitBooking() {
-        if (nodeIds.isEmpty() || spinnerNodes.selectedItemPosition < 0) {
+        if (nodesList.isEmpty() || spinnerNodes.selectedItemPosition < 0) {
             Toast.makeText(this, "Please select a grid node", Toast.LENGTH_SHORT).show()
             return
         }
+
+        val selectedNode = nodesList[spinnerNodes.selectedItemPosition]
+        val selectedSlot = if (slotOptions.isNotEmpty() && spinnerSlots.selectedItemPosition in slotOptions.indices) {
+            slotOptions[spinnerSlots.selectedItemPosition]
+        } else {
+            "SLOT-01"
+        }
+
         val dateStr = etDate.text.toString().trim()
         val kwhStr = etEnergyKWh.text.toString().trim()
 
         if (dateStr.isEmpty() || kwhStr.isEmpty()) {
-            Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Please fill in date and energy fields", Toast.LENGTH_SHORT).show()
             return
         }
 
-        val kwh = kwhStr.toDouble()
-        val selectedNodeId = nodeIds[spinnerNodes.selectedItemPosition]
+        val kwh = try {
+            kwhStr.toDouble()
+        } catch (_: Exception) {
+            Toast.makeText(this, "Invalid energy amount", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (kwh <= 0) {
+            Toast.makeText(this, "Energy amount must be greater than 0 kWh", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (kwh > selectedNode.capacityKWh) {
+            Toast.makeText(this, "Requested energy exceeds node capacity (${selectedNode.capacityKWh} kWh)", Toast.LENGTH_LONG).show()
+            return
+        }
 
         try {
             val req = JSONObject().apply {
                 put("prosumerNic", session.getUserNic())
-                put("nodeId", selectedNodeId)
-                put("slotId", "SLOT-${System.currentTimeMillis()}")
+                put("nodeId", selectedNode.id)
+                put("slotId", selectedSlot)
                 put("reservationDate", "${dateStr}T10:00:00Z")
                 put("energyKWh", kwh)
             }
 
             ApiClient.request("reservation", "POST", req, session.getToken(), object : ApiClient.ApiCallback {
                 override fun onSuccess(response: String) {
-                    // Summary page dialog
-                    AlertDialog.Builder(this@CreateReservationActivity)
-                        .setTitle("Booking Submitted Successfully")
-                        .setMessage(
-                            "Summary:\n• Station: ${spinnerNodes.selectedItem}" +
-                                    "\n• Date: $dateStr" +
-                                    "\n• Energy: $kwh kWh\n• Status: Pending Approval\n\nOnce approved, your QR code will be generated."
+                    try {
+                        val created = JSONObject(response)
+                        val newRes = Reservation(
+                            id = created.optString("id", ""),
+                            prosumerNic = session.getUserNic(),
+                            slotId = selectedSlot,
+                            nodeId = selectedNode.id,
+                            reservationDate = dateStr,
+                            energyKWh = kwh,
+                            status = "Pending"
                         )
-                        .setPositiveButton("OK") { _, _ -> finish() }
+                        // Cache in local SQLite
+                        val list = session.dbHelper.getCachedReservations(session.getUserNic())
+                        list.add(0, newRes)
+                        session.dbHelper.cacheReservations(list)
+                    } catch (_: Exception) {}
+
+                    AlertDialog.Builder(this@CreateReservationActivity)
+                        .setTitle("Energy Slot Reserved! ⚡")
+                        .setMessage(
+                            "Booking Summary:\n" +
+                            "• Station: ${selectedNode.nodeName} (${selectedNode.location})\n" +
+                            "• Slot: $selectedSlot\n" +
+                            "• Scheduled Date: $dateStr\n" +
+                            "• Transfer Energy: $kwh kWh\n" +
+                            "• Status: Pending Approval\n\n" +
+                            "Your request has been dispatched to the Grid Operator. Once approved, your secure QR transaction pass will become active."
+                        )
+                        .setPositiveButton("View Bookings") { _, _ -> finish() }
                         .setCancelable(false)
                         .show()
                 }
@@ -146,7 +237,7 @@ class CreateReservationActivity : AppCompatActivity() {
                 }
             })
         } catch (e: Exception) {
-            Toast.makeText(this, "Error submitting booking", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Error submitting booking: ${e.message}", Toast.LENGTH_SHORT).show()
         }
     }
 }
