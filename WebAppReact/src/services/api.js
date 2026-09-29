@@ -134,7 +134,36 @@ export async function getNodeById(id) {
 
 // Creates a new microgrid node.
 export async function createNode(nodeData) {
-  return apiRequest('microgridnode', 'POST', nodeData);
+  const latitude = Number(nodeData.latitude);
+  const longitude = Number(nodeData.longitude);
+  const capacityKWh = Number(nodeData.capacityKWh);
+  const batterySlotCapacities = Array.isArray(nodeData.batterySlotCapacities)
+    ? nodeData.batterySlotCapacities.map(Number)
+    : [];
+
+  if (!nodeData.nodeName?.trim() || !nodeData.location?.trim()) {
+    throw new Error('Node name and location are required.');
+  }
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error('Choose a valid node location.');
+  }
+  if (!Number.isFinite(capacityKWh) || capacityKWh <= 0) {
+    throw new Error('Grid capacity must be greater than 0 kWh.');
+  }
+  if (batterySlotCapacities.length === 0 || batterySlotCapacities.some(value => !Number.isFinite(value) || value <= 0)) {
+    throw new Error('Enter a positive capacity for every battery slot.');
+  }
+  if (batterySlotCapacities.reduce((sum, value) => sum + value, 0) > capacityKWh) {
+    throw new Error('The total of battery slot capacities cannot exceed the grid capacity.');
+  }
+
+  return apiRequest('microgridnode', 'POST', {
+    ...nodeData,
+    latitude,
+    longitude,
+    capacityKWh,
+    batterySlotCapacities
+  });
 }
 
 // Updates a microgrid node.

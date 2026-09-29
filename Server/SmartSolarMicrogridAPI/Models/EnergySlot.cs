@@ -25,14 +25,17 @@ namespace SmartSolarMicrogridAPI.Models
         [BsonElement("nodeId")]
         public string NodeId { get; set; } = null!;
 
+        [BsonElement("slotNumber")]
+        public int SlotNumber { get; set; }
+
         [BsonElement("slotDate")]
         public DateTime SlotDate { get; set; }
 
         [BsonElement("startTime")]
-        public string StartTime { get; set; } = null!;
+        public string? StartTime { get; set; }
 
         [BsonElement("endTime")]
-        public string EndTime { get; set; } = null!;
+        public string? EndTime { get; set; }
 
         /// <summary>
         /// Energy capacity available in this slot (kWh).

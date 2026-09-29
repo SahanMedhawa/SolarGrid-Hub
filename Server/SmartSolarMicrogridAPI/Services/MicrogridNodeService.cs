@@ -6,6 +6,7 @@
 // ============================================================
 
 using MongoDB.Driver;
+using System.Globalization;
 using SmartSolarMicrogridAPI.Data;
 using SmartSolarMicrogridAPI.Models;
 
@@ -45,10 +46,30 @@ namespace SmartSolarMicrogridAPI.Services
         // Creates a new microgrid node.
         public async Task<MicrogridNode> CreateAsync(MicrogridNode node)
         {
+            ValidateSchedule(node.Schedule);
+
+            if (node.CapacityKWh <= 0 || node.BatterySlotCapacities.Count == 0 || node.BatterySlotCapacities.Any(capacity => capacity <= 0))
+                throw new ArgumentException("Enter a positive capacity for at least one battery slot.");
+
+            var allocatedCapacity = node.BatterySlotCapacities.Sum();
+            if (allocatedCapacity > node.CapacityKWh)
+                throw new ArgumentException($"Battery slots total {allocatedCapacity:0.##} kWh, exceeding the grid capacity of {node.CapacityKWh:0.##} kWh.");
+
+            node.BatterySlots = node.BatterySlotCapacities.Count;
+            node.AvailableBatterySlots = node.BatterySlots;
             node.CreatedAt = DateTime.UtcNow;
             node.UpdatedAt = DateTime.UtcNow;
-            node.AvailableBatterySlots = node.BatterySlots;
             await _context.MicrogridNodes.InsertOneAsync(node);
+
+            var slots = node.BatterySlotCapacities.Select((capacity, index) => new EnergySlot
+            {
+                NodeId = node.Id!,
+                SlotNumber = index + 1,
+                AvailableKWh = capacity,
+                Status = "Available"
+            }).ToList();
+            await _context.EnergySlots.InsertManyAsync(slots);
+
             return node;
         }
 
@@ -58,6 +79,13 @@ namespace SmartSolarMicrogridAPI.Services
             var existing = await GetByIdAsync(id);
             if (existing == null) return false;
 
+            var updatedCapacity = node.CapacityKWh > 0 ? node.CapacityKWh : existing.CapacityKWh;
+            ValidateSchedule(!string.IsNullOrWhiteSpace(node.Schedule) ? node.Schedule : existing.Schedule);
+
+            var configuredSlots = await _context.EnergySlots.Find(s => s.NodeId == id).ToListAsync();
+            if (configuredSlots.Sum(s => s.AvailableKWh) > updatedCapacity)
+                throw new ArgumentException("Grid capacity cannot be reduced below the total configured battery slot capacity.");
+
             var update = Builders<MicrogridNode>.Update
                 .Set(n => n.NodeName, !string.IsNullOrWhiteSpace(node.NodeName) ? node.NodeName : existing.NodeName)
                 .Set(n => n.Location, !string.IsNullOrWhiteSpace(node.Location) ? node.Location : existing.Location)
@@ -65,13 +93,24 @@ namespace SmartSolarMicrogridAPI.Services
                 .Set(n => n.Longitude, node.Longitude != 0 ? node.Longitude : existing.Longitude)
                 .Set(n => n.CapacityKWh, node.CapacityKWh > 0 ? node.CapacityKWh : existing.CapacityKWh)
                 .Set(n => n.BatterySlots, node.BatterySlots > 0 ? node.BatterySlots : existing.BatterySlots)
-                .Set(n => n.AvailableBatterySlots, node.AvailableBatterySlots >= 0 ? node.AvailableBatterySlots : existing.AvailableBatterySlots)
                 .Set(n => n.Schedule, !string.IsNullOrWhiteSpace(node.Schedule) ? node.Schedule : existing.Schedule)
                 .Set(n => n.UpdatedAt, DateTime.UtcNow);
 
             var result = await _context.MicrogridNodes.UpdateOneAsync(
                 n => n.Id == id, update);
             return result.ModifiedCount > 0;
+        }
+
+        private static void ValidateSchedule(string? schedule)
+        {
+            var times = schedule?.Split('-', StringSplitOptions.TrimEntries);
+            if (times == null || times.Length != 2 ||
+                !TimeOnly.TryParseExact(times[0], "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var startTime) ||
+                !TimeOnly.TryParseExact(times[1], "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var endTime) ||
+                endTime <= startTime)
+            {
+                throw new ArgumentException("Schedule must use valid times, and finish time must be later than start time.");
+            }
         }
 
         // Directly updates available battery slots (Grid Operator / Backoffice responsibility).
@@ -92,7 +131,7 @@ namespace SmartSolarMicrogridAPI.Services
             return result.ModifiedCount > 0;
         }
 
-        // Deactivates a node only if no active reservations or slots reference it.
+        // Deactivates a node only if it has no active reservations.
         public async Task<(bool Success, string Message)> DeactivateAsync(string id)
         {
             // Check for active reservations on this node
@@ -104,17 +143,6 @@ namespace SmartSolarMicrogridAPI.Services
             if (activeReservations > 0)
             {
                 return (false, $"Cannot deactivate: {activeReservations} active reservation(s) exist on this node.");
-            }
-
-            // Check for active energy slots on this node
-            var activeSlots = await _context.EnergySlots
-                .Find(s => s.NodeId == id &&
-                          (s.Status == "Available" || s.Status == "Reserved"))
-                .CountDocumentsAsync();
-
-            if (activeSlots > 0)
-            {
-                return (false, $"Cannot deactivate: {activeSlots} active energy slot(s) exist on this node.");
             }
 
             var update = Builders<MicrogridNode>.Update

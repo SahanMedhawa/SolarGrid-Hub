@@ -59,8 +59,15 @@ namespace SmartSolarMicrogridAPI.Controllers
         [Authorize(Roles = "Backoffice")]
         public async Task<IActionResult> Create([FromBody] MicrogridNode node)
         {
-            var created = await _nodeService.CreateAsync(node);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            try
+            {
+                var created = await _nodeService.CreateAsync(node);
+                return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // PUT api/microgridnode/{id} — Updates a node.
@@ -68,10 +75,17 @@ namespace SmartSolarMicrogridAPI.Controllers
         [Authorize(Roles = "Backoffice,GridOperator")]
         public async Task<IActionResult> Update(string id, [FromBody] MicrogridNode node)
         {
-            var success = await _nodeService.UpdateAsync(id, node);
-            if (!success)
-                return NotFound(new { message = "Node not found." });
-            return Ok(new { message = "Node updated successfully." });
+            try
+            {
+                var success = await _nodeService.UpdateAsync(id, node);
+                if (!success)
+                    return NotFound(new { message = "Node not found." });
+                return Ok(new { message = "Node updated successfully." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // PATCH api/microgridnode/{id}/battery-slots — Updates available battery slots directly.

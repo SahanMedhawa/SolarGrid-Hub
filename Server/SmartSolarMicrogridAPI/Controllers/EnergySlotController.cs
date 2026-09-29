@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using MongoDB.Driver;
 using SmartSolarMicrogridAPI.Data;
 using SmartSolarMicrogridAPI.Models;
+using SmartSolarMicrogridAPI.Models.DTOs;
 
 namespace SmartSolarMicrogridAPI.Controllers
 {
@@ -63,11 +64,11 @@ namespace SmartSolarMicrogridAPI.Controllers
 
         // POST api/energyslot — Creates a new energy slot.
         [HttpPost]
-        [Authorize(Roles = "Backoffice,GridOperator")]
-        public async Task<IActionResult> Create([FromBody] EnergySlot slot)
+        [Authorize(Roles = "Backoffice")]
+        public async Task<IActionResult> Create([FromBody] CreateEnergySlotRequest request)
         {
             var node = await _context.MicrogridNodes
-                .Find(n => n.Id == slot.NodeId)
+                .Find(n => n.Id == request.NodeId)
                 .FirstOrDefaultAsync();
 
             if (node == null)
@@ -76,8 +77,29 @@ namespace SmartSolarMicrogridAPI.Controllers
             if (!node.IsActive)
                 return BadRequest(new { message = "Cannot add slots to an inactive microgrid node." });
 
+            if (request.AvailableKWh <= 0)
+                return BadRequest(new { message = "Battery slot capacity must be greater than 0 kWh." });
+
+            var existingSlots = await _context.EnergySlots.Find(s => s.NodeId == request.NodeId).ToListAsync();
+            if (existingSlots.Sum(s => s.AvailableKWh) + request.AvailableKWh > node.CapacityKWh)
+                return BadRequest(new { message = $"Battery slot capacity exceeds the remaining grid capacity ({node.CapacityKWh - existingSlots.Sum(s => s.AvailableKWh):0.##} kWh)." });
+
+            var slot = new EnergySlot
+            {
+                NodeId = request.NodeId,
+                AvailableKWh = request.AvailableKWh,
+                Status = "Available"
+            };
             slot.CreatedAt = DateTime.UtcNow;
+            slot.SlotNumber = existingSlots.Count == 0 ? 1 : existingSlots.Max(s => s.SlotNumber) + 1;
             await _context.EnergySlots.InsertOneAsync(slot);
+
+            await _context.MicrogridNodes.UpdateOneAsync(
+                n => n.Id == request.NodeId,
+                Builders<MicrogridNode>.Update
+                    .Inc(n => n.BatterySlots, 1)
+                    .Inc(n => n.AvailableBatterySlots, 1));
+
             return CreatedAtAction(nameof(GetById), new { id = slot.Id }, slot);
         }
 
@@ -86,10 +108,19 @@ namespace SmartSolarMicrogridAPI.Controllers
         [Authorize(Roles = "Backoffice,GridOperator")]
         public async Task<IActionResult> Update(string id, [FromBody] EnergySlot slot)
         {
+            var existing = await _context.EnergySlots.Find(s => s.Id == id).FirstOrDefaultAsync();
+            if (existing == null)
+                return NotFound(new { message = "Slot not found." });
+
+            if (slot.AvailableKWh <= 0)
+                return BadRequest(new { message = "Battery slot capacity must be greater than 0 kWh." });
+
+            var node = await _context.MicrogridNodes.Find(n => n.Id == existing.NodeId).FirstOrDefaultAsync();
+            var otherSlots = await _context.EnergySlots.Find(s => s.NodeId == existing.NodeId && s.Id != id).ToListAsync();
+            if (node != null && otherSlots.Sum(s => s.AvailableKWh) + slot.AvailableKWh > node.CapacityKWh)
+                return BadRequest(new { message = "Battery slot capacities cannot exceed the grid capacity." });
+
             var update = Builders<EnergySlot>.Update
-                .Set(s => s.SlotDate, slot.SlotDate)
-                .Set(s => s.StartTime, slot.StartTime)
-                .Set(s => s.EndTime, slot.EndTime)
                 .Set(s => s.AvailableKWh, slot.AvailableKWh)
                 .Set(s => s.Status, slot.Status);
 
@@ -106,9 +137,26 @@ namespace SmartSolarMicrogridAPI.Controllers
         [Authorize(Roles = "Backoffice")]
         public async Task<IActionResult> Delete(string id)
         {
+            var slot = await _context.EnergySlots.Find(s => s.Id == id).FirstOrDefaultAsync();
+            if (slot == null)
+                return NotFound(new { message = "Slot not found." });
+
+            var hasActiveReservation = await _context.Reservations.CountDocumentsAsync(
+                r => r.SlotId == id && (r.Status == "Pending" || r.Status == "Approved"));
+            if (hasActiveReservation > 0)
+                return BadRequest(new { message = "Cannot delete a battery slot with an active reservation." });
+
             var result = await _context.EnergySlots.DeleteOneAsync(s => s.Id == id);
             if (result.DeletedCount == 0)
                 return NotFound(new { message = "Slot not found." });
+
+            var nodeUpdate = Builders<MicrogridNode>.Update.Inc(n => n.BatterySlots, -1);
+            if (string.Equals(slot.Status, "Available", StringComparison.OrdinalIgnoreCase))
+                nodeUpdate = Builders<MicrogridNode>.Update.Combine(
+                    nodeUpdate,
+                    Builders<MicrogridNode>.Update.Inc(n => n.AvailableBatterySlots, -1));
+            await _context.MicrogridNodes.UpdateOneAsync(n => n.Id == slot.NodeId, nodeUpdate);
+
             return Ok(new { message = "Slot deleted successfully." });
         }
     }

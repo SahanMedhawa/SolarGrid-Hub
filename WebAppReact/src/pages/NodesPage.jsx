@@ -12,6 +12,7 @@ import { getNodes, createNode, updateNode, deactivateNode, getSlotsByNode, creat
 import StatusBadge from '../components/StatusBadge';
 import { toast } from 'react-toastify';
 import LocationPicker from '../components/LocationPicker';
+import SchedulePicker from '../components/SchedulePicker';
 
 // Renders the microgrid node management page with slot management.
 export default function NodesPage() {
@@ -25,12 +26,15 @@ export default function NodesPage() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [slots, setSlots] = useState([]);
   const [nodeForm, setNodeForm] = useState({
-    nodeName: '', location: '', latitude: '', longitude: '',
-    capacityKWh: '', batterySlots: '', availableBatterySlots: '', schedule: '06:00-18:00'
+    nodeName: '', location: '', latitude: '', longitude: '', capacityKWh: '',
+    batterySlotCapacities: [''], schedule: '06:00-18:00'
   });
   const [slotForm, setSlotForm] = useState({
-    slotDate: '', startTime: '', endTime: '', availableKWh: '', status: 'Available'
+    availableKWh: '', status: 'Available'
   });
+  const allocatedSlotCapacity = slots.reduce((total, slot) => total + Number(slot.availableKWh || 0), 0);
+  const remainingNodeCapacity = Math.max(0, Number(selectedNode?.capacityKWh || 0) - allocatedSlotCapacity);
+  const capacityFullyAllocated = remainingNodeCapacity <= 0.000001;
 
   // Loads all nodes on mount.
   useEffect(() => { loadNodes(); }, []);
@@ -55,12 +59,11 @@ export default function NodesPage() {
       setNodeForm({
         nodeName: node.nodeName, location: node.location,
         latitude: node.latitude, longitude: node.longitude,
-        capacityKWh: node.capacityKWh, batterySlots: node.batterySlots,
-        availableBatterySlots: node.availableBatterySlots, schedule: node.schedule
+        capacityKWh: node.capacityKWh, batterySlotCapacities: [], schedule: node.schedule
       });
     } else {
       setEditingNode(null);
-      setNodeForm({ nodeName: '', location: '', latitude: '', longitude: '', capacityKWh: '', batterySlots: '', availableBatterySlots: '', schedule: '06:00-18:00' });
+      setNodeForm({ nodeName: '', location: '', latitude: '', longitude: '', capacityKWh: '', batterySlotCapacities: [''], schedule: '06:00-18:00' });
     }
     setShowNodeModal(true);
   }
@@ -78,10 +81,20 @@ export default function NodesPage() {
       ...nodeForm,
       latitude: parseFloat(nodeForm.latitude),
       longitude: parseFloat(nodeForm.longitude),
-      capacityKWh: parseFloat(nodeForm.capacityKWh),
-      batterySlots: parseInt(nodeForm.batterySlots),
-      availableBatterySlots: parseInt(nodeForm.availableBatterySlots)
+      capacityKWh: parseFloat(nodeForm.capacityKWh)
     };
+    if (!editingNode) {
+      const batterySlotCapacities = nodeForm.batterySlotCapacities.map(Number);
+      if (batterySlotCapacities.length === 0 || batterySlotCapacities.some(value => !Number.isFinite(value) || value <= 0)) {
+        toast.error('Enter a positive capacity for every battery slot.');
+        return;
+      }
+      if (batterySlotCapacities.reduce((sum, value) => sum + value, 0) > payload.capacityKWh) {
+        toast.error('The total of battery slot capacities cannot exceed the grid capacity.');
+        return;
+      }
+      payload.batterySlotCapacities = batterySlotCapacities;
+    }
     try {
       if (editingNode) {
         await updateNode(editingNode.id, payload);
@@ -130,9 +143,6 @@ export default function NodesPage() {
     try {
       await createSlot({
         nodeId: selectedNode.id,
-        slotDate: slotForm.slotDate,
-        startTime: slotForm.startTime,
-        endTime: slotForm.endTime,
         availableKWh: parseFloat(slotForm.availableKWh),
         status: 'Available'
       });
@@ -170,24 +180,26 @@ export default function NodesPage() {
           <div className="card">
             <div className="card-header">
               <h3 className="card-title">🔌 Slots — {selectedNode.nodeName}</h3>
-              {selectedNode.isActive && (
-                <button className="btn btn-primary btn-sm" onClick={() => { setSlotForm({ slotDate: '', startTime: '', endTime: '', availableKWh: '', status: 'Available' }); setShowSlotModal(true); }}>
-                  + Add Slot
+              {selectedNode.isActive && isBackoffice && (
+                <button className="btn btn-primary btn-sm" disabled={capacityFullyAllocated} onClick={() => { setSlotForm({ availableKWh: '', status: 'Available' }); setShowSlotModal(true); }}>
+                  + Add Battery Slot
                 </button>
               )}
+            </div>
+            <div className="card-body">
+              {allocatedSlotCapacity} / {selectedNode.capacityKWh} kWh allocated across {slots.length} battery slot{slots.length === 1 ? '' : 's'}; {remainingNodeCapacity} kWh remaining.
             </div>
             <div className="table-container">
               <table>
                 <thead>
-                  <tr><th>Date</th><th>Time</th><th>Available kWh</th><th>Status</th><th>Actions</th></tr>
+                  <tr><th>Battery Slot</th><th>Capacity</th><th>Status</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
                   {slots.length === 0 ? (
-                    <tr><td colSpan="5" className="text-center text-muted" style={{ padding: '2rem' }}>No slots found</td></tr>
+                    <tr><td colSpan="4" className="text-center text-muted" style={{ padding: '2rem' }}>No battery slots configured.</td></tr>
                   ) : slots.map(s => (
                     <tr key={s.id}>
-                      <td>{new Date(s.slotDate).toLocaleDateString()}</td>
-                      <td>{s.startTime} - {s.endTime}</td>
+                      <td>Slot {s.slotNumber || slots.indexOf(s) + 1}</td>
                       <td>{s.availableKWh} kWh</td>
                       <td><StatusBadge status={s.status} /></td>
                       <td className="actions">
@@ -205,33 +217,20 @@ export default function NodesPage() {
             <div className="modal-overlay" onClick={() => setShowSlotModal(false)}>
               <div className="modal-content" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                  <h3 className="modal-title">Add Energy Slot</h3>
+                  <h3 className="modal-title">Add Battery Slot</h3>
                   <button className="btn btn-ghost" onClick={() => setShowSlotModal(false)}>✕</button>
                 </div>
                 <form onSubmit={handleCreateSlot}>
                   <div className="modal-body">
                     <div className="form-group">
-                      <label className="form-label">Slot Date</label>
-                      <input type="date" className="form-input" value={slotForm.slotDate} onChange={e => setSlotForm({ ...slotForm, slotDate: e.target.value })} required />
-                    </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label className="form-label">Start Time</label>
-                        <input type="time" className="form-input" value={slotForm.startTime} onChange={e => setSlotForm({ ...slotForm, startTime: e.target.value })} required />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">End Time</label>
-                        <input type="time" className="form-input" value={slotForm.endTime} onChange={e => setSlotForm({ ...slotForm, endTime: e.target.value })} required />
-                      </div>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Available kWh</label>
+                      <label className="form-label">Battery Slot Capacity (kWh)</label>
                       <input type="number" min="0" step="0.1" className="form-input" value={slotForm.availableKWh} onChange={e => setSlotForm({ ...slotForm, availableKWh: e.target.value })} required />
+                      <small>Grid capacity: {selectedNode.capacityKWh} kWh. Allocated to slots: {allocatedSlotCapacity} kWh. Remaining: {remainingNodeCapacity} kWh.</small>
                     </div>
                   </div>
                   <div className="modal-footer">
                     <button type="button" className="btn btn-secondary" onClick={() => setShowSlotModal(false)}>Cancel</button>
-                    <button type="submit" className="btn btn-primary">Create Slot</button>
+                    <button type="submit" className="btn btn-primary" disabled={capacityFullyAllocated || Number(slotForm.availableKWh) > remainingNodeCapacity}>Add Battery Slot</button>
                   </div>
                 </form>
               </div>
@@ -322,20 +321,24 @@ export default function NodesPage() {
                     <label className="form-label">Capacity (kWh)</label>
                     <input type="number" min="0" step="50" className="form-input" value={nodeForm.capacityKWh} onChange={e => setNodeForm({ ...nodeForm, capacityKWh: e.target.value })} required />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Total Battery Slots</label>
-                    <input type="number" min="0" className="form-input" value={nodeForm.batterySlots} onChange={e => setNodeForm({ ...nodeForm, batterySlots: e.target.value })} required />
-                  </div>
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Available Battery Slots</label>
-                    <input type="number" min="0" className="form-input" value={nodeForm.availableBatterySlots} onChange={e => setNodeForm({ ...nodeForm, availableBatterySlots: e.target.value })} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Schedule</label>
-                    <input className="form-input" placeholder="06:00-18:00" value={nodeForm.schedule} onChange={e => setNodeForm({ ...nodeForm, schedule: e.target.value })} required />
-                  </div>
+                {!editingNode && <div className="form-group">
+                  <label className="form-label">Battery Slot Capacities (kWh)</label>
+                  <p className="text-muted">Divide the {nodeForm.capacityKWh || 0} kWh grid capacity into individual slots. Total: {nodeForm.batterySlotCapacities.reduce((sum, value) => sum + (Number(value) || 0), 0)} kWh.</p>
+                  {nodeForm.batterySlotCapacities.map((capacity, index) => (
+                    <div className="slot-capacity-row" key={index}>
+                      <div className="form-group slot-capacity-input">
+                        <label className="form-label">Slot {index + 1}</label>
+                        <input type="number" min="0.1" step="0.1" className="form-input" value={capacity} onChange={e => setNodeForm({ ...nodeForm, batterySlotCapacities: nodeForm.batterySlotCapacities.map((value, slotIndex) => slotIndex === index ? e.target.value : value) })} required />
+                      </div>
+                      {nodeForm.batterySlotCapacities.length > 1 && <button type="button" className="btn btn-danger btn-sm slot-remove-btn" onClick={() => setNodeForm({ ...nodeForm, batterySlotCapacities: nodeForm.batterySlotCapacities.filter((_, slotIndex) => slotIndex !== index) })}>Remove</button>}
+                    </div>
+                  ))}
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setNodeForm({ ...nodeForm, batterySlotCapacities: [...nodeForm.batterySlotCapacities, ''] })}>+ Add battery slot</button>
+                </div>}
+                <div className="form-group">
+                  <label className="form-label">Operating Schedule</label>
+                  <SchedulePicker value={nodeForm.schedule} onChange={schedule => setNodeForm({ ...nodeForm, schedule })} />
                 </div>
               </div>
               <div className="modal-footer">

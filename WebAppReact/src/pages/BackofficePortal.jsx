@@ -25,6 +25,8 @@ import {
   approveReservation
 } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
+import LocationPicker from '../components/LocationPicker';
+import SchedulePicker from '../components/SchedulePicker';
 import { toast } from 'react-toastify';
 
 export default function BackofficePortal() {
@@ -49,8 +51,7 @@ export default function BackofficePortal() {
     latitude: 6.9271,
     longitude: 79.8612,
     capacityKWh: 100,
-    batterySlots: 10,
-    availableBatterySlots: 10,
+    batterySlotCapacities: [''],
     schedule: '06:00-18:00'
   });
 
@@ -113,8 +114,17 @@ export default function BackofficePortal() {
   // --- Handlers: Grid Nodes ---
   async function handleCreateNode(e) {
     e.preventDefault();
+    const slotCapacities = newNode.batterySlotCapacities.map(Number);
     if (!newNode.nodeName || !newNode.location) {
       toast.warning('Node name and location are required.');
+      return;
+    }
+    if (slotCapacities.length === 0 || slotCapacities.some(value => !Number.isFinite(value) || value <= 0)) {
+      toast.error('Enter a positive capacity for every battery slot.');
+      return;
+    }
+    if (slotCapacities.reduce((sum, value) => sum + value, 0) > Number(newNode.capacityKWh)) {
+      toast.error('The total of battery slot capacities cannot exceed the grid capacity.');
       return;
     }
     try {
@@ -123,8 +133,7 @@ export default function BackofficePortal() {
         latitude: parseFloat(newNode.latitude),
         longitude: parseFloat(newNode.longitude),
         capacityKWh: parseFloat(newNode.capacityKWh),
-        batterySlots: parseInt(newNode.batterySlots, 10),
-        availableBatterySlots: parseInt(newNode.availableBatterySlots, 10)
+        batterySlotCapacities: slotCapacities
       });
       toast.success('Grid Node Hub created successfully!');
       setShowNodeModal(false);
@@ -134,8 +143,7 @@ export default function BackofficePortal() {
         latitude: 6.9271,
         longitude: 79.8612,
         capacityKWh: 100,
-        batterySlots: 10,
-        availableBatterySlots: 10,
+        batterySlotCapacities: [''],
         schedule: '06:00-18:00'
       });
       loadAllData();
@@ -800,82 +808,68 @@ export default function BackofficePortal() {
             <form onSubmit={handleCreateNode}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Station Name</label>
+                  <label className="form-label">Node Name</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Colombo South Station"
                     value={newNode.nodeName}
                     onChange={e => setNewNode({ ...newNode, nodeName: e.target.value })}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Physical Location</label>
+                  <label className="form-label">Location</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Havelock City, Colombo 05"
                     value={newNode.location}
                     onChange={e => setNewNode({ ...newNode, location: e.target.value })}
                     required
                   />
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Latitude</label>
-                    <input
-                      type="number"
-                      step="any"
-                      className="form-input"
-                      value={newNode.latitude}
-                      onChange={e => setNewNode({ ...newNode, latitude: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Longitude</label>
-                    <input
-                      type="number"
-                      step="any"
-                      className="form-input"
-                      value={newNode.longitude}
-                      onChange={e => setNewNode({ ...newNode, longitude: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
+                <LocationPicker
+                  latitude={newNode.latitude}
+                  longitude={newNode.longitude}
+                  onChange={({ latitude, longitude, address }) =>
+                    setNewNode(prev => ({
+                      ...prev,
+                      latitude,
+                      longitude,
+                      location: address || prev.location
+                    }))
+                  }
+                />
                 <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Capacity (kWh)</label>
                     <input
                       type="number"
+                      min="0"
+                      step="50"
                       className="form-input"
                       value={newNode.capacityKWh}
                       onChange={e => setNewNode({ ...newNode, capacityKWh: e.target.value })}
                       required
                     />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Battery Slots</label>
-                    <input
-                      type="number"
-                      className="form-input"
-                      value={newNode.batterySlots}
-                      onChange={e => setNewNode({ ...newNode, batterySlots: e.target.value, availableBatterySlots: e.target.value })}
-                      required
-                    />
-                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Battery Slot Capacities (kWh)</label>
+                  <p className="text-muted">Divide the {newNode.capacityKWh || 0} kWh grid capacity into individual slots. Total: {newNode.batterySlotCapacities.reduce((sum, value) => sum + (Number(value) || 0), 0)} kWh.</p>
+                  {newNode.batterySlotCapacities.map((capacity, index) => (
+                    <div className="slot-capacity-row" key={index}>
+                      <div className="form-group slot-capacity-input">
+                        <label className="form-label">Slot {index + 1}</label>
+                        <input type="number" min="0.1" step="0.1" className="form-input" value={capacity} onChange={e => setNewNode({ ...newNode, batterySlotCapacities: newNode.batterySlotCapacities.map((value, slotIndex) => slotIndex === index ? e.target.value : value) })} required />
+                      </div>
+                      {newNode.batterySlotCapacities.length > 1 && <button type="button" className="btn btn-danger btn-sm slot-remove-btn" onClick={() => setNewNode({ ...newNode, batterySlotCapacities: newNode.batterySlotCapacities.filter((_, slotIndex) => slotIndex !== index) })}>Remove</button>}
+                    </div>
+                  ))}
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setNewNode({ ...newNode, batterySlotCapacities: [...newNode.batterySlotCapacities, ''] })}>+ Add battery slot</button>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Operating Schedule</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="06:00-18:00"
-                    value={newNode.schedule}
-                    onChange={e => setNewNode({ ...newNode, schedule: e.target.value })}
-                  />
+                  <SchedulePicker value={newNode.schedule} onChange={schedule => setNewNode({ ...newNode, schedule })} />
                 </div>
               </div>
               <div className="modal-footer">
@@ -883,7 +877,7 @@ export default function BackofficePortal() {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Create Station Node
+                  Create
                 </button>
               </div>
             </form>
