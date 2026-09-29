@@ -34,6 +34,7 @@ class OperatorMainActivity : AppCompatActivity() {
     private lateinit var tvCountCompleted: TextView
     private lateinit var etManualQrToken: EditText
     private lateinit var llOperatorBookingsList: LinearLayout
+    private val slotMap = HashMap<String, String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -104,12 +105,20 @@ class OperatorMainActivity : AppCompatActivity() {
                     val startTime = detailObj.optString("startTime", "")
                     val endTime = detailObj.optString("endTime", "")
                     val slotsArr = detailObj.optJSONArray("allocatedSlotIds")
-                    val slotDisplay = if (slotsArr != null && slotsArr.length() > 0) {
+                    val slotNamesArr = detailObj.optJSONArray("allocatedSlotNames")
+                    val slotDisplay = if (slotNamesArr != null && slotNamesArr.length() > 0) {
                         val sList = mutableListOf<String>()
-                        for (j in 0 until slotsArr.length()) sList.add(slotsArr.getString(j))
-                        "${sList.joinToString(", ")} (${sList.size} slots)"
+                        for (j in 0 until slotNamesArr.length()) sList.add(slotNamesArr.getString(j))
+                        sList.joinToString(", ")
+                    } else if (slotsArr != null && slotsArr.length() > 0) {
+                        val sList = mutableListOf<String>()
+                        for (j in 0 until slotsArr.length()) {
+                            val sId = slotsArr.getString(j)
+                            sList.add(slotMap[sId] ?: "Slot #${j + 1}")
+                        }
+                        sList.joinToString(", ")
                     } else if (slot.isNotEmpty()) {
-                        slot
+                        slotMap[slot] ?: "Slot #1"
                     } else {
                         "Dynamic"
                     }
@@ -118,7 +127,7 @@ class OperatorMainActivity : AppCompatActivity() {
                     if (!status.equals("Approved", ignoreCase = true)) {
                         AlertDialog.Builder(this@OperatorMainActivity)
                             .setTitle("Cannot Finalize Transfer")
-                            .setMessage("Reservation #$resId is currently '$status'. Only 'Approved' bookings can be finalized.")
+                            .setMessage("Reservation is currently '$status'. Only 'Approved' bookings can be finalized.")
                             .setPositiveButton("OK", null)
                             .show()
                         return
@@ -129,7 +138,6 @@ class OperatorMainActivity : AppCompatActivity() {
                         .setTitle("Verify Server Data ⚡")
                         .setMessage(
                             "Verified Reservation Record:\n" +
-                            "• Booking ID: #$resId\n" +
                             "• Prosumer NIC: $nic\n" +
                             "• Time Window: $timeWindow\n" +
                             "• Battery Slots: $slotDisplay\n" +
@@ -195,6 +203,17 @@ class OperatorMainActivity : AppCompatActivity() {
                 try {
                     val list = JSONArray(response)
                     updateStats(list)
+
+                    // Preload station slots for readable slot names
+                    val nodeIds = mutableSetOf<String>()
+                    for (i in 0 until list.length()) {
+                        val nId = list.optJSONObject(i)?.optString("nodeId", "") ?: ""
+                        if (nId.isNotEmpty()) nodeIds.add(nId)
+                    }
+                    for (nId in nodeIds) {
+                        loadStationSlots(nId)
+                    }
+
                     renderBookings(list)
                 } catch (e: Exception) {
                     Toast.makeText(this@OperatorMainActivity, "Error parsing bookings", Toast.LENGTH_SHORT).show()
@@ -204,6 +223,25 @@ class OperatorMainActivity : AppCompatActivity() {
             override fun onError(error: String) {
                 Toast.makeText(this@OperatorMainActivity, "Bookings: $error", Toast.LENGTH_SHORT).show()
             }
+        })
+    }
+
+    private fun loadStationSlots(nodeId: String) {
+        ApiClient.request("energyslot/node/$nodeId", "GET", null, session.getToken(), object : ApiClient.ApiCallback {
+            override fun onSuccess(resp: String) {
+                try {
+                    val arr = JSONArray(resp)
+                    for (i in 0 until arr.length()) {
+                        val s = arr.getJSONObject(i)
+                        val sId = s.optString("id", "")
+                        val sNum = s.optInt("slotNumber", i + 1)
+                        if (sId.isNotEmpty()) {
+                            slotMap[sId] = "Slot #$sNum"
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+            override fun onError(error: String) {}
         })
     }
 
@@ -255,14 +293,23 @@ class OperatorMainActivity : AppCompatActivity() {
                 val startTime = r.optString("startTime", "")
                 val endTime = r.optString("endTime", "")
                 val slotsArr = r.optJSONArray("allocatedSlotIds")
-                val slotDisplay = if (slotsArr != null && slotsArr.length() > 0) {
+                val slotNamesArr = r.optJSONArray("allocatedSlotNames")
+                val slotDisplay = if (slotNamesArr != null && slotNamesArr.length() > 0) {
                     val sList = mutableListOf<String>()
-                    for (j in 0 until slotsArr.length()) sList.add(slotsArr.getString(j))
-                    "${sList.joinToString(", ")} (${sList.size} slots)"
+                    for (j in 0 until slotNamesArr.length()) sList.add(slotNamesArr.getString(j))
+                    sList.joinToString(", ")
+                } else if (slotsArr != null && slotsArr.length() > 0) {
+                    val sList = mutableListOf<String>()
+                    for (j in 0 until slotsArr.length()) {
+                        val sId = slotsArr.getString(j)
+                        val name = slotMap[sId] ?: "Slot #${j + 1}"
+                        sList.add(name)
+                    }
+                    sList.joinToString(", ")
                 } else if (slot.isNotEmpty()) {
-                    slot
+                    slotMap[slot] ?: "Slot #1"
                 } else {
-                    "Auto"
+                    "Auto-allocated"
                 }
                 val energy = r.optDouble("energyKWh", 0.0)
                 val date = r.optString("reservationDate", "")
@@ -293,7 +340,7 @@ class OperatorMainActivity : AppCompatActivity() {
                 }
 
                 val tvHead = TextView(this).apply {
-                    text = "Booking #${if (id.length > 8) id.substring(0, 8) else id}"
+                    text = "Prosumer: $nic"
                     textSize = 15f
                     setTextColor(textPrimaryColor)
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -325,7 +372,7 @@ class OperatorMainActivity : AppCompatActivity() {
                 val formattedDate = if (date.length >= 10) date.substring(0, 10) else date
                 val timeWindow = if (startTime.isNotEmpty() && endTime.isNotEmpty()) " [$startTime - $endTime]" else ""
                 val tvDetails = TextView(this).apply {
-                    text = "Prosumer: $nic • Slots: $slotDisplay\nDate: $formattedDate$timeWindow • Energy: $energy kWh"
+                    text = "⚡ Energy: $energy kWh • Slots: $slotDisplay\n📅 Date: $formattedDate$timeWindow"
                     textSize = 13f
                     setTextColor(textSecondaryColor)
                     setLineSpacing(4f, 1f)

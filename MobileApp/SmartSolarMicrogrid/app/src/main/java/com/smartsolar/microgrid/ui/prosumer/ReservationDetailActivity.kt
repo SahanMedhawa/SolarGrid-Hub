@@ -163,6 +163,14 @@ class ReservationDetailActivity : AppCompatActivity() {
             }
         }
 
+        val currentAllocatedSlotNames = ArrayList<String>()
+        val slotNamesArr = obj.optJSONArray("allocatedSlotNames")
+        if (slotNamesArr != null) {
+            for (i in 0 until slotNamesArr.length()) {
+                currentAllocatedSlotNames.add(slotNamesArr.getString(i))
+            }
+        }
+
         // Format Date
         val displayDate = if (currentDateStr.length >= 10) currentDateStr.substring(0, 10) else currentDateStr
         val displayTimeWindow = if (currentStartTime.isNotEmpty() && currentEndTime.isNotEmpty()) {
@@ -171,10 +179,12 @@ class ReservationDetailActivity : AppCompatActivity() {
             "Standard Window"
         }
 
-        val displaySlots = if (currentAllocatedSlots.isNotEmpty()) {
-            "${currentAllocatedSlots.joinToString(", ")} (${currentAllocatedSlots.size} slot${if (currentAllocatedSlots.size > 1) "s" else ""})"
+        val displaySlots = if (currentAllocatedSlotNames.isNotEmpty()) {
+            currentAllocatedSlotNames.joinToString(", ")
+        } else if (currentAllocatedSlots.isNotEmpty()) {
+            "${currentAllocatedSlots.size} slot${if (currentAllocatedSlots.size > 1) "s" else ""}"
         } else if (currentSlotId.isNotEmpty()) {
-            currentSlotId
+            "Slot #1"
         } else {
             "Dynamic Auto-Allocation"
         }
@@ -192,9 +202,7 @@ class ReservationDetailActivity : AppCompatActivity() {
 
         // Specifications list
         val specs = StringBuilder()
-            .append("• Booking ID: ").append(resId).append("\n")
             .append("• Prosumer NIC: ").append(prosumerNic).append("\n")
-            .append("• Grid Hub Station: ").append(currentNodeId).append("\n")
             .append("• Scheduled Date: ").append(displayDate).append("\n")
             .append("• Time Window: ").append(displayTimeWindow).append("\n")
             .append("• Battery Storage Slots: ").append(displaySlots).append("\n")
@@ -279,7 +287,7 @@ class ReservationDetailActivity : AppCompatActivity() {
         btnSubmit.text = "Save Updated Reservation"
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Modify Booking #$resId")
+            .setTitle("Modify Reservation")
             .setView(dialogView)
             .setNegativeButton("Cancel", null)
             .create()
