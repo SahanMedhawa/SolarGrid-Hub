@@ -136,10 +136,11 @@ export async function getNodeById(id) {
 export async function createNode(nodeData) {
   const latitude = Number(nodeData.latitude);
   const longitude = Number(nodeData.longitude);
-  const capacityKWh = Number(nodeData.capacityKWh);
   const batterySlotCapacities = Array.isArray(nodeData.batterySlotCapacities)
     ? nodeData.batterySlotCapacities.map(Number)
     : [];
+  const slotSum = batterySlotCapacities.reduce((sum, value) => sum + value, 0);
+  const capacityKWh = Number(nodeData.capacityKWh) || slotSum;
 
   if (!nodeData.nodeName?.trim() || !nodeData.location?.trim()) {
     throw new Error('Node name and location are required.');
@@ -147,14 +148,11 @@ export async function createNode(nodeData) {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     throw new Error('Choose a valid node location.');
   }
-  if (!Number.isFinite(capacityKWh) || capacityKWh <= 0) {
-    throw new Error('Grid capacity must be greater than 0 kWh.');
-  }
   if (batterySlotCapacities.length === 0 || batterySlotCapacities.some(value => !Number.isFinite(value) || value <= 0)) {
     throw new Error('Enter a positive capacity for every battery slot.');
   }
-  if (batterySlotCapacities.reduce((sum, value) => sum + value, 0) > capacityKWh) {
-    throw new Error('The total of battery slot capacities cannot exceed the grid capacity.');
+  if (!Number.isFinite(capacityKWh) || capacityKWh <= 0) {
+    throw new Error('Grid capacity must be greater than 0 kWh.');
   }
 
   return apiRequest('microgridnode', 'POST', {
@@ -208,6 +206,11 @@ export async function updateSlot(id, slotData) {
   return apiRequest(`energyslot/${id}`, 'PUT', slotData);
 }
 
+// Toggles maintenance status on an energy slot.
+export async function toggleSlotMaintenance(id, underMaintenance) {
+  return apiRequest(`energyslot/${id}/maintenance`, 'PUT', { underMaintenance });
+}
+
 // Deletes an energy slot.
 export async function deleteSlot(id) {
   return apiRequest(`energyslot/${id}`, 'DELETE');
@@ -243,6 +246,18 @@ export async function getApprovedFutureCount(nic) {
 // Gets the count of pending reservations for a prosumer.
 export async function getPendingCount(nic) {
   return apiRequest(`reservation/prosumer/${nic}/pending-count`);
+}
+
+// Retrieves availability for a specific node, date, and time window.
+export async function getAvailability(nodeId, date, startTime, endTime) {
+  const params = new URLSearchParams({ nodeId, date, startTime, endTime });
+  return apiRequest(`reservation/availability?${params.toString()}`);
+}
+
+// Retrieves hourly capacity availability breakdown for a node on a date.
+export async function getHourlyAvailability(nodeId, date) {
+  const params = new URLSearchParams({ nodeId, date });
+  return apiRequest(`reservation/availability/hourly?${params.toString()}`);
 }
 
 // Creates a new reservation (7-day rule enforced server-side).

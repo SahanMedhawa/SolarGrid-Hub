@@ -17,6 +17,8 @@ export default function ProsumersPage() {
   const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [showDeactivateModal, setShowDeactivateModal] = useState(false);
+  const [selectedProsumerNic, setSelectedProsumerNic] = useState(null);
 
   // Loads all prosumers from the API on mount.
   useEffect(() => { loadProsumers(); }, []);
@@ -55,11 +57,19 @@ export default function ProsumersPage() {
   }
 
   // Deactivates an active prosumer account.
-  async function handleDeactivate(nic) {
-    if (!window.confirm('Deactivate this prosumer? Only a Backoffice officer can reactivate them.')) return;
+  // Opens confirmation modal before deactivating an active prosumer.
+  function handleDeactivate(nic) {
+    setSelectedProsumerNic(nic);
+    setShowDeactivateModal(true);
+  }
+
+  // Confirms prosumer account deactivation.
+  async function confirmDeactivate() {
     try {
-      await deactivateProsumer(nic);
-      toast.success('Prosumer deactivated.');
+      await deactivateProsumer(selectedProsumerNic);
+      toast.success('Prosumer deactivated successfully.');
+      setShowDeactivateModal(false);
+      setSelectedProsumerNic(null);
       loadProsumers();
     } catch (error) {
       toast.error(error.message);
@@ -140,6 +150,53 @@ export default function ProsumersPage() {
           </div>
         )}
       </div>
+
+
+      {showDeactivateModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+
+            <div className="modal-header">
+              <h2 className="modal-title">Deactivate Prosumer</h2>
+            </div>
+
+            <div className="modal-body">
+              <p>
+                Are you sure you want to deactivate this prosumer account?
+              </p>
+
+              <p className="text-muted mt-1">
+                The account can be reactivated later by a Backoffice Administrator.
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowDeactivateModal(false);
+                  setSelectedProsumerNic(null);
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                className="btn btn-danger"
+                onClick={confirmDeactivate}
+              >
+                🚫 Deactivate
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+
+
+
     </div>
+
   );
 }

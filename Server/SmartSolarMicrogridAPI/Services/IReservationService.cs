@@ -1,7 +1,8 @@
 // ============================================================
 // File: IReservationService.cs
 // Project: SmartSolarMicrogridAPI
-// Description: Interface for energy reservation management.
+// Description: Interface for energy reservation management
+//              with time-window-based capacity evaluation.
 // ============================================================
 
 using SmartSolarMicrogridAPI.Models;
@@ -32,7 +33,13 @@ namespace SmartSolarMicrogridAPI.Services
         // Gets the count of pending reservations for a prosumer.
         Task<long> GetPendingCountByProsumerAsync(string nic);
 
-        // Creates a new reservation (must be within 7 days).
+        // Gets availability for a specific station, date, and time window.
+        Task<AvailabilityResponse> GetAvailabilityAsync(string nodeId, DateTime date, string startTime, string endTime);
+
+        // Gets hourly availability breakdown for a station on a specific date.
+        Task<HourlyAvailabilityResponse> GetHourlyAvailabilityAsync(string nodeId, DateTime date);
+
+        // Creates a new reservation (must be within 7 days, within operating hours, capacity available).
         Task<(bool Success, string Message, Reservation? Reservation)> CreateAsync(CreateReservationRequest request);
 
         // Updates a reservation (requires 12 hours' notice).

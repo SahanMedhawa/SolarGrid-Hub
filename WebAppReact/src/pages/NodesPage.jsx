@@ -8,7 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getNodes, createNode, updateNode, deactivateNode, getSlotsByNode, createSlot, updateSlot, deleteSlot } from '../services/api';
+import { getNodes, getNodeById, createNode, updateNode, deactivateNode, getSlotsByNode, createSlot, updateSlot, deleteSlot, toggleSlotMaintenance } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { toast } from 'react-toastify';
 import LocationPicker from '../components/LocationPicker';
@@ -18,6 +18,8 @@ import SchedulePicker from '../components/SchedulePicker';
 export default function NodesPage() {
   const { user } = useAuth();
   const isBackoffice = user?.role === 'Backoffice';
+  const isOperator = user?.role === 'GridOperator';
+  const canManageSlots = isBackoffice || isOperator;
   const [nodes, setNodes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showNodeModal, setShowNodeModal] = useState(false);
@@ -27,14 +29,16 @@ export default function NodesPage() {
   const [slots, setSlots] = useState([]);
   const [nodeForm, setNodeForm] = useState({
     nodeName: '', location: '', latitude: '', longitude: '', capacityKWh: '',
-    batterySlotCapacities: [''], schedule: '06:00-18:00'
+    batterySlotCapacities: ['50', '50'], schedule: '06:00-18:00'
   });
   const [slotForm, setSlotForm] = useState({
     availableKWh: '', status: 'Available'
   });
-  const allocatedSlotCapacity = slots.reduce((total, slot) => total + Number(slot.availableKWh || 0), 0);
-  const remainingNodeCapacity = Math.max(0, Number(selectedNode?.capacityKWh || 0) - allocatedSlotCapacity);
-  const capacityFullyAllocated = remainingNodeCapacity <= 0.000001;
+  const totalSlotCapacity = slots.reduce((total, slot) => total + Number(slot.availableKWh || 0), 0);
+  const activeSlots = slots.filter(s => s.status !== 'Maintenance');
+  const maintenanceSlots = slots.filter(s => s.status === 'Maintenance');
+  const activeSlotCapacity = activeSlots.reduce((total, slot) => total + Number(slot.availableKWh || 0), 0);
+  const maintenanceSlotCapacity = maintenanceSlots.reduce((total, slot) => total + Number(slot.availableKWh || 0), 0);
 
   // Loads all nodes on mount.
   useEffect(() => { loadNodes(); }, []);
@@ -45,6 +49,10 @@ export default function NodesPage() {
       setLoading(true);
       const data = await getNodes();
       setNodes(data);
+      if (selectedNode) {
+        const updated = data.find(n => n.id === selectedNode.id);
+        if (updated) setSelectedNode(updated);
+      }
     } catch (error) {
       toast.error('Failed to load nodes.');
     } finally {
@@ -63,7 +71,7 @@ export default function NodesPage() {
       });
     } else {
       setEditingNode(null);
-      setNodeForm({ nodeName: '', location: '', latitude: '', longitude: '', capacityKWh: '', batterySlotCapacities: [''], schedule: '06:00-18:00' });
+      setNodeForm({ nodeName: '', location: '', latitude: '', longitude: '', capacityKWh: '100', batterySlotCapacities: ['50', '50'], schedule: '06:00-18:00' });
     }
     setShowNodeModal(true);
   }
@@ -80,28 +88,29 @@ export default function NodesPage() {
     const payload = {
       ...nodeForm,
       latitude: parseFloat(nodeForm.latitude),
-      longitude: parseFloat(nodeForm.longitude),
-      capacityKWh: parseFloat(nodeForm.capacityKWh)
+      longitude: parseFloat(nodeForm.longitude)
     };
+
     if (!editingNode) {
       const batterySlotCapacities = nodeForm.batterySlotCapacities.map(Number);
       if (batterySlotCapacities.length === 0 || batterySlotCapacities.some(value => !Number.isFinite(value) || value <= 0)) {
         toast.error('Enter a positive capacity for every battery slot.');
         return;
       }
-      if (batterySlotCapacities.reduce((sum, value) => sum + value, 0) > payload.capacityKWh) {
-        toast.error('The total of battery slot capacities cannot exceed the grid capacity.');
-        return;
-      }
+      const sumCap = batterySlotCapacities.reduce((sum, value) => sum + value, 0);
+      payload.capacityKWh = sumCap;
       payload.batterySlotCapacities = batterySlotCapacities;
+    } else {
+      payload.capacityKWh = parseFloat(nodeForm.capacityKWh);
     }
+
     try {
       if (editingNode) {
         await updateNode(editingNode.id, payload);
         toast.success('Node updated!');
       } else {
         await createNode(payload);
-        toast.success('Node created!');
+        toast.success('Node created with auto-calculated slot capacity!');
       }
       setShowNodeModal(false);
       loadNodes();
@@ -126,8 +135,12 @@ export default function NodesPage() {
   async function viewSlots(node) {
     setSelectedNode(node);
     try {
-      const data = await getSlotsByNode(node.id);
-      setSlots(data);
+      const [slotData, nodeData] = await Promise.all([
+        getSlotsByNode(node.id),
+        getNodeById(node.id)
+      ]);
+      setSlots(slotData);
+      if (nodeData) setSelectedNode(nodeData);
     } catch (error) {
       toast.error('Failed to load slots.');
     }
@@ -140,15 +153,35 @@ export default function NodesPage() {
       toast.error('Cannot add slots to an inactive node. Reactivate the node first.');
       return;
     }
+    const cap = parseFloat(slotForm.availableKWh);
+    if (!cap || cap <= 0) {
+      toast.error('Slot capacity must be greater than 0 kWh.');
+      return;
+    }
     try {
       await createSlot({
         nodeId: selectedNode.id,
-        availableKWh: parseFloat(slotForm.availableKWh),
+        availableKWh: cap,
         status: 'Available'
       });
-      toast.success('Slot created!');
+      toast.success('Battery slot added! Station capacity updated.');
       setShowSlotModal(false);
-      viewSlots(selectedNode);
+      setSlotForm({ availableKWh: '', status: 'Available' });
+      await viewSlots(selectedNode);
+      await loadNodes();
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  // Toggles maintenance status on a slot.
+  async function handleToggleMaintenance(slot) {
+    const isMaint = slot.status === 'Maintenance';
+    try {
+      await toggleSlotMaintenance(slot.id, !isMaint);
+      toast.success(isMaint ? `Slot ${slot.slotNumber || ''} returned to service.` : `Slot ${slot.slotNumber || ''} marked under maintenance.`);
+      await viewSlots(selectedNode);
+      await loadNodes();
     } catch (error) {
       toast.error(error.message);
     }
@@ -156,11 +189,12 @@ export default function NodesPage() {
 
   // Deletes a slot.
   async function handleDeleteSlot(id) {
-    if (!window.confirm('Delete this slot?')) return;
+    if (!window.confirm('Delete this battery slot? Active reservations on this slot will block deletion.')) return;
     try {
       await deleteSlot(id);
-      toast.success('Slot deleted.');
-      viewSlots(selectedNode);
+      toast.success('Slot deleted. Station capacity updated.');
+      await viewSlots(selectedNode);
+      await loadNodes();
     } catch (error) {
       toast.error(error.message);
     }
@@ -179,15 +213,20 @@ export default function NodesPage() {
           <button className="btn btn-secondary mb-2" onClick={() => setSelectedNode(null)}>← Back to Nodes</button>
           <div className="card">
             <div className="card-header">
-              <h3 className="card-title">🔌 Slots — {selectedNode.nodeName}</h3>
+              <h3 className="card-title">🔌 Battery Slots — {selectedNode.nodeName}</h3>
               {selectedNode.isActive && isBackoffice && (
-                <button className="btn btn-primary btn-sm" disabled={capacityFullyAllocated} onClick={() => { setSlotForm({ availableKWh: '', status: 'Available' }); setShowSlotModal(true); }}>
+                <button className="btn btn-primary btn-sm" onClick={() => { setSlotForm({ availableKWh: '', status: 'Available' }); setShowSlotModal(true); }}>
                   + Add Battery Slot
                 </button>
               )}
             </div>
-            <div className="card-body">
-              {allocatedSlotCapacity} / {selectedNode.capacityKWh} kWh allocated across {slots.length} battery slot{slots.length === 1 ? '' : 's'}; {remainingNodeCapacity} kWh remaining.
+            <div className="card-body" style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+              <div><strong>Total Station Capacity:</strong> {selectedNode.capacityKWh} kWh</div>
+              <div><strong>Active Capacity:</strong> <span style={{ color: 'var(--success, #22c55e)' }}>{activeSlotCapacity} kWh</span> ({activeSlots.length} slots)</div>
+              {maintenanceSlots.length > 0 && (
+                <div><strong>Maintenance:</strong> <span style={{ color: 'var(--warning, #f59e0b)' }}>{maintenanceSlotCapacity} kWh</span> ({maintenanceSlots.length} slots)</div>
+              )}
+              <div><strong>Operating Schedule:</strong> {selectedNode.schedule}</div>
             </div>
             <div className="table-container">
               <table>
@@ -202,8 +241,19 @@ export default function NodesPage() {
                       <td>Slot {s.slotNumber || slots.indexOf(s) + 1}</td>
                       <td>{s.availableKWh} kWh</td>
                       <td><StatusBadge status={s.status} /></td>
-                      <td className="actions">
-                        {isBackoffice && <button className="btn btn-danger btn-sm" onClick={() => handleDeleteSlot(s.id)}>🗑️</button>}
+                      <td className="actions" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        {canManageSlots && (
+                          <button
+                            className={`btn btn-sm ${s.status === 'Maintenance' ? 'btn-success' : 'btn-warning'}`}
+                            onClick={() => handleToggleMaintenance(s)}
+                            title={s.status === 'Maintenance' ? 'Return slot to service' : 'Place slot under maintenance'}
+                          >
+                            {s.status === 'Maintenance' ? '✅ Restore' : '🔧 Maintenance'}
+                          </button>
+                        )}
+                        {isBackoffice && (
+                          <button className="btn btn-danger btn-sm" onClick={() => handleDeleteSlot(s.id)} title="Delete battery slot">🗑️</button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -224,13 +274,13 @@ export default function NodesPage() {
                   <div className="modal-body">
                     <div className="form-group">
                       <label className="form-label">Battery Slot Capacity (kWh)</label>
-                      <input type="number" min="0" step="0.1" className="form-input" value={slotForm.availableKWh} onChange={e => setSlotForm({ ...slotForm, availableKWh: e.target.value })} required />
-                      <small>Grid capacity: {selectedNode.capacityKWh} kWh. Allocated to slots: {allocatedSlotCapacity} kWh. Remaining: {remainingNodeCapacity} kWh.</small>
+                      <input type="number" min="0.1" step="0.1" className="form-input" value={slotForm.availableKWh} onChange={e => setSlotForm({ ...slotForm, availableKWh: e.target.value })} required />
+                      <small className="text-muted">Station total capacity will automatically increase with this slot's capacity.</small>
                     </div>
                   </div>
                   <div className="modal-footer">
                     <button type="button" className="btn btn-secondary" onClick={() => setShowSlotModal(false)}>Cancel</button>
-                    <button type="submit" className="btn btn-primary" disabled={capacityFullyAllocated || Number(slotForm.availableKWh) > remainingNodeCapacity}>Add Battery Slot</button>
+                    <button type="submit" className="btn btn-primary" disabled={!Number(slotForm.availableKWh) || Number(slotForm.availableKWh) <= 0}>Add Battery Slot</button>
                   </div>
                 </form>
               </div>
@@ -316,26 +366,31 @@ export default function NodesPage() {
                     }))
                   }
                 />
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Capacity (kWh)</label>
-                    <input type="number" min="0" step="50" className="form-input" value={nodeForm.capacityKWh} onChange={e => setNodeForm({ ...nodeForm, capacityKWh: e.target.value })} required />
-                  </div>
-                </div>
-                {!editingNode && <div className="form-group">
-                  <label className="form-label">Battery Slot Capacities (kWh)</label>
-                  <p className="text-muted">Divide the {nodeForm.capacityKWh || 0} kWh grid capacity into individual slots. Total: {nodeForm.batterySlotCapacities.reduce((sum, value) => sum + (Number(value) || 0), 0)} kWh.</p>
-                  {nodeForm.batterySlotCapacities.map((capacity, index) => (
-                    <div className="slot-capacity-row" key={index}>
-                      <div className="form-group slot-capacity-input">
-                        <label className="form-label">Slot {index + 1}</label>
-                        <input type="number" min="0.1" step="0.1" className="form-input" value={capacity} onChange={e => setNodeForm({ ...nodeForm, batterySlotCapacities: nodeForm.batterySlotCapacities.map((value, slotIndex) => slotIndex === index ? e.target.value : value) })} required />
-                      </div>
-                      {nodeForm.batterySlotCapacities.length > 1 && <button type="button" className="btn btn-danger btn-sm slot-remove-btn" onClick={() => setNodeForm({ ...nodeForm, batterySlotCapacities: nodeForm.batterySlotCapacities.filter((_, slotIndex) => slotIndex !== index) })}>Remove</button>}
+                {editingNode ? (
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Capacity (kWh)</label>
+                      <input type="number" min="0" step="10" className="form-input" value={nodeForm.capacityKWh} onChange={e => setNodeForm({ ...nodeForm, capacityKWh: e.target.value })} required />
                     </div>
-                  ))}
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setNodeForm({ ...nodeForm, batterySlotCapacities: [...nodeForm.batterySlotCapacities, ''] })}>+ Add battery slot</button>
-                </div>}
+                  </div>
+                ) : (
+                  <div className="form-group">
+                    <label className="form-label">Battery Slot Capacities (kWh)</label>
+                    <p className="text-muted">
+                      Total station capacity will be calculated automatically: <strong>{nodeForm.batterySlotCapacities.reduce((sum, value) => sum + (Number(value) || 0), 0)} kWh</strong> across {nodeForm.batterySlotCapacities.length} slot(s).
+                    </p>
+                    {nodeForm.batterySlotCapacities.map((capacity, index) => (
+                      <div className="slot-capacity-row" key={index}>
+                        <div className="form-group slot-capacity-input">
+                          <label className="form-label">Slot {index + 1}</label>
+                          <input type="number" min="0.1" step="0.1" className="form-input" value={capacity} onChange={e => setNodeForm({ ...nodeForm, batterySlotCapacities: nodeForm.batterySlotCapacities.map((value, slotIndex) => slotIndex === index ? e.target.value : value) })} required />
+                        </div>
+                        {nodeForm.batterySlotCapacities.length > 1 && <button type="button" className="btn btn-danger btn-sm slot-remove-btn" onClick={() => setNodeForm({ ...nodeForm, batterySlotCapacities: nodeForm.batterySlotCapacities.filter((_, slotIndex) => slotIndex !== index) })}>Remove</button>}
+                      </div>
+                    ))}
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setNodeForm({ ...nodeForm, batterySlotCapacities: [...nodeForm.batterySlotCapacities, '50'] })}>+ Add battery slot</button>
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="form-label">Operating Schedule</label>
                   <SchedulePicker value={nodeForm.schedule} onChange={schedule => setNodeForm({ ...nodeForm, schedule })} />
