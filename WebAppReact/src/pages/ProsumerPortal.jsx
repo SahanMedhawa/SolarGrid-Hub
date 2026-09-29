@@ -21,10 +21,8 @@ import {
 import StatusBadge from '../components/StatusBadge';
 import { toast } from 'react-toastify';
 import { QRCodeSVG } from 'qrcode.react';
-import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import MapboxLocationMap from '../components/MapboxLocationMap';
 
-const MAP_LIBRARIES = ['places'];
-const MAP_CONTAINER_STYLE = { width: '100%', height: '420px' };
 const DEFAULT_MAP_CENTER = { lat: 7.8731, lng: 80.7718 };
 
 export default function ProsumerPortal() {
@@ -56,10 +54,6 @@ export default function ProsumerPortal() {
 
   // Nearby microgrid map modal state
   const [selectedMapNode, setSelectedMapNode] = useState(null);
-  const { isLoaded: isMapLoaded, loadError: mapLoadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: MAP_LIBRARIES
-  });
 
   // Modify Booking Modal state
   const [modifyingRes, setModifyingRes] = useState(null);
@@ -1019,46 +1013,22 @@ export default function ProsumerPortal() {
               <button className="btn btn-ghost btn-sm" onClick={() => setSelectedMapNode(null)}>✕</button>
             </div>
             <div className="modal-body" style={{ padding: '1rem' }}>
-              {mapLoadError && (
-                <p className="text-muted" style={{ marginBottom: '1rem' }}>
-                  Google Maps could not be loaded. Check the Maps API key configuration.
-                </p>
-              )}
-              {!mapLoadError && !isMapLoaded && (
-                <div className="loading-spinner" style={{ minHeight: '420px' }}>
-                  <div className="spinner"></div>
-                </div>
-              )}
-              {!mapLoadError && isMapLoaded && (
-                <GoogleMap
-                  mapContainerStyle={MAP_CONTAINER_STYLE}
-                  center={mapCenter}
-                  zoom={selectedMapNode ? 13 : 7}
-                  options={{ streetViewControl: false, mapTypeControl: false, fullscreenControl: true }}
-                >
-                  {mappedNodes.map(node => (
-                    <Marker
-                      key={node.id}
-                      position={{ lat: Number(node.latitude), lng: Number(node.longitude) }}
-                      title={node.nodeName}
-                      onClick={() => setSelectedMapNode(node)}
-                    />
-                  ))}
-                </GoogleMap>
-              )}
+              <MapboxLocationMap
+                height="420px"
+                center={mapCenter}
+                zoom={13}
+                markers={[{
+                  id: selectedMapNode.id,
+                  name: selectedMapNode.nodeName,
+                  latitude: Number(selectedMapNode.latitude),
+                  longitude: Number(selectedMapNode.longitude)
+                }]}
+              />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
                 <div>
                   <strong>{selectedMapNode.nodeName}</strong>
                   <div className="text-muted" style={{ fontSize: '0.85rem' }}>{selectedMapNode.location}</div>
                 </div>
-                <a
-                  className="btn btn-primary"
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${selectedMapNode.latitude},${selectedMapNode.longitude}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  ↗ Get Directions
-                </a>
               </div>
             </div>
           </div>
