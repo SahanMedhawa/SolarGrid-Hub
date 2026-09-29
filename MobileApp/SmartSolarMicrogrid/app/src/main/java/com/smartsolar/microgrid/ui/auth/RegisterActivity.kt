@@ -1,9 +1,11 @@
 package com.smartsolar.microgrid.ui.auth
 
+import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.smartsolar.microgrid.R
@@ -12,6 +14,7 @@ import org.json.JSONObject
 
 /**
  * Registration Activity for new solar prosumers.
+ *
  * NIC is used as the unique identifier.
  * New registrations are submitted to the central API
  * and remain Pending until Backoffice activation.
@@ -25,7 +28,9 @@ class RegisterActivity : AppCompatActivity() {
     private lateinit var etPhone: EditText
     private lateinit var etAddress: EditText
     private lateinit var etRegPassword: EditText
+    private lateinit var etConfirmPassword: EditText
     private lateinit var btnSubmit: Button
+    private lateinit var tvSignIn: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,8 +44,17 @@ class RegisterActivity : AppCompatActivity() {
         etPhone = findViewById(R.id.etPhone)
         etAddress = findViewById(R.id.etAddress)
         etRegPassword = findViewById(R.id.etRegPassword)
+        etConfirmPassword = findViewById(R.id.etConfirmPassword)
         btnSubmit = findViewById(R.id.btnSubmitRegister)
+        tvSignIn = findViewById(R.id.tvSignIn)
 
+        // Navigate back to login screen
+        tvSignIn.setOnClickListener {
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+        }
+
+        // Submit registration
         btnSubmit.setOnClickListener {
             submitRegistration()
         }
@@ -58,6 +72,7 @@ class RegisterActivity : AppCompatActivity() {
         val phone = etPhone.text.toString().trim()
         val address = etAddress.text.toString().trim()
         val password = etRegPassword.text.toString()
+        val confirmPassword = etConfirmPassword.text.toString()
 
         // Clear previous validation errors
         clearErrors()
@@ -169,6 +184,22 @@ class RegisterActivity : AppCompatActivity() {
             return
         }
 
+        // ---------------------------------------------------------
+        // CONFIRM PASSWORD VALIDATION
+        // ---------------------------------------------------------
+
+        if (confirmPassword.isEmpty()) {
+            etConfirmPassword.error = "Please confirm your password"
+            etConfirmPassword.requestFocus()
+            return
+        }
+
+        if (password != confirmPassword) {
+            etConfirmPassword.error = "Passwords do not match"
+            etConfirmPassword.requestFocus()
+            return
+        }
+
         // All client-side validation passed
         submitToApi(
             nic = nic,
@@ -192,6 +223,7 @@ class RegisterActivity : AppCompatActivity() {
         etPhone.error = null
         etAddress.error = null
         etRegPassword.error = null
+        etConfirmPassword.error = null
     }
 
     /**
@@ -275,6 +307,6 @@ class RegisterActivity : AppCompatActivity() {
      */
     private fun resetSubmitButton() {
         btnSubmit.isEnabled = true
-        btnSubmit.text = "Submit Registration"
+        btnSubmit.text = "Complete Registration  →"
     }
 }
