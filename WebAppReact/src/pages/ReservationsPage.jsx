@@ -22,6 +22,14 @@ import {
 import StatusBadge from '../components/StatusBadge';
 import { toast } from 'react-toastify';
 
+function addOneHour(timeStr) {
+  if (!timeStr || !timeStr.includes(':')) return '09:00';
+  const [h, m] = timeStr.split(':').map(Number);
+  const nextH = h + 1;
+  if (nextH >= 24) return '24:00';
+  return `${String(nextH).padStart(2, '0')}:${String(m || 0).padStart(2, '0')}`;
+}
+
 // Renders the full reservation management page.
 export default function ReservationsPage() {
   const { user } = useAuth();
@@ -35,7 +43,7 @@ export default function ReservationsPage() {
   // Create modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({
-    prosumerNic: '', nodeId: '', reservationDate: '', startTime: '08:00', endTime: '12:00', energyKWh: ''
+    prosumerNic: '', nodeId: '', reservationDate: '', startTime: '08:00', endTime: '09:00', energyKWh: ''
   });
   const [availabilityCheck, setAvailabilityCheck] = useState(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
@@ -187,11 +195,12 @@ export default function ReservationsPage() {
 
   // Opens update modal for a reservation.
   function openUpdateModal(res) {
+    const start = res.startTime || '08:00';
     setEditingRes(res);
     setUpdateForm({
       reservationDate: res.reservationDate ? new Date(res.reservationDate).toISOString().split('T')[0] : '',
-      startTime: res.startTime || '08:00',
-      endTime: res.endTime || '12:00',
+      startTime: start,
+      endTime: addOneHour(start),
       energyKWh: res.energyKWh || ''
     });
     setShowUpdateModal(true);
@@ -317,7 +326,7 @@ export default function ReservationsPage() {
       <div className="page-header">
         <h1 className="page-title"><span className="icon">📅</span> Reservations</h1>
         <button className="btn btn-primary" onClick={() => {
-          setCreateForm({ prosumerNic: '', nodeId: '', reservationDate: '', startTime: '08:00', endTime: '12:00', energyKWh: '' });
+          setCreateForm({ prosumerNic: '', nodeId: '', reservationDate: '', startTime: '08:00', endTime: '09:00', energyKWh: '' });
           setAvailabilityCheck(null);
           setShowCreateModal(true);
         }}>
@@ -505,12 +514,20 @@ export default function ReservationsPage() {
                   <div className="form-group">
                     <label className="form-label">Start Time</label>
                     <input type="time" className="form-input" value={createForm.startTime}
-                      onChange={e => setCreateForm({ ...createForm, startTime: e.target.value })} required />
+                      onChange={e => {
+                        const start = e.target.value;
+                        setCreateForm({ ...createForm, startTime: start, endTime: addOneHour(start) });
+                      }} required />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">End Time</label>
+                    <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      End Time
+                      <span style={{ fontSize: '0.7rem', color: 'var(--color-primary-light)', background: 'rgba(56, 189, 248, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                        🔒 1-Hour Fixed
+                      </span>
+                    </label>
                     <input type="time" className="form-input" value={createForm.endTime}
-                      onChange={e => setCreateForm({ ...createForm, endTime: e.target.value })} required />
+                      readOnly disabled style={{ opacity: 0.85, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }} />
                   </div>
                 </div>
 
@@ -591,12 +608,20 @@ export default function ReservationsPage() {
                   <div className="form-group">
                     <label className="form-label">Start Time</label>
                     <input type="time" className="form-input" value={updateForm.startTime}
-                      onChange={e => setUpdateForm({ ...updateForm, startTime: e.target.value })} />
+                      onChange={e => {
+                        const start = e.target.value;
+                        setUpdateForm({ ...updateForm, startTime: start, endTime: addOneHour(start) });
+                      }} />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">End Time</label>
+                    <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      End Time
+                      <span style={{ fontSize: '0.7rem', color: 'var(--color-primary-light)', background: 'rgba(56, 189, 248, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                        🔒 1-Hour Fixed
+                      </span>
+                    </label>
                     <input type="time" className="form-input" value={updateForm.endTime}
-                      onChange={e => setUpdateForm({ ...updateForm, endTime: e.target.value })} />
+                      readOnly disabled style={{ opacity: 0.85, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }} />
                   </div>
                 </div>
                 <div className="form-group">

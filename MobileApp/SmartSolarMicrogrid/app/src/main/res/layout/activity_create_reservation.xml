@@ -130,7 +130,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="6dp"
-                android:hint="End Time"
+                android:hint="End Time (1-Hr Fixed)"
                 app:endIconMode="custom"
                 app:endIconDrawable="@android:drawable/ic_menu_recent_history"
                 app:endIconTint="@color/primary">
@@ -202,22 +202,96 @@
                 android:clickable="true" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Energy Amount Field -->
-        <com.google.android.material.textfield.TextInputLayout
+        <!-- Battery Slot Selection Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Choose Station Battery Storage Slot(s)"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="4dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Tap available slots to allocate your energy drop-off. Capacity is calculated directly from your selected slots."
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="10dp" />
+
+        <!-- Container where actual station slots will be dynamically populated -->
+        <LinearLayout
+            android:id="@+id/llSlotsListContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Energy Amount (kWh)"
-            app:suffixText="kWh"
-            app:suffixTextColor="@color/primary"
-            android:layout_marginBottom="24dp">
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etEnergyKWh"
+            <TextView
+                android:id="@+id/tvSlotsLoadingPrompt"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="@color/text_primary"
-                android:inputType="numberDecimal" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:text="Select station, date, and times above to load actual station battery slots."
+                android:textSize="12sp"
+                android:padding="12dp"
+                android:textColor="@color/text_secondary"
+                android:gravity="center"
+                android:background="@color/card_background_elevated" />
+        </LinearLayout>
+
+        <!-- Calculated Energy Summary Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardCalculatedEnergy"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/md_theme_light_primaryContainer"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:id="@+id/tvSelectedSlotsCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="CALCULATED ENERGY TO SUPPLY (0 SLOTS SELECTED)"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/md_theme_light_onPrimaryContainer" />
+
+                <TextView
+                    android:id="@+id/tvCalculatedEnergyTotal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.0 kWh"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/md_theme_light_onPrimaryContainer"
+                    android:layout_marginTop="2dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⚡ Determined directly from your physical battery slot choices."
+                    android:textSize="11sp"
+                    android:textColor="@color/md_theme_light_onPrimaryContainer"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Hidden backward-compatibility input -->
+        <EditText
+            android:id="@+id/etEnergyKWh"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:text="0.0" />
 
         <!-- Submit Button -->
         <com.google.android.material.button.MaterialButton

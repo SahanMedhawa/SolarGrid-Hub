@@ -266,8 +266,14 @@ class ReservationDetailActivity : AppCompatActivity() {
         if (currentDateStr.length >= 10) {
             etDate.setText(currentDateStr.substring(0, 10))
         }
-        etStartTime.setText(if (currentStartTime.isNotEmpty()) currentStartTime else "08:00")
-        etEndTime.setText(if (currentEndTime.isNotEmpty()) currentEndTime else "10:00")
+        val initStart = if (currentStartTime.isNotEmpty()) currentStartTime else "08:00"
+        etStartTime.setText(initStart)
+        val startParts = initStart.split(":")
+        val sH = startParts[0].toIntOrNull() ?: 8
+        val sM = if (startParts.size > 1) startParts[1].toIntOrNull() ?: 0 else 0
+        val endH = sH + 1
+        val initEnd = if (endH >= 24) "24:00" else String.format(Locale.US, "%02d:%02d", endH, sM)
+        etEndTime.setText(initEnd)
         etEnergyKWh.setText(currentEnergyKWh.toString())
 
         btnSubmit.text = "Save Updated Reservation"
@@ -304,17 +310,16 @@ class ReservationDetailActivity : AppCompatActivity() {
             val h = if (currentParts.size == 2) currentParts[0].toIntOrNull() ?: 8 else 8
             val m = if (currentParts.size == 2) currentParts[1].toIntOrNull() ?: 0 else 0
             TimePickerDialog(this, { _, hour, minute ->
-                etStartTime.setText(String.format(Locale.US, "%02d:%02d", hour, minute))
+                val newStart = String.format(Locale.US, "%02d:%02d", hour, minute)
+                val newEndH = hour + 1
+                val newEnd = if (newEndH >= 24) "24:00" else String.format(Locale.US, "%02d:%02d", newEndH, minute)
+                etStartTime.setText(newStart)
+                etEndTime.setText(newEnd)
             }, h, m, true).show()
         }
 
         etEndTime.setOnClickListener {
-            val currentParts = etEndTime.text.toString().split(":")
-            val h = if (currentParts.size == 2) currentParts[0].toIntOrNull() ?: 10 else 10
-            val m = if (currentParts.size == 2) currentParts[1].toIntOrNull() ?: 0 else 0
-            TimePickerDialog(this, { _, hour, minute ->
-                etEndTime.setText(String.format(Locale.US, "%02d:%02d", hour, minute))
-            }, h, m, true).show()
+            Toast.makeText(this, "Every energy reservation is exactly 1 hour. Tap Start Time to select.", Toast.LENGTH_SHORT).show()
         }
 
         btnSubmit.setOnClickListener {

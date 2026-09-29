@@ -25,6 +25,24 @@ namespace SmartSolarMicrogridAPI.Models.DTOs
         public double MaintenanceCapacityKWh { get; set; }
         public string Schedule { get; set; } = null!;
         public bool IsWithinOperatingHours { get; set; }
+
+        /// <summary>
+        /// Detailed list of actual physical battery slots and their availability in this window.
+        /// </summary>
+        public List<SlotAvailabilityInfo> Slots { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Information for an individual physical battery slot and its availability in a time window.
+    /// </summary>
+    public class SlotAvailabilityInfo
+    {
+        public string Id { get; set; } = null!;
+        public int SlotNumber { get; set; }
+        public double CapacityKWh { get; set; }
+        public string Status { get; set; } = "Available"; // "Available" or "Maintenance"
+        public bool IsBooked { get; set; }
+        public bool IsAvailable { get; set; }
     }
 
     /// <summary>

@@ -72,6 +72,12 @@ class OperatorMainActivity : AppCompatActivity() {
     // Handle manual QR token verification
     private fun handleManualVerification() {
         val tokenInput = etManualQrToken.text.toString().trim()
+        val cbInterlock = findViewById<com.google.android.material.checkbox.MaterialCheckBox?>(R.id.cbSafetyInterlock)
+        if (cbInterlock != null && !cbInterlock.isChecked) {
+            Toast.makeText(this, "Safety Alert: Please confirm Inverter Physical Interlock is latched and grounded before finalizing transfer.", Toast.LENGTH_LONG).show()
+            return
+        }
+
         if (tokenInput.isEmpty()) {
             Toast.makeText(this, "Please enter or paste QR token", Toast.LENGTH_SHORT).show()
             return
