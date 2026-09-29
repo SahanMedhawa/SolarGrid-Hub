@@ -2,8 +2,9 @@
 // File: DbSeeder.cs
 // Project: SmartSolarMicrogridAPI
 // Description: Seeds initial test/demo data into MongoDB for
-//              all four required collections: Users, Prosumers,
-//              MicrogridNodes, EnergySlots, and Reservations.
+//              all collections: Users, Prosumers, MicrogridNodes,
+//              EnergySlots, and Reservations. Battery slots define
+//              the station capacity; reservations use time windows.
 // ============================================================
 
 using MongoDB.Driver;
@@ -48,55 +49,92 @@ namespace SmartSolarMicrogridAPI.Data
                 await context.Users.InsertManyAsync(users);
             }
 
-            // 2. Seed Microgrid Nodes (Solar Grid Hubs)
+            // 2. Seed Microgrid Nodes with battery slots defining capacity
             if (await context.MicrogridNodes.CountDocumentsAsync(_ => true) == 0)
             {
-                var nodes = new List<MicrogridNode>
+                // --- Colombo Central Hub ---
+                var colomboSlotCapacities = new List<double> { 100, 50, 25, 25, 100, 200 };
+                var colombo = new MicrogridNode
                 {
-                    new MicrogridNode
-                    {
-                        NodeName = "Colombo Central Hub",
-                        Location = "Colombo 03",
-                        Latitude = 6.9034,
-                        Longitude = 79.8546,
-                        CapacityKWh = 500.0,
-                        BatterySlots = 20,
-                        AvailableBatterySlots = 18,
-                        Schedule = "06:00-18:00",
-                        IsActive = true,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    },
-                    new MicrogridNode
-                    {
-                        NodeName = "Kandy Hill Hub",
-                        Location = "Peradeniya, Kandy",
-                        Latitude = 7.2605,
-                        Longitude = 80.5980,
-                        CapacityKWh = 350.0,
-                        BatterySlots = 15,
-                        AvailableBatterySlots = 14,
-                        Schedule = "06:00-18:00",
-                        IsActive = true,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    },
-                    new MicrogridNode
-                    {
-                        NodeName = "Galle Coastal Hub",
-                        Location = "Galle Fort",
-                        Latitude = 6.0328,
-                        Longitude = 80.2170,
-                        CapacityKWh = 400.0,
-                        BatterySlots = 16,
-                        AvailableBatterySlots = 15,
-                        Schedule = "06:00-18:00",
-                        IsActive = true,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    }
+                    NodeName = "Colombo Central Hub",
+                    Location = "Colombo 03",
+                    Latitude = 6.9034,
+                    Longitude = 79.8546,
+                    CapacityKWh = colomboSlotCapacities.Sum(), // 500 kWh
+                    BatterySlots = colomboSlotCapacities.Count,
+                    AvailableBatterySlots = colomboSlotCapacities.Count,
+                    Schedule = "06:00-18:00",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
                 };
-                await context.MicrogridNodes.InsertManyAsync(nodes);
+                await context.MicrogridNodes.InsertOneAsync(colombo);
+
+                var colomboSlots = colomboSlotCapacities.Select((capacity, index) => new EnergySlot
+                {
+                    NodeId = colombo.Id!,
+                    SlotNumber = index + 1,
+                    AvailableKWh = capacity,
+                    Status = "Available",
+                    CreatedAt = DateTime.UtcNow
+                }).ToList();
+                await context.EnergySlots.InsertManyAsync(colomboSlots);
+
+                // --- Kandy Hill Hub ---
+                var kandySlotCapacities = new List<double> { 100, 75, 50, 50, 75 };
+                var kandy = new MicrogridNode
+                {
+                    NodeName = "Kandy Hill Hub",
+                    Location = "Peradeniya, Kandy",
+                    Latitude = 7.2605,
+                    Longitude = 80.5980,
+                    CapacityKWh = kandySlotCapacities.Sum(), // 350 kWh
+                    BatterySlots = kandySlotCapacities.Count,
+                    AvailableBatterySlots = kandySlotCapacities.Count,
+                    Schedule = "07:00-17:00",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await context.MicrogridNodes.InsertOneAsync(kandy);
+
+                var kandySlots = kandySlotCapacities.Select((capacity, index) => new EnergySlot
+                {
+                    NodeId = kandy.Id!,
+                    SlotNumber = index + 1,
+                    AvailableKWh = capacity,
+                    Status = "Available",
+                    CreatedAt = DateTime.UtcNow
+                }).ToList();
+                await context.EnergySlots.InsertManyAsync(kandySlots);
+
+                // --- Galle Coastal Hub ---
+                var galleSlotCapacities = new List<double> { 100, 100, 50, 50, 50, 50 };
+                var galle = new MicrogridNode
+                {
+                    NodeName = "Galle Coastal Hub",
+                    Location = "Galle Fort",
+                    Latitude = 6.0328,
+                    Longitude = 80.2170,
+                    CapacityKWh = galleSlotCapacities.Sum(), // 400 kWh
+                    BatterySlots = galleSlotCapacities.Count,
+                    AvailableBatterySlots = galleSlotCapacities.Count,
+                    Schedule = "06:00-18:00",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                await context.MicrogridNodes.InsertOneAsync(galle);
+
+                var galleSlots = galleSlotCapacities.Select((capacity, index) => new EnergySlot
+                {
+                    NodeId = galle.Id!,
+                    SlotNumber = index + 1,
+                    AvailableKWh = capacity,
+                    Status = "Available",
+                    CreatedAt = DateTime.UtcNow
+                }).ToList();
+                await context.EnergySlots.InsertManyAsync(galleSlots);
             }
 
             // 3. Seed Prosumers (NIC as primary key)
@@ -134,49 +172,22 @@ namespace SmartSolarMicrogridAPI.Data
                 await context.Prosumers.InsertManyAsync(prosumers);
             }
 
-            // 4. Seed Energy Slots
+            // 4. Seed a sample reservation (with time window)
             var firstNode = await context.MicrogridNodes.Find(_ => true).FirstOrDefaultAsync();
-            if (firstNode != null && await context.EnergySlots.CountDocumentsAsync(_ => true) == 0)
-            {
-                var slots = new List<EnergySlot>
-                {
-                    new EnergySlot
-                    {
-                        NodeId = firstNode.Id!,
-                        SlotDate = DateTime.UtcNow.Date.AddDays(1),
-                        StartTime = "09:00",
-                        EndTime = "11:00",
-                        AvailableKWh = 100.0,
-                        Status = "Available",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new EnergySlot
-                    {
-                        NodeId = firstNode.Id!,
-                        SlotDate = DateTime.UtcNow.Date.AddDays(2),
-                        StartTime = "11:00",
-                        EndTime = "13:00",
-                        AvailableKWh = 150.0,
-                        Status = "Available",
-                        CreatedAt = DateTime.UtcNow
-                    }
-                };
-                await context.EnergySlots.InsertManyAsync(slots);
-            }
-
-            // 5. Seed Reservations
             if (firstNode != null && await context.Reservations.CountDocumentsAsync(_ => true) == 0)
             {
-                var slot = await context.EnergySlots.Find(_ => true).FirstOrDefaultAsync();
+                var firstSlots = await context.EnergySlots.Find(s => s.NodeId == firstNode.Id).ToListAsync();
                 var resId = MongoDB.Bson.ObjectId.GenerateNewId().ToString();
                 var reservation = new Reservation
                 {
                     Id = resId,
                     ProsumerNic = "199012345678",
-                    SlotId = slot?.Id ?? "SLOT-001",
                     NodeId = firstNode.Id!,
                     ReservationDate = DateTime.UtcNow.Date.AddDays(3),
+                    StartTime = "09:00",
+                    EndTime = "10:00",
                     EnergyKWh = 25.0,
+                    AllocatedSlotIds = firstSlots.Take(1).Select(s => s.Id!).ToList(),
                     Status = "Approved",
                     QrCodeData = $"SMTS-{resId}-199012345678-{Guid.NewGuid():N}",
                     CreatedAt = DateTime.UtcNow,
@@ -187,4 +198,3 @@ namespace SmartSolarMicrogridAPI.Data
         }
     }
 }
-

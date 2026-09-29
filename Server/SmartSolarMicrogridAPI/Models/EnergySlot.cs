@@ -1,8 +1,11 @@
 // ============================================================
 // File: EnergySlot.cs
 // Project: SmartSolarMicrogridAPI
-// Description: Represents an available energy trading slot
-//              within a microgrid node.
+// Description: Represents a physical battery storage slot
+//              within a microgrid node. Each slot has a fixed
+//              capacity (kWh) and can be Available or under
+//              Maintenance. Capacity availability for reservations
+//              is evaluated per time window, not permanently.
 // ============================================================
 
 using MongoDB.Bson;
@@ -11,8 +14,9 @@ using MongoDB.Bson.Serialization.Attributes;
 namespace SmartSolarMicrogridAPI.Models
 {
     /// <summary>
-    /// Energy booking slot within a microgrid node.
+    /// Physical battery storage slot within a microgrid node.
     /// </summary>
+    [BsonIgnoreExtraElements]
     public class EnergySlot
     {
         [BsonId]
@@ -28,23 +32,16 @@ namespace SmartSolarMicrogridAPI.Models
         [BsonElement("slotNumber")]
         public int SlotNumber { get; set; }
 
-        [BsonElement("slotDate")]
-        public DateTime SlotDate { get; set; }
-
-        [BsonElement("startTime")]
-        public string? StartTime { get; set; }
-
-        [BsonElement("endTime")]
-        public string? EndTime { get; set; }
-
         /// <summary>
-        /// Energy capacity available in this slot (kWh).
+        /// Fixed energy capacity of this battery slot (kWh).
         /// </summary>
         [BsonElement("availableKWh")]
         public double AvailableKWh { get; set; }
 
         /// <summary>
-        /// Status: "Available", "Reserved", "Completed"
+        /// Status: "Available" or "Maintenance"
+        /// Available = operational, can be allocated to reservations.
+        /// Maintenance = under maintenance, excluded from capacity calculations.
         /// </summary>
         [BsonElement("status")]
         public string Status { get; set; } = "Available";

@@ -95,6 +95,19 @@ class OperatorMainActivity : AppCompatActivity() {
                     val energy = detailObj.optDouble("energyKWh", 0.0)
                     val status = detailObj.optString("status", "")
                     val slot = detailObj.optString("slotId", "")
+                    val startTime = detailObj.optString("startTime", "")
+                    val endTime = detailObj.optString("endTime", "")
+                    val slotsArr = detailObj.optJSONArray("allocatedSlotIds")
+                    val slotDisplay = if (slotsArr != null && slotsArr.length() > 0) {
+                        val sList = mutableListOf<String>()
+                        for (j in 0 until slotsArr.length()) sList.add(slotsArr.getString(j))
+                        "${sList.joinToString(", ")} (${sList.size} slots)"
+                    } else if (slot.isNotEmpty()) {
+                        slot
+                    } else {
+                        "Dynamic"
+                    }
+                    val timeWindow = if (startTime.isNotEmpty() && endTime.isNotEmpty()) "$startTime - $endTime" else "Standard Window"
 
                     if (!status.equals("Approved", ignoreCase = true)) {
                         AlertDialog.Builder(this@OperatorMainActivity)
@@ -112,7 +125,8 @@ class OperatorMainActivity : AppCompatActivity() {
                             "Verified Reservation Record:\n" +
                             "• Booking ID: #$resId\n" +
                             "• Prosumer NIC: $nic\n" +
-                            "• Battery Slot: $slot\n" +
+                            "• Time Window: $timeWindow\n" +
+                            "• Battery Slots: $slotDisplay\n" +
                             "• Transfer Energy: $energy kWh\n\n" +
                             "Do you want to finalize this energy transfer and release battery storage capacity?"
                         )
@@ -231,7 +245,19 @@ class OperatorMainActivity : AppCompatActivity() {
                 val id = r.optString("id")
                 val nic = r.optString("prosumerNic")
                 val status = r.optString("status")
-                val slot = r.optString("slotId", "SLOT-01")
+                val slot = r.optString("slotId", "")
+                val startTime = r.optString("startTime", "")
+                val endTime = r.optString("endTime", "")
+                val slotsArr = r.optJSONArray("allocatedSlotIds")
+                val slotDisplay = if (slotsArr != null && slotsArr.length() > 0) {
+                    val sList = mutableListOf<String>()
+                    for (j in 0 until slotsArr.length()) sList.add(slotsArr.getString(j))
+                    "${sList.joinToString(", ")} (${sList.size} slots)"
+                } else if (slot.isNotEmpty()) {
+                    slot
+                } else {
+                    "Auto"
+                }
                 val energy = r.optDouble("energyKWh", 0.0)
                 val date = r.optString("reservationDate", "")
                 val qrToken = r.optString("qrCodeData", "")
@@ -291,8 +317,9 @@ class OperatorMainActivity : AppCompatActivity() {
 
                 // Details Text
                 val formattedDate = if (date.length >= 10) date.substring(0, 10) else date
+                val timeWindow = if (startTime.isNotEmpty() && endTime.isNotEmpty()) " [$startTime - $endTime]" else ""
                 val tvDetails = TextView(this).apply {
-                    text = "Prosumer: $nic • Slot: $slot\nDate: $formattedDate • Energy: $energy kWh"
+                    text = "Prosumer: $nic • Slots: $slotDisplay\nDate: $formattedDate$timeWindow • Energy: $energy kWh"
                     textSize = 13f
                     setTextColor(textSecondaryColor)
                     setLineSpacing(4f, 1f)

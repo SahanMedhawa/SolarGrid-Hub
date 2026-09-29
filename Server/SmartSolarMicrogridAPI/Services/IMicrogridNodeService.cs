@@ -31,6 +31,9 @@ namespace SmartSolarMicrogridAPI.Services
         // Updates available battery slots directly (Grid Operator / Backoffice).
         Task<bool> UpdateBatterySlotsAsync(string id, int availableSlots);
 
+        // Recalculates node capacity and slot counts from EnergySlot documents.
+        Task SyncNodeCapacityAsync(string nodeId);
+
         // Deactivates a node (blocked if active reservations exist).
         Task<(bool Success, string Message)> DeactivateAsync(string id);
 

@@ -10,7 +10,10 @@ data class Reservation(
     var slotId: String = "",
     var nodeId: String = "",
     var reservationDate: String = "",
+    var startTime: String = "",
+    var endTime: String = "",
     var energyKWh: Double = 0.0,
     var status: String = "",
-    var qrCodeData: String = ""
+    var qrCodeData: String = "",
+    var allocatedSlotIds: List<String> = emptyList()
 )
