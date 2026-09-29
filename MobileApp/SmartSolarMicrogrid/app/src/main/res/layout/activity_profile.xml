@@ -1,96 +1,134 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/app_background"
-    android:fillViewport="true">
+    android:background="@color/register_background"
+    android:fillViewport="true"
+    android:clipToPadding="false">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="32dp">
 
+        <!-- Brand -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="My Prosumer Profile"
-            android:textSize="24sp"
+            android:layout_gravity="center_horizontal"
+            android:text="⚡  SMART SOLAR TRADING"
+            android:textColor="@color/register_primary"
+            android:textSize="12sp"
             android:textStyle="bold"
-            android:textColor="@color/primary"
-            android:layout_marginBottom="4dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Manage your personal information and account status"
-            android:textSize="14sp"
-            android:textColor="@color/text_secondary"
+            android:letterSpacing="0.08"
             android:layout_marginBottom="20dp" />
 
-        <!-- Profile Summary Header Card -->
+        <!-- Page title -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="My Profile"
+            android:textColor="@color/register_text_primary"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Manage your personal information and account"
+            android:textColor="@color/register_text_secondary"
+            android:textSize="13sp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="20dp" />
+
+        <!-- Profile summary -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="16dp"
-            app:cardBackgroundColor="@color/card_background"
-            app:strokeColor="@color/card_border"
+            app:cardBackgroundColor="@color/register_surface"
+            app:strokeColor="@color/register_border"
             app:strokeWidth="1dp"
-            app:cardElevation="1dp"
-            android:layout_marginBottom="20dp">
+            app:cardElevation="0dp"
+            android:layout_marginBottom="24dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:padding="16dp">
+                android:padding="18dp">
+
+                <TextView
+                    android:layout_width="54dp"
+                    android:layout_height="54dp"
+                    android:gravity="center"
+                    android:text="👤"
+                    android:textSize="28sp"
+                    android:background="@color/register_notice_background" />
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:layout_marginStart="16dp">
 
                     <TextView
                         android:id="@+id/tvProfileNic"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="NIC: Loading..."
+                        android:textColor="@color/register_text_primary"
                         android:textSize="16sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
+                        android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tvProfileStatus"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Status: Active"
-                        android:textSize="13sp"
+                        android:text="● Loading status"
+                        android:textColor="@color/register_primary"
+                        android:textSize="12sp"
                         android:textStyle="bold"
-                        android:textColor="@color/status_active"
-                        android:layout_marginTop="4dp" />
+                        android:layout_marginTop="6dp" />
+
                 </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="👤"
-                    android:textSize="32sp" />
             </LinearLayout>
+
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Form Inputs Card -->
+
+        <!-- Personal information heading -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="PERSONAL INFORMATION"
+            android:textColor="@color/register_text_secondary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:layout_marginBottom="10dp" />
+
+
+        <!-- Personal information card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="16dp"
-            app:cardBackgroundColor="@color/card_background"
-            app:strokeColor="@color/card_border"
+            app:cardBackgroundColor="@color/register_surface"
+            app:strokeColor="@color/register_border"
             app:strokeWidth="1dp"
-            app:cardElevation="1dp"
-            android:layout_marginBottom="24dp">
+            app:cardElevation="0dp"
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -103,96 +141,152 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="First Name"
-                    android:layout_marginBottom="12dp">
+                    app:boxBackgroundMode="filled"
+                    app:boxBackgroundColor="@color/register_input"
+                    app:boxStrokeColor="@color/register_border"
+                    app:hintTextColor="@color/register_text_secondary"
+                    android:layout_marginBottom="10dp">
+
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etProfFirstName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary"
-                        android:inputType="textPersonName" />
+                        android:enabled="false"
+                        android:textColor="@color/register_text_primary"
+                        android:textColorHint="@color/register_text_hint" />
+
                 </com.google.android.material.textfield.TextInputLayout>
+
 
                 <!-- Last Name -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="Last Name"
-                    android:layout_marginBottom="12dp">
+                    app:boxBackgroundMode="filled"
+                    app:boxBackgroundColor="@color/register_input"
+                    app:boxStrokeColor="@color/register_border"
+                    app:hintTextColor="@color/register_text_secondary"
+                    android:layout_marginBottom="10dp">
+
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etProfLastName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary"
-                        android:inputType="textPersonName" />
+                        android:enabled="false"
+                        android:textColor="@color/register_text_primary"
+                        android:textColorHint="@color/register_text_hint" />
+
                 </com.google.android.material.textfield.TextInputLayout>
+
 
                 <!-- Email -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="Email Address"
-                    android:layout_marginBottom="12dp">
+                    app:boxBackgroundMode="filled"
+                    app:boxBackgroundColor="@color/register_input"
+                    app:boxStrokeColor="@color/register_border"
+                    app:hintTextColor="@color/register_text_secondary"
+                    android:layout_marginBottom="10dp">
+
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etProfEmail"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary"
-                        android:inputType="textEmailAddress" />
+                        android:enabled="false"
+                        android:textColor="@color/register_text_primary"
+                        android:textColorHint="@color/register_text_hint" />
+
                 </com.google.android.material.textfield.TextInputLayout>
+
 
                 <!-- Phone -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Phone Number"
-                    android:layout_marginBottom="12dp">
+                    android:hint="Mobile Number"
+                    app:boxBackgroundMode="filled"
+                    app:boxBackgroundColor="@color/register_input"
+                    app:boxStrokeColor="@color/register_border"
+                    app:hintTextColor="@color/register_text_secondary"
+                    android:layout_marginBottom="10dp">
+
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etProfPhone"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary"
-                        android:inputType="phone" />
+                        android:enabled="false"
+                        android:textColor="@color/register_text_primary"
+                        android:textColorHint="@color/register_text_hint" />
+
                 </com.google.android.material.textfield.TextInputLayout>
+
 
                 <!-- Address -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="Physical Address"
-                    android:layout_marginBottom="16dp">
+                    app:boxBackgroundMode="filled"
+                    app:boxBackgroundColor="@color/register_input"
+                    app:boxStrokeColor="@color/register_border"
+                    app:hintTextColor="@color/register_text_secondary">
+
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etProfAddress"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:textColor="@color/text_primary"
-                        android:inputType="textPostalAddress" />
+                        android:enabled="false"
+                        android:minLines="2"
+                        android:gravity="top"
+                        android:textColor="@color/register_text_primary"
+                        android:textColorHint="@color/register_text_hint" />
+
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Save Changes Button -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnUpdateProfile"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:text="Save Profile Changes"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="12dp"
-                    android:backgroundTint="@color/primary"
-                    android:textColor="@color/white" />
-
             </LinearLayout>
+
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Account Deactivation Danger Zone Card -->
+
+        <!-- Edit Profile -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnUpdateProfile"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:text="✎  Edit Profile"
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/register_background"
+            android:backgroundTint="@color/register_primary"
+            app:cornerRadius="12dp"
+            android:layout_marginBottom="28dp" />
+
+
+        <!-- Account heading -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ACCOUNT MANAGEMENT"
+            android:textColor="@color/register_text_secondary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:layout_marginBottom="10dp" />
+
+
+        <!-- Danger zone -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="16dp"
-            app:cardBackgroundColor="@color/card_background"
-            app:strokeColor="@color/status_cancelled_bg"
-            app:strokeWidth="1.5dp"
-            app:cardElevation="0dp"
-            android:layout_marginBottom="24dp">
+            app:cardBackgroundColor="@color/register_surface"
+            app:strokeColor="@color/register_error"
+            app:strokeWidth="1dp"
+            app:cardElevation="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -203,33 +297,39 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⚠️ Danger Zone"
+                    android:text="⚠  Account Deactivation"
+                    android:textColor="@color/register_error"
                     android:textSize="14sp"
                     android:textStyle="bold"
-                    android:textColor="@color/status_cancelled"
-                    android:layout_marginBottom="4dp" />
+                    android:layout_marginBottom="7dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Deactivating your prosumer account pauses active bookings. Reactivation requires Backoffice officer authorization."
+                    android:text="Deactivating your account prevents you from making new reservations. Reactivation requires authorization from a Backoffice Administrator."
+                    android:textColor="@color/register_text_secondary"
                     android:textSize="12sp"
-                    android:textColor="@color/text_secondary"
-                    android:layout_marginBottom="12dp" />
+                    android:lineSpacingExtra="2dp"
+                    android:layout_marginBottom="14dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnDeactivateAccount"
                     style="@style/Widget.Material3.Button.OutlinedButton"
                     android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:text="Request Account Deactivation"
+                    android:layout_height="50dp"
+                    android:text="Deactivate Account"
+                    android:textAllCaps="false"
                     android:textSize="13sp"
                     android:textStyle="bold"
-                    app:cornerRadius="12dp"
-                    app:strokeColor="@color/status_cancelled"
-                    android:textColor="@color/status_cancelled" />
+                    android:textColor="@color/register_error"
+                    app:strokeColor="@color/register_error"
+                    app:strokeWidth="1dp"
+                    app:cornerRadius="12dp" />
+
             </LinearLayout>
+
         </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
+
 </ScrollView>
