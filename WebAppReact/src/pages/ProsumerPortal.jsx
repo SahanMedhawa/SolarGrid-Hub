@@ -16,7 +16,9 @@ import {
   updateReservation,
   getProsumerByNic,
   updateProsumer,
-  deactivateProsumer
+  deactivateProsumer,
+  getAvailability,
+  getHourlyAvailability
 } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { toast } from 'react-toastify';
@@ -50,7 +52,6 @@ export default function ProsumerPortal() {
     address: ''
   });
 
-
   // QR Modal state
   const [selectedQrPass, setSelectedQrPass] = useState(null);
 
@@ -63,21 +64,27 @@ export default function ProsumerPortal() {
 
   // Modify Booking Modal state
   const [modifyingRes, setModifyingRes] = useState(null);
-  const [modifyData, setModifyData] = useState({ reservationDate: '', energyKWh: 10 });
+  const [modifyData, setModifyData] = useState({ reservationDate: '', startTime: '08:00', endTime: '12:00', energyKWh: 10 });
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState('All');
 
   // Booking Form state (7-Day Rule)
-  const todayIso = new Date().toISOString().slice(0, 16);
-  const maxDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16);
+  const todayDateStr = new Date().toISOString().split('T')[0];
+  const tomorrowDateStr = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const maxDateStr = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   const [bookingForm, setBookingForm] = useState({
     nodeId: '',
-    slotId: 'SLOT-01',
-    reservationDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 16),
+    reservationDate: tomorrowDateStr,
+    startTime: '08:00',
+    endTime: '12:00',
     energyKWh: 15.0
   });
+  const [hourlyAvailability, setHourlyAvailability] = useState(null);
+  const [loadingHourly, setLoadingHourly] = useState(false);
+  const [windowAvailability, setWindowAvailability] = useState(null);
+  const [evaluatingWindow, setEvaluatingWindow] = useState(false);
   const [submittingBooking, setSubmittingBooking] = useState(false);
 
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
@@ -153,16 +160,57 @@ export default function ProsumerPortal() {
 
 
 
+  // Load hourly breakdown when node and date change
+  useEffect(() => {
+    if (bookingForm.nodeId && bookingForm.reservationDate) {
+      let active = true;
+      setLoadingHourly(true);
+      getHourlyAvailability(bookingForm.nodeId, bookingForm.reservationDate)
+        .then(data => { if (active) setHourlyAvailability(data); })
+        .catch(() => { if (active) setHourlyAvailability(null); })
+        .finally(() => { if (active) setLoadingHourly(false); });
+      return () => { active = false; };
+    }
+  }, [bookingForm.nodeId, bookingForm.reservationDate]);
+
+  // Load window availability when node, date, and times change
+  useEffect(() => {
+    if (bookingForm.nodeId && bookingForm.reservationDate && bookingForm.startTime && bookingForm.endTime) {
+      if (bookingForm.startTime >= bookingForm.endTime) {
+        setWindowAvailability({ error: 'Start time must be earlier than end time.' });
+        return;
+      }
+      let active = true;
+      setEvaluatingWindow(true);
+      getAvailability(bookingForm.nodeId, bookingForm.reservationDate, bookingForm.startTime, bookingForm.endTime)
+        .then(data => { if (active) setWindowAvailability(data); })
+        .catch(err => { if (active) setWindowAvailability({ error: err.message }); })
+        .finally(() => { if (active) setEvaluatingWindow(false); });
+      return () => { active = false; };
+    }
+  }, [bookingForm.nodeId, bookingForm.reservationDate, bookingForm.startTime, bookingForm.endTime]);
+
+  // Helper: Computes Date object with reservation start time
+  function getReservationDateTime(r) {
+    if (!r) return new Date();
+    const d = new Date(r.reservationDate);
+    if (r.startTime && r.startTime.includes(':')) {
+      const [h, m] = r.startTime.split(':').map(Number);
+      d.setHours(h, m, 0, 0);
+    }
+    return d;
+  }
+
   // Helper: Checks if reservation is at least 12 hours in the future
-  function canModifyOrCancel(reservationDate) {
-    const resTime = new Date(reservationDate).getTime();
+  function canModifyOrCancel(r) {
+    const resTime = getReservationDateTime(r).getTime();
     const now = Date.now();
     const hoursRemaining = (resTime - now) / (1000 * 60 * 60);
     return hoursRemaining > 12;
   }
 
-  function getHoursNoticeText(reservationDate) {
-    const resTime = new Date(reservationDate).getTime();
+  function getHoursNoticeText(r) {
+    const resTime = getReservationDateTime(r).getTime();
     const now = Date.now();
     const hoursRemaining = (resTime - now) / (1000 * 60 * 60);
     if (hoursRemaining <= 0) return 'Past slot';
@@ -170,16 +218,16 @@ export default function ProsumerPortal() {
   }
 
   // --- Handlers: Cancel Booking (12-hour rule) ---
-  async function handleCancel(id, reservationDate) {
-    if (!canModifyOrCancel(reservationDate)) {
+  async function handleCancel(res) {
+    if (!canModifyOrCancel(res)) {
       toast.error('Cancellations require at least 12 hours’ notice before the scheduled slot.');
       return;
     }
 
-    if (!window.confirm('Are you sure you want to cancel this reservation?')) return;
+    if (!window.confirm('Are you sure you want to cancel this reservation? Its allocated battery capacity will be freed.')) return;
 
     try {
-      await cancelReservation(id);
+      await cancelReservation(res.id);
       toast.success('Reservation cancelled successfully.');
       loadProsumerData();
     } catch (err) {
@@ -189,13 +237,15 @@ export default function ProsumerPortal() {
 
   // --- Handlers: Modify Booking (12-hour rule) ---
   function openModifyModal(res) {
-    if (!canModifyOrCancel(res.reservationDate)) {
+    if (!canModifyOrCancel(res)) {
       toast.error('Updates require at least 12 hours’ notice before the scheduled slot.');
       return;
     }
     setModifyingRes(res);
     setModifyData({
-      reservationDate: new Date(res.reservationDate).toISOString().slice(0, 16),
+      reservationDate: res.reservationDate ? new Date(res.reservationDate).toISOString().split('T')[0] : '',
+      startTime: res.startTime || '08:00',
+      endTime: res.endTime || '12:00',
       energyKWh: res.energyKWh
     });
   }
@@ -203,9 +253,15 @@ export default function ProsumerPortal() {
   async function handleSaveModify(e) {
     e.preventDefault();
     if (!modifyingRes) return;
+    if (modifyData.startTime >= modifyData.endTime) {
+      toast.error('Start time must be earlier than end time.');
+      return;
+    }
     try {
       await updateReservation(modifyingRes.id, {
-        reservationDate: new Date(modifyData.reservationDate).toISOString(),
+        reservationDate: modifyData.reservationDate,
+        startTime: modifyData.startTime,
+        endTime: modifyData.endTime,
         energyKWh: parseFloat(modifyData.energyKWh)
       });
       toast.success('Reservation updated successfully!');
@@ -221,10 +277,11 @@ export default function ProsumerPortal() {
     e.preventDefault();
     const selectedDate = new Date(bookingForm.reservationDate);
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
     const maxAllowed = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-    if (selectedDate <= now) {
-      toast.error('Reservation date must be in the future.');
+    if (selectedDate < now) {
+      toast.error('Reservation date must be today or in the future.');
       return;
     }
 
@@ -233,16 +290,22 @@ export default function ProsumerPortal() {
       return;
     }
 
+    if (bookingForm.startTime >= bookingForm.endTime) {
+      toast.error('Start time must be earlier than end time.');
+      return;
+    }
+
     setSubmittingBooking(true);
     try {
       await createReservation({
         prosumerNic: prosumerNic,
         nodeId: bookingForm.nodeId,
-        slotId: bookingForm.slotId,
-        reservationDate: selectedDate.toISOString(),
+        reservationDate: bookingForm.reservationDate,
+        startTime: bookingForm.startTime,
+        endTime: bookingForm.endTime,
         energyKWh: parseFloat(bookingForm.energyKWh)
       });
-      toast.success('Energy reservation created successfully! Awaiting station operator approval.');
+      toast.success('Energy reservation created successfully with auto-allocated battery slots! Awaiting station operator approval.');
       setActiveTab('bookings');
       loadProsumerData();
     } catch (err) {
@@ -428,9 +491,9 @@ export default function ProsumerPortal() {
                     <tr>
                       <th>Booking ID</th>
                       <th>Grid Station</th>
-                      <th>Slot</th>
-                      <th>Scheduled Date</th>
+                      <th>Scheduled Date &amp; Time</th>
                       <th>Energy (kWh)</th>
+                      <th>Slots</th>
                       <th>Status</th>
                       <th>Notice Window</th>
                       <th>Digital Pass &amp; Actions</th>
@@ -438,25 +501,39 @@ export default function ProsumerPortal() {
                   </thead>
                   <tbody>
                     {filteredReservations.map(r => {
-                      const modifiable = canModifyOrCancel(r.reservationDate);
+                      const modifiable = canModifyOrCancel(r);
                       const isApproved = r.status === 'Approved';
                       const isPending = r.status === 'Pending';
                       const isFinished = r.status === 'Completed' || r.status === 'Cancelled';
+                      const stationName = nodes.find(n => n.id === r.nodeId)?.nodeName || r.nodeId;
 
                       return (
                         <tr key={r.id}>
-                          <td className="truncate" style={{ maxWidth: '100px' }}>{r.id}</td>
+                          <td className="truncate" style={{ maxWidth: '100px' }}>{r.id.substring(0, 8)}...</td>
                           <td>
-                            <strong>{r.nodeId}</strong>
+                            <strong>{stationName}</strong>
                           </td>
-                          <td>{r.slotId}</td>
-                          <td>{new Date(r.reservationDate).toLocaleString()}</td>
+                          <td>
+                            <div>{new Date(r.reservationDate).toLocaleDateString()}</div>
+                            {r.startTime && r.endTime && (
+                              <small className="text-muted" style={{ display: 'block' }}>⏱️ {r.startTime} - {r.endTime}</small>
+                            )}
+                          </td>
                           <td><strong style={{ color: 'var(--color-primary-light)' }}>{r.energyKWh} kWh</strong></td>
+                          <td>
+                            {r.allocatedSlotIds?.length > 0 ? (
+                              <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                                {r.allocatedSlotIds.length} slot(s)
+                              </span>
+                            ) : (
+                              <span className="text-muted">Auto</span>
+                            )}
+                          </td>
                           <td><StatusBadge status={r.status} /></td>
                           <td style={{ fontSize: '0.8rem' }}>
                             {!isFinished ? (
                               <span style={{ color: modifiable ? 'var(--color-primary-light)' : 'var(--color-warning)' }}>
-                                {modifiable ? '✓ ' : '🔒 '}{getHoursNoticeText(r.reservationDate)}
+                                {modifiable ? '✓ ' : '🔒 '}{getHoursNoticeText(r)}
                               </span>
                             ) : (
                               <span className="text-muted">—</span>
@@ -489,7 +566,7 @@ export default function ProsumerPortal() {
                                     className="btn btn-danger btn-sm"
                                     disabled={!modifiable}
                                     title={!modifiable ? 'Cancellations require at least 12 hours notice before scheduled time.' : ''}
-                                    onClick={() => handleCancel(r.id, r.reservationDate)}
+                                    onClick={() => handleCancel(r)}
                                   >
                                     Cancel
                                   </button>
@@ -564,42 +641,142 @@ export default function ProsumerPortal() {
                   <option value="">-- Choose a Station --</option>
                   {activeNodes.map(n => (
                     <option key={n.id} value={n.id}>
-                      {n.nodeName} ({n.location}) — {n.availableBatterySlots} slots avail
+                      {n.nodeName} ({n.location}) — Total {n.capacityKWh} kWh | Schedule: {n.schedule}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Slot Identifier */}
-              <div className="form-group">
-                <label className="form-label">Battery Slot Preference</label>
-                <select
-                  className="form-select"
-                  value={bookingForm.slotId}
-                  onChange={e => setBookingForm({ ...bookingForm, slotId: e.target.value })}
-                >
-                  {['SLOT-01', 'SLOT-02', 'SLOT-03', 'SLOT-04', 'SLOT-05', 'SLOT-06', 'SLOT-07', 'SLOT-08'].map(s => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                </select>
+              {/* Date & Time Window */}
+              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
+                <div className="form-group">
+                  <label className="form-label">Reservation Date</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    min={todayDateStr}
+                    max={maxDateStr}
+                    value={bookingForm.reservationDate}
+                    onChange={e => setBookingForm({ ...bookingForm, reservationDate: e.target.value })}
+                    required
+                  />
+                  <span className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                    Within 7 days
+                  </span>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Start Time</label>
+                  <input
+                    type="time"
+                    className="form-input"
+                    value={bookingForm.startTime}
+                    onChange={e => setBookingForm({ ...bookingForm, startTime: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">End Time</label>
+                  <input
+                    type="time"
+                    className="form-input"
+                    value={bookingForm.endTime}
+                    onChange={e => setBookingForm({ ...bookingForm, endTime: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
 
-              {/* Reservation Date and Time */}
-              <div className="form-group">
-                <label className="form-label">Reservation Date &amp; Time (Max 7 Days Ahead)</label>
-                <input
-                  type="datetime-local"
-                  className="form-input"
-                  min={todayIso}
-                  max={maxDate}
-                  value={bookingForm.reservationDate}
-                  onChange={e => setBookingForm({ ...bookingForm, reservationDate: e.target.value })}
-                  required
-                />
-                <span className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                  Allowed range: Today through {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}
-                </span>
-              </div>
+              {/* Hourly Capacity Breakdown Grid */}
+              {loadingHourly && (
+                <div className="text-muted" style={{ padding: '0.5rem 0', fontSize: '0.85rem' }}>
+                  ⏳ Loading station hourly schedule and availability...
+                </div>
+              )}
+              {hourlyAvailability && !loadingHourly && hourlyAvailability.slots && (
+                <div style={{
+                  margin: '1rem 0',
+                  padding: '1rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-border)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <strong style={{ fontSize: '0.9rem' }}>📊 Station Hourly Capacity on {bookingForm.reservationDate}</strong>
+                    <span className="text-muted" style={{ fontSize: '0.75rem' }}>Operating Hours: {hourlyAvailability.schedule}</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.5rem' }}>
+                    {hourlyAvailability.slots.map(s => {
+                      const isSelected = bookingForm.startTime <= `${String(s.hour).padStart(2, '0')}:00` &&
+                                         bookingForm.endTime > `${String(s.hour).padStart(2, '0')}:00`;
+                      return (
+                        <div
+                          key={s.hour}
+                          onClick={() => {
+                            if (s.isWithinOperatingHours) {
+                              const start = `${String(s.hour).padStart(2, '0')}:00`;
+                              const end = `${String(Math.min(23, s.hour + 2)).padStart(2, '0')}:00`;
+                              setBookingForm(prev => ({ ...prev, startTime: start, endTime: end }));
+                            }
+                          }}
+                          style={{
+                            padding: '0.5rem',
+                            borderRadius: 'var(--radius-sm)',
+                            cursor: s.isWithinOperatingHours ? 'pointer' : 'not-allowed',
+                            fontSize: '0.75rem',
+                            textAlign: 'center',
+                            opacity: s.isWithinOperatingHours ? 1 : 0.45,
+                            border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                            background: isSelected
+                              ? 'rgba(34, 197, 94, 0.15)'
+                              : s.isWithinOperatingHours
+                                ? 'var(--color-bg)'
+                                : 'rgba(150, 150, 150, 0.1)'
+                          }}
+                          title={s.isWithinOperatingHours ? 'Click to select this slot time' : 'Outside operating hours'}
+                        >
+                          <div style={{ fontWeight: 600 }}>{s.timeLabel}</div>
+                          {s.isWithinOperatingHours ? (
+                            <div style={{ color: s.availableKWh > 0 ? 'var(--color-primary-light)' : '#ef4444' }}>
+                              {s.availableKWh} / {hourlyAvailability.totalCapacityKWh} kWh
+                            </div>
+                          ) : (
+                            <div className="text-muted">Closed</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Window Capacity Evaluation Alert */}
+              {evaluatingWindow && (
+                <div className="text-muted" style={{ padding: '0.5rem 0', fontSize: '0.85rem' }}>
+                  ⏳ Evaluating requested time window...
+                </div>
+              )}
+              {windowAvailability && !evaluatingWindow && (
+                <div style={{
+                  margin: '1rem 0',
+                  padding: '0.85rem',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: windowAvailability.error || !windowAvailability.isWithinOperatingHours ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                  border: `1px solid ${windowAvailability.error || !windowAvailability.isWithinOperatingHours ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`
+                }}>
+                  {windowAvailability.error ? (
+                    <span style={{ color: '#ef4444', fontSize: '0.85rem' }}>⚠️ {windowAvailability.error}</span>
+                  ) : (
+                    <div style={{ fontSize: '0.85rem' }}>
+                      <div><strong>Station Schedule:</strong> {windowAvailability.schedule} {!windowAvailability.isWithinOperatingHours && <span style={{ color: '#ef4444' }}>(OUTSIDE OPERATING HOURS)</span>}</div>
+                      <div><strong>Station Capacity:</strong> {windowAvailability.totalCapacityKWh} kWh {windowAvailability.maintenanceSlotsCount > 0 && `(${windowAvailability.maintenanceSlotsCount} slot under maintenance)`}</div>
+                      <div><strong>Reserved in this window:</strong> {windowAvailability.reservedKWh} kWh</div>
+                      <div style={{ fontWeight: 600, color: windowAvailability.availableKWh > 0 ? '#10b981' : '#ef4444', marginTop: '0.25rem' }}>
+                        Available for Injection: {windowAvailability.availableKWh} kWh
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Energy Amount */}
               <div className="form-group">
@@ -607,7 +784,7 @@ export default function ProsumerPortal() {
                 <input
                   type="number"
                   step="0.5"
-                  min="1"
+                  min="0.5"
                   max="500"
                   className="form-input"
                   placeholder="e.g. 15.0"
@@ -615,6 +792,11 @@ export default function ProsumerPortal() {
                   onChange={e => setBookingForm({ ...bookingForm, energyKWh: e.target.value })}
                   required
                 />
+                {windowAvailability && !windowAvailability.error && Number(bookingForm.energyKWh) > windowAvailability.availableKWh && (
+                  <small style={{ color: '#ef4444', display: 'block', marginTop: '4px' }}>
+                    ⚠️ Requested energy ({bookingForm.energyKWh} kWh) exceeds available capacity ({windowAvailability.availableKWh} kWh) in this time window!
+                  </small>
+                )}
               </div>
 
               {/* Submit */}
@@ -622,7 +804,7 @@ export default function ProsumerPortal() {
                 type="submit"
                 className="btn btn-primary btn-lg"
                 style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}
-                disabled={submittingBooking || !bookingForm.nodeId}
+                disabled={submittingBooking || !bookingForm.nodeId || (windowAvailability && !windowAvailability.error && (!windowAvailability.isWithinOperatingHours || Number(bookingForm.energyKWh) > windowAvailability.availableKWh))}
               >
                 {submittingBooking ? 'Submitting Reservation...' : '⚡ Confirm Energy Reservation'}
               </button>
@@ -988,9 +1170,11 @@ export default function ProsumerPortal() {
               <div style={{ fontSize: '0.85rem', textAlign: 'left', background: 'var(--color-surface)', padding: '1rem', borderRadius: 'var(--radius-sm)', lineHeight: '1.8' }}>
                 <div>Booking: <strong>#{selectedQrPass.id}</strong></div>
                 <div>Prosumer NIC: <strong>{selectedQrPass.prosumerNic}</strong></div>
-                <div>Slot: <strong>{selectedQrPass.slotId}</strong></div>
+                <div>Station: <strong>{nodes.find(n => n.id === selectedQrPass.nodeId)?.nodeName || selectedQrPass.nodeId}</strong></div>
+                <div>Time Window: <strong>{selectedQrPass.startTime && selectedQrPass.endTime ? `${selectedQrPass.startTime} - ${selectedQrPass.endTime}` : 'Full Day'}</strong></div>
+                <div>Allocated Slots: <strong>{selectedQrPass.allocatedSlotIds?.length > 0 ? `${selectedQrPass.allocatedSlotIds.length} slot(s)` : 'Auto-allocated'}</strong></div>
                 <div>Energy to Transfer: <strong style={{ color: 'var(--color-primary)' }}>{selectedQrPass.energyKWh} kWh</strong></div>
-                <div>Scheduled: <strong>{new Date(selectedQrPass.reservationDate).toLocaleString()}</strong></div>
+                <div>Scheduled Date: <strong>{new Date(selectedQrPass.reservationDate).toLocaleDateString()}</strong></div>
               </div>
             </div>
             <div className="modal-footer" style={{ justifyContent: 'center' }}>
@@ -1070,7 +1254,7 @@ export default function ProsumerPortal() {
         <div className="modal-overlay" onClick={() => setModifyingRes(null)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <div className="modal-header">
-              <h3 className="modal-title">✏️ Modify Reservation #{modifyingRes.id}</h3>
+              <h3 className="modal-title">✏️ Modify Reservation #{modifyingRes.id.substring(0, 8)}</h3>
               <button className="btn btn-ghost btn-sm" onClick={() => setModifyingRes(null)}>✕</button>
             </div>
             <form onSubmit={handleSaveModify}>
@@ -1089,16 +1273,39 @@ export default function ProsumerPortal() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">New Reservation Date &amp; Time</label>
+                  <label className="form-label">New Reservation Date</label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     className="form-input"
-                    min={todayIso}
-                    max={maxDate}
+                    min={todayDateStr}
+                    max={maxDateStr}
                     value={modifyData.reservationDate}
                     onChange={e => setModifyData({ ...modifyData, reservationDate: e.target.value })}
                     required
                   />
+                </div>
+
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Start Time</label>
+                    <input
+                      type="time"
+                      className="form-input"
+                      value={modifyData.startTime}
+                      onChange={e => setModifyData({ ...modifyData, startTime: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">End Time</label>
+                    <input
+                      type="time"
+                      className="form-input"
+                      value={modifyData.endTime}
+                      onChange={e => setModifyData({ ...modifyData, endTime: e.target.value })}
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="form-group">
@@ -1106,6 +1313,7 @@ export default function ProsumerPortal() {
                   <input
                     type="number"
                     step="0.5"
+                    min="0.5"
                     className="form-input"
                     value={modifyData.energyKWh}
                     onChange={e => setModifyData({ ...modifyData, energyKWh: e.target.value })}

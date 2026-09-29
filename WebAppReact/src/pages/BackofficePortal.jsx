@@ -123,19 +123,16 @@ export default function BackofficePortal() {
       toast.error('Enter a positive capacity for every battery slot.');
       return;
     }
-    if (slotCapacities.reduce((sum, value) => sum + value, 0) > Number(newNode.capacityKWh)) {
-      toast.error('The total of battery slot capacities cannot exceed the grid capacity.');
-      return;
-    }
+    const sumCap = slotCapacities.reduce((sum, value) => sum + value, 0);
     try {
       await createNode({
         ...newNode,
         latitude: parseFloat(newNode.latitude),
         longitude: parseFloat(newNode.longitude),
-        capacityKWh: parseFloat(newNode.capacityKWh),
+        capacityKWh: sumCap,
         batterySlotCapacities: slotCapacities
       });
-      toast.success('Grid Node Hub created successfully!');
+      toast.success('Grid Node Hub created with auto-calculated slot capacity!');
       setShowNodeModal(false);
       setNewNode({
         nodeName: '',
@@ -749,46 +746,62 @@ export default function BackofficePortal() {
                     <tr>
                       <th>ID</th>
                       <th>Prosumer NIC</th>
-                      <th>Node Station</th>
-                      <th>Slot</th>
-                      <th>Scheduled Date</th>
+                      <th>Station</th>
+                      <th>Date &amp; Time Window</th>
+                      <th>Slots</th>
                       <th>Energy (kWh)</th>
                       <th>Status</th>
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredReservations.map(r => (
-                      <tr key={r.id}>
-                        <td className="truncate" style={{ maxWidth: '100px' }}>{r.id}</td>
-                        <td><strong>{r.prosumerNic}</strong></td>
-                        <td>{r.nodeId}</td>
-                        <td>{r.slotId}</td>
-                        <td>{new Date(r.reservationDate).toLocaleString()}</td>
-                        <td>{r.energyKWh} kWh</td>
-                        <td><StatusBadge status={r.status} /></td>
-                        <td>
-                          {r.status === 'Pending' && (
-                            <button
-                              className="btn btn-primary btn-sm"
-                              onClick={() => handleApproveReservation(r.id)}
-                            >
-                              Approve &amp; QR
-                            </button>
-                          )}
-                          {r.status === 'Approved' && (
-                            <span style={{ fontSize: '0.8rem', color: 'var(--color-primary-light)' }}>
-                              QR Ready
-                            </span>
-                          )}
-                          {r.status === 'Completed' && (
-                            <span style={{ fontSize: '0.8rem', color: 'var(--color-accent-light)' }}>
-                              ⚡ Transferred
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredReservations.map(r => {
+                      const stationName = nodes.find(n => n.id === r.nodeId)?.nodeName || r.nodeId;
+                      return (
+                        <tr key={r.id}>
+                          <td className="truncate" style={{ maxWidth: '100px' }}>{r.id.substring(0, 8)}...</td>
+                          <td><strong>{r.prosumerNic}</strong></td>
+                          <td>{stationName}</td>
+                          <td>
+                            <div>{new Date(r.reservationDate).toLocaleDateString()}</div>
+                            {r.startTime && r.endTime && (
+                              <small className="text-muted" style={{ display: 'block' }}>⏱️ {r.startTime} - {r.endTime}</small>
+                            )}
+                          </td>
+                          <td>
+                            {r.allocatedSlotIds?.length > 0 ? (
+                              <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                                {r.allocatedSlotIds.length} slot(s)
+                              </span>
+                            ) : (
+                              <span className="text-muted">Auto</span>
+                            )}
+                          </td>
+                          <td>{r.energyKWh} kWh</td>
+                          <td><StatusBadge status={r.status} /></td>
+                          <td>
+                            {r.status === 'Pending' && (
+                              <button
+                                className="btn btn-primary btn-sm"
+                                onClick={() => handleApproveReservation(r.id)}
+                              >
+                                Approve &amp; QR
+                              </button>
+                            )}
+                            {r.status === 'Approved' && (
+                              <span style={{ fontSize: '0.8rem', color: 'var(--color-primary-light)' }}>
+                                QR Ready
+                              </span>
+                            )}
+                            {r.status === 'Completed' && (
+                              <span style={{ fontSize: '0.8rem', color: 'var(--color-accent-light)' }}>
+                                ⚡ Transferred
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -839,23 +852,11 @@ export default function BackofficePortal() {
                     }))
                   }
                 />
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Capacity (kWh)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="50"
-                      className="form-input"
-                      value={newNode.capacityKWh}
-                      onChange={e => setNewNode({ ...newNode, capacityKWh: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
                 <div className="form-group">
                   <label className="form-label">Battery Slot Capacities (kWh)</label>
-                  <p className="text-muted">Divide the {newNode.capacityKWh || 0} kWh grid capacity into individual slots. Total: {newNode.batterySlotCapacities.reduce((sum, value) => sum + (Number(value) || 0), 0)} kWh.</p>
+                  <p className="text-muted">
+                    Total station capacity is auto-calculated from slot capacities: <strong>{newNode.batterySlotCapacities.reduce((sum, value) => sum + (Number(value) || 0), 0)} kWh</strong>.
+                  </p>
                   {newNode.batterySlotCapacities.map((capacity, index) => (
                     <div className="slot-capacity-row" key={index}>
                       <div className="form-group slot-capacity-input">
@@ -865,7 +866,7 @@ export default function BackofficePortal() {
                       {newNode.batterySlotCapacities.length > 1 && <button type="button" className="btn btn-danger btn-sm slot-remove-btn" onClick={() => setNewNode({ ...newNode, batterySlotCapacities: newNode.batterySlotCapacities.filter((_, slotIndex) => slotIndex !== index) })}>Remove</button>}
                     </div>
                   ))}
-                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setNewNode({ ...newNode, batterySlotCapacities: [...newNode.batterySlotCapacities, ''] })}>+ Add battery slot</button>
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setNewNode({ ...newNode, batterySlotCapacities: [...newNode.batterySlotCapacities, '50'] })}>+ Add battery slot</button>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Operating Schedule</label>
