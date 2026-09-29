@@ -632,6 +632,22 @@ table .actions {
   gap: 1rem;
 }
 
+.slot-capacity-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.slot-capacity-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.slot-remove-btn {
+  flex: 0 0 auto;
+  margin-bottom: 1.25rem;
+}
+
 .form-error {
   color: var(--color-danger);
   font-size: 0.8rem;

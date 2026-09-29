@@ -33,5 +33,8 @@ namespace SmartSolarMicrogridAPI.Services
 
         // Deactivates a node (blocked if active reservations exist).
         Task<(bool Success, string Message)> DeactivateAsync(string id);
+
+        // Reactivates a previously deactivated node.
+        Task<bool> ActivateAsync(string id);
     }
 }
