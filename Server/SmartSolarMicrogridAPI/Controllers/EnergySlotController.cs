@@ -1,8 +1,9 @@
 // ============================================================
 // File: EnergySlotController.cs
 // Project: SmartSolarMicrogridAPI
-// Description: Handles CRUD endpoints for energy slot
-//              management within microgrid nodes.
+// Description: Handles CRUD endpoints for battery slot
+//              management within microgrid nodes, including
+//              maintenance status toggling and capacity sync.
 // ============================================================
 
 using Microsoft.AspNetCore.Authorization;
@@ -11,11 +12,12 @@ using MongoDB.Driver;
 using SmartSolarMicrogridAPI.Data;
 using SmartSolarMicrogridAPI.Models;
 using SmartSolarMicrogridAPI.Models.DTOs;
+using SmartSolarMicrogridAPI.Services;
 
 namespace SmartSolarMicrogridAPI.Controllers
 {
     /// <summary>
-    /// Energy slot management API endpoints.
+    /// Battery slot management API endpoints.
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
@@ -23,11 +25,13 @@ namespace SmartSolarMicrogridAPI.Controllers
     public class EnergySlotController : ControllerBase
     {
         private readonly MongoDbContext _context;
+        private readonly IMicrogridNodeService _nodeService;
 
-        // Constructor — injects MongoDB context.
-        public EnergySlotController(MongoDbContext context)
+        // Constructor — injects MongoDB context and node service.
+        public EnergySlotController(MongoDbContext context, IMicrogridNodeService nodeService)
         {
             _context = context;
+            _nodeService = nodeService;
         }
 
         // GET api/energyslot/node/{nodeId} — Returns all slots for a node.
@@ -40,12 +44,12 @@ namespace SmartSolarMicrogridAPI.Controllers
             return Ok(slots);
         }
 
-        // GET api/energyslot/node/{nodeId}/available — Returns available slots for a node.
+        // GET api/energyslot/node/{nodeId}/available — Returns available (non-maintenance) slots for a node.
         [HttpGet("node/{nodeId}/available")]
         public async Task<IActionResult> GetAvailableByNode(string nodeId)
         {
             var slots = await _context.EnergySlots
-                .Find(s => s.NodeId == nodeId && s.Status == "Available")
+                .Find(s => s.NodeId == nodeId && s.Status != "Maintenance")
                 .ToListAsync();
             return Ok(slots);
         }
@@ -62,7 +66,7 @@ namespace SmartSolarMicrogridAPI.Controllers
             return Ok(slot);
         }
 
-        // POST api/energyslot — Creates a new energy slot.
+        // POST api/energyslot — Creates a new battery slot and syncs node capacity.
         [HttpPost]
         [Authorize(Roles = "Backoffice")]
         public async Task<IActionResult> Create([FromBody] CreateEnergySlotRequest request)
@@ -81,8 +85,6 @@ namespace SmartSolarMicrogridAPI.Controllers
                 return BadRequest(new { message = "Battery slot capacity must be greater than 0 kWh." });
 
             var existingSlots = await _context.EnergySlots.Find(s => s.NodeId == request.NodeId).ToListAsync();
-            if (existingSlots.Sum(s => s.AvailableKWh) + request.AvailableKWh > node.CapacityKWh)
-                return BadRequest(new { message = $"Battery slot capacity exceeds the remaining grid capacity ({node.CapacityKWh - existingSlots.Sum(s => s.AvailableKWh):0.##} kWh)." });
 
             var slot = new EnergySlot
             {
@@ -94,16 +96,13 @@ namespace SmartSolarMicrogridAPI.Controllers
             slot.SlotNumber = existingSlots.Count == 0 ? 1 : existingSlots.Max(s => s.SlotNumber) + 1;
             await _context.EnergySlots.InsertOneAsync(slot);
 
-            await _context.MicrogridNodes.UpdateOneAsync(
-                n => n.Id == request.NodeId,
-                Builders<MicrogridNode>.Update
-                    .Inc(n => n.BatterySlots, 1)
-                    .Inc(n => n.AvailableBatterySlots, 1));
+            // Sync node capacity and slot counts
+            await _nodeService.SyncNodeCapacityAsync(request.NodeId);
 
             return CreatedAtAction(nameof(GetById), new { id = slot.Id }, slot);
         }
 
-        // PUT api/energyslot/{id} — Updates a slot.
+        // PUT api/energyslot/{id} — Updates a slot's capacity and/or status.
         [HttpPut("{id}")]
         [Authorize(Roles = "Backoffice,GridOperator")]
         public async Task<IActionResult> Update(string id, [FromBody] EnergySlot slot)
@@ -115,24 +114,58 @@ namespace SmartSolarMicrogridAPI.Controllers
             if (slot.AvailableKWh <= 0)
                 return BadRequest(new { message = "Battery slot capacity must be greater than 0 kWh." });
 
-            var node = await _context.MicrogridNodes.Find(n => n.Id == existing.NodeId).FirstOrDefaultAsync();
-            var otherSlots = await _context.EnergySlots.Find(s => s.NodeId == existing.NodeId && s.Id != id).ToListAsync();
-            if (node != null && otherSlots.Sum(s => s.AvailableKWh) + slot.AvailableKWh > node.CapacityKWh)
-                return BadRequest(new { message = "Battery slot capacities cannot exceed the grid capacity." });
+            // Validate status is one of the allowed values
+            var validStatuses = new[] { "Available", "Maintenance" };
+            var newStatus = validStatuses.FirstOrDefault(s =>
+                string.Equals(s, slot.Status, StringComparison.OrdinalIgnoreCase)) ?? existing.Status;
 
             var update = Builders<EnergySlot>.Update
                 .Set(s => s.AvailableKWh, slot.AvailableKWh)
-                .Set(s => s.Status, slot.Status);
+                .Set(s => s.Status, newStatus);
 
             var result = await _context.EnergySlots.UpdateOneAsync(
                 s => s.Id == id, update);
 
             if (result.ModifiedCount == 0)
                 return NotFound(new { message = "Slot not found." });
+
+            // Sync node capacity after changes
+            await _nodeService.SyncNodeCapacityAsync(existing.NodeId);
+
             return Ok(new { message = "Slot updated successfully." });
         }
 
-        // DELETE api/energyslot/{id} — Deletes a slot.
+        // PUT api/energyslot/{id}/maintenance — Toggles maintenance status on a slot.
+        [HttpPut("{id}/maintenance")]
+        [Authorize(Roles = "Backoffice,GridOperator")]
+        public async Task<IActionResult> ToggleMaintenance(string id, [FromBody] MaintenanceRequest request)
+        {
+            var existing = await _context.EnergySlots.Find(s => s.Id == id).FirstOrDefaultAsync();
+            if (existing == null)
+                return NotFound(new { message = "Slot not found." });
+
+            var newStatus = request.UnderMaintenance ? "Maintenance" : "Available";
+
+            var update = Builders<EnergySlot>.Update
+                .Set(s => s.Status, newStatus);
+
+            var result = await _context.EnergySlots.UpdateOneAsync(
+                s => s.Id == id, update);
+
+            if (result.ModifiedCount == 0)
+                return NotFound(new { message = "Slot not found." });
+
+            // Sync node capacity after maintenance status change
+            await _nodeService.SyncNodeCapacityAsync(existing.NodeId);
+
+            var msg = request.UnderMaintenance
+                ? $"Slot {existing.SlotNumber} marked as under maintenance. Its {existing.AvailableKWh} kWh capacity is excluded from availability."
+                : $"Slot {existing.SlotNumber} returned to service. Its {existing.AvailableKWh} kWh capacity is now available.";
+
+            return Ok(new { message = msg });
+        }
+
+        // DELETE api/energyslot/{id} — Deletes a slot and syncs node capacity.
         [HttpDelete("{id}")]
         [Authorize(Roles = "Backoffice")]
         public async Task<IActionResult> Delete(string id)
@@ -141,23 +174,29 @@ namespace SmartSolarMicrogridAPI.Controllers
             if (slot == null)
                 return NotFound(new { message = "Slot not found." });
 
+            // Check if any active reservation has this slot allocated
             var hasActiveReservation = await _context.Reservations.CountDocumentsAsync(
-                r => r.SlotId == id && (r.Status == "Pending" || r.Status == "Approved"));
+                r => r.AllocatedSlotIds.Contains(id) &&
+                     (r.Status == "Pending" || r.Status == "Approved"));
             if (hasActiveReservation > 0)
-                return BadRequest(new { message = "Cannot delete a battery slot with an active reservation." });
+                return BadRequest(new { message = "Cannot delete a battery slot that is allocated to an active reservation." });
 
             var result = await _context.EnergySlots.DeleteOneAsync(s => s.Id == id);
             if (result.DeletedCount == 0)
                 return NotFound(new { message = "Slot not found." });
 
-            var nodeUpdate = Builders<MicrogridNode>.Update.Inc(n => n.BatterySlots, -1);
-            if (string.Equals(slot.Status, "Available", StringComparison.OrdinalIgnoreCase))
-                nodeUpdate = Builders<MicrogridNode>.Update.Combine(
-                    nodeUpdate,
-                    Builders<MicrogridNode>.Update.Inc(n => n.AvailableBatterySlots, -1));
-            await _context.MicrogridNodes.UpdateOneAsync(n => n.Id == slot.NodeId, nodeUpdate);
+            // Sync node capacity after deletion
+            await _nodeService.SyncNodeCapacityAsync(slot.NodeId);
 
             return Ok(new { message = "Slot deleted successfully." });
         }
+    }
+
+    /// <summary>
+    /// Request DTO for toggling maintenance status on a battery slot.
+    /// </summary>
+    public class MaintenanceRequest
+    {
+        public bool UnderMaintenance { get; set; }
     }
 }
