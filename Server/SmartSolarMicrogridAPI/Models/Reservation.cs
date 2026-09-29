@@ -68,6 +68,12 @@ namespace SmartSolarMicrogridAPI.Models
         public List<string> AllocatedSlotIds { get; set; } = new();
 
         /// <summary>
+        /// Human-friendly display names for allocated battery slots (e.g. ["Slot #1", "Slot #2"]).
+        /// </summary>
+        [BsonElement("allocatedSlotNames")]
+        public List<string> AllocatedSlotNames { get; set; } = new();
+
+        /// <summary>
         /// Status: "Pending", "Approved", "Cancelled", "Completed"
         /// </summary>
         [BsonElement("status")]

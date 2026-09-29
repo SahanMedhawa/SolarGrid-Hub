@@ -39,25 +39,50 @@ namespace SmartSolarMicrogridAPI.Services
         // Returns all reservations.
         public async Task<List<Reservation>> GetAllAsync()
         {
-            return await _context.Reservations.Find(_ => true).ToListAsync();
+            var list = await _context.Reservations.Find(_ => true).ToListAsync();
+            await PopulateSlotNamesAsync(list);
+            return list;
         }
 
         // Finds a reservation by ID.
         public async Task<Reservation?> GetByIdAsync(string id)
         {
-            return await _context.Reservations.Find(r => r.Id == id).FirstOrDefaultAsync();
+            var res = await _context.Reservations.Find(r => r.Id == id).FirstOrDefaultAsync();
+            if (res != null) await PopulateSlotNamesAsync(new List<Reservation> { res });
+            return res;
         }
 
         // Returns all reservations for a given prosumer NIC.
         public async Task<List<Reservation>> GetByProsumerNicAsync(string nic)
         {
-            return await _context.Reservations.Find(r => r.ProsumerNic == nic).ToListAsync();
+            var list = await _context.Reservations.Find(r => r.ProsumerNic == nic).ToListAsync();
+            await PopulateSlotNamesAsync(list);
+            return list;
         }
 
         // Returns reservations filtered by status.
         public async Task<List<Reservation>> GetByStatusAsync(string status)
         {
-            return await _context.Reservations.Find(r => r.Status == status).ToListAsync();
+            var list = await _context.Reservations.Find(r => r.Status == status).ToListAsync();
+            await PopulateSlotNamesAsync(list);
+            return list;
+        }
+
+        private async Task PopulateSlotNamesAsync(List<Reservation> reservations)
+        {
+            var missing = reservations.Where(r => (r.AllocatedSlotNames == null || r.AllocatedSlotNames.Count == 0) && r.AllocatedSlotIds != null && r.AllocatedSlotIds.Count > 0).ToList();
+            if (!missing.Any()) return;
+
+            var allSlotIds = missing.SelectMany(r => r.AllocatedSlotIds).Distinct().ToList();
+            var slots = await _context.EnergySlots.Find(s => allSlotIds.Contains(s.Id!)).ToListAsync();
+            var slotMap = slots.ToDictionary(s => s.Id!, s => $"Slot #{s.SlotNumber}");
+
+            foreach (var r in missing)
+            {
+                r.AllocatedSlotNames = r.AllocatedSlotIds
+                    .Select((id, idx) => slotMap.TryGetValue(id, out var name) ? name : $"Slot #{idx + 1}")
+                    .ToList();
+            }
         }
 
         // Counts approved reservations with future dates for a prosumer.
@@ -395,6 +420,14 @@ namespace SmartSolarMicrogridAPI.Services
                         request.StartTime, request.EndTime, request.EnergyKWh);
                 }
 
+                // ── Resolve Slot Names for human-friendly display ──
+                var slotObjects = await _context.EnergySlots.Find(s => allocatedSlotIds.Contains(s.Id!)).ToListAsync();
+                var allocatedSlotNames = slotObjects.OrderBy(s => s.SlotNumber).Select(s => $"Slot #{s.SlotNumber}").ToList();
+                if (!allocatedSlotNames.Any() && allocatedSlotIds.Any())
+                {
+                    allocatedSlotNames = allocatedSlotIds.Select((_, idx) => $"Slot #{idx + 1}").ToList();
+                }
+
                 var reservation = new Reservation
                 {
                     ProsumerNic = request.ProsumerNic,
@@ -404,6 +437,7 @@ namespace SmartSolarMicrogridAPI.Services
                     EndTime = request.EndTime,
                     EnergyKWh = effectiveEnergyKWh,
                     AllocatedSlotIds = allocatedSlotIds,
+                    AllocatedSlotNames = allocatedSlotNames,
                     Status = "Pending",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -564,8 +598,10 @@ namespace SmartSolarMicrogridAPI.Services
                     }
 
                     var newEnergy = selectedSlots.Sum(s => s.AvailableKWh);
+                    var newSlotNames = selectedSlots.OrderBy(s => s.SlotNumber).Select(s => $"Slot #{s.SlotNumber}").ToList();
                     updateBuilder = updateBuilder
                         .Set(r => r.AllocatedSlotIds, request.SelectedSlotIds)
+                        .Set(r => r.AllocatedSlotNames, newSlotNames)
                         .Set(r => r.EnergyKWh, newEnergy);
                 }
                 else
@@ -573,7 +609,11 @@ namespace SmartSolarMicrogridAPI.Services
                     // Re-allocate slots for new parameters
                     var allocatedSlotIds = await AllocateSlotsAsync(
                         currentNodeId, currentDate, currentStartTime, currentEndTime, currentEnergy, excludeReservationId: id);
-                    updateBuilder = updateBuilder.Set(r => r.AllocatedSlotIds, allocatedSlotIds);
+                    var reallocatedSlots = await _context.EnergySlots.Find(s => allocatedSlotIds.Contains(s.Id!)).ToListAsync();
+                    var reallocatedNames = reallocatedSlots.OrderBy(s => s.SlotNumber).Select(s => $"Slot #{s.SlotNumber}").ToList();
+                    updateBuilder = updateBuilder
+                        .Set(r => r.AllocatedSlotIds, allocatedSlotIds)
+                        .Set(r => r.AllocatedSlotNames, reallocatedNames);
                 }
 
                 var result = await _context.Reservations.UpdateOneAsync(
