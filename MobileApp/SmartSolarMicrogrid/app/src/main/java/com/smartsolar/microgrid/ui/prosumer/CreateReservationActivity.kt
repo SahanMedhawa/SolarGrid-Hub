@@ -2,18 +2,21 @@ package com.smartsolar.microgrid.ui.prosumer
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.google.android.material.card.MaterialCardView
 import com.smartsolar.microgrid.R
 import com.smartsolar.microgrid.api.ApiClient
 import com.smartsolar.microgrid.data.SessionManager
@@ -26,11 +29,20 @@ import java.util.Calendar
 import java.util.Locale
 
 /**
- * Create Reservation Activity - allows prosumers to reserve energy drop-off/charging capacity.
+ * Create Reservation Activity - allows prosumers to choose actual physical battery
+ * slots of a microgrid station to reserve capacity.
  * Enforces the 7-day scheduling window, operating hours, and time-window capacity evaluation.
- * Battery slots are auto-allocated dynamically on the FAT server.
  */
 class CreateReservationActivity : AppCompatActivity() {
+
+    data class BatterySlotUI(
+        val id: String,
+        val slotNumber: Int,
+        val capacityKWh: Double,
+        val status: String,
+        val isBooked: Boolean,
+        val isAvailable: Boolean
+    )
 
     private lateinit var spinnerNodes: Spinner
     private lateinit var etDate: EditText
@@ -39,11 +51,17 @@ class CreateReservationActivity : AppCompatActivity() {
     private lateinit var etEnergyKWh: EditText
     private lateinit var tvOperatingHours: TextView
     private lateinit var tvAvailabilityFeedback: TextView
+    private lateinit var llSlotsListContainer: LinearLayout
+    private lateinit var tvSelectedSlotsCount: TextView
+    private lateinit var tvCalculatedEnergyTotal: TextView
     private lateinit var session: SessionManager
 
     private val nodesList = ArrayList<MicrogridNode>()
     private val nodeDisplayNames = ArrayList<String>()
     private val selectedCalendar: Calendar = Calendar.getInstance()
+
+    private val availableSlotsList = ArrayList<BatterySlotUI>()
+    private val selectedSlotIds = HashSet<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,15 +75,20 @@ class CreateReservationActivity : AppCompatActivity() {
         etEnergyKWh = findViewById(R.id.etEnergyKWh)
         tvOperatingHours = findViewById(R.id.tvOperatingHours)
         tvAvailabilityFeedback = findViewById(R.id.tvAvailabilityFeedback)
+        llSlotsListContainer = findViewById(R.id.llSlotsListContainer)
+        tvSelectedSlotsCount = findViewById(R.id.tvSelectedSlotsCount)
+        tvCalculatedEnergyTotal = findViewById(R.id.tvCalculatedEnergyTotal)
         val btnSubmit: Button = findViewById(R.id.btnSubmitReservation)
 
-        // Set default time window: 08:00 - 10:00
+        // Set default time window: 08:00 - 09:00 (strictly 1-hour reservation)
         etStartTime.setText("08:00")
-        etEndTime.setText("10:00")
+        etEndTime.setText("09:00")
 
         etDate.setOnClickListener { showDatePicker() }
-        etStartTime.setOnClickListener { showTimePicker(true) }
-        etEndTime.setOnClickListener { showTimePicker(false) }
+        etStartTime.setOnClickListener { showStartTimePicker() }
+        etEndTime.setOnClickListener {
+            Toast.makeText(this, "Every energy reservation is exactly 1 hour. Tap Start Time to select.", Toast.LENGTH_SHORT).show()
+        }
         btnSubmit.setOnClickListener { submitBooking() }
 
         spinnerNodes.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -74,6 +97,7 @@ class CreateReservationActivity : AppCompatActivity() {
                     val node = nodesList[position]
                     val sched = if (node.schedule.isNotEmpty()) node.schedule else "06:00-18:00"
                     tvOperatingHours.text = "Operating Hours: $sched"
+                    loadStationSlotsDirectly(node.id)
                     checkAvailability()
                 }
             }
@@ -108,22 +132,21 @@ class CreateReservationActivity : AppCompatActivity() {
         datePickerDialog.show()
     }
 
-    // Show time picker for Start or End time
-    private fun showTimePicker(isStart: Boolean) {
-        val currentText = if (isStart) etStartTime.text.toString().trim() else etEndTime.text.toString().trim()
+    // Show time picker for Start time and automatically set End time to exactly 1 hour later
+    private fun showStartTimePicker() {
+        val currentText = etStartTime.text.toString().trim()
         val parts = currentText.split(":")
-        val defaultHour = if (parts.size == 2) parts[0].toIntOrNull() ?: if (isStart) 8 else 10 else if (isStart) 8 else 10
+        val defaultHour = if (parts.size == 2) parts[0].toIntOrNull() ?: 8 else 8
         val defaultMin = if (parts.size == 2) parts[1].toIntOrNull() ?: 0 else 0
 
         val timePickerDialog = TimePickerDialog(
             this,
             { _, hourOfDay, minute ->
-                val timeFormatted = String.format(Locale.US, "%02d:%02d", hourOfDay, minute)
-                if (isStart) {
-                    etStartTime.setText(timeFormatted)
-                } else {
-                    etEndTime.setText(timeFormatted)
-                }
+                val startFormatted = String.format(Locale.US, "%02d:%02d", hourOfDay, minute)
+                val endHour = hourOfDay + 1
+                val endFormatted = if (endHour >= 24) "24:00" else String.format(Locale.US, "%02d:%02d", endHour, minute)
+                etStartTime.setText(startFormatted)
+                etEndTime.setText(endFormatted)
                 checkAvailability()
             },
             defaultHour,
@@ -179,6 +202,39 @@ class CreateReservationActivity : AppCompatActivity() {
         })
     }
 
+    // Query actual station battery slots directly upon station selection
+    private fun loadStationSlotsDirectly(nodeId: String) {
+        ApiClient.request("energyslot/node/$nodeId", "GET", null, session.getToken(), object : ApiClient.ApiCallback {
+            override fun onSuccess(response: String) {
+                try {
+                    val arr = JSONArray(response)
+                    availableSlotsList.clear()
+                    selectedSlotIds.clear()
+                    for (i in 0 until arr.length()) {
+                        val sObj = arr.getJSONObject(i)
+                        val status = sObj.optString("status", "Available")
+                        val isMaint = status.equals("Maintenance", ignoreCase = true)
+                        availableSlotsList.add(
+                            BatterySlotUI(
+                                id = sObj.optString("id", ""),
+                                slotNumber = sObj.optInt("slotNumber", i + 1),
+                                capacityKWh = sObj.optDouble("availableKWh", 0.0),
+                                status = status,
+                                isBooked = false,
+                                isAvailable = !isMaint
+                            )
+                        )
+                    }
+                    runOnUiThread {
+                        renderSlotsUI()
+                        updateCalculatedEnergyDisplay()
+                    }
+                } catch (_: Exception) {}
+            }
+            override fun onError(error: String) {}
+        })
+    }
+
     // Query real-time availability evaluation from backend for the selected node, date, and time window
     private fun checkAvailability() {
         if (nodesList.isEmpty() || spinnerNodes.selectedItemPosition !in nodesList.indices) return
@@ -201,30 +257,182 @@ class CreateReservationActivity : AppCompatActivity() {
             override fun onSuccess(response: String) {
                 try {
                     val obj = JSONObject(response)
-                    val availableKWh = obj.optDouble("availableCapacityKWh", 0.0)
+                    val availableKWh = obj.optDouble("availableKWh", 0.0)
                     val isWithinHours = obj.optBoolean("isWithinOperatingHours", true)
-                    val totalActiveSlots = obj.optInt("totalActiveSlots", 0)
-                    val operatingSchedule = obj.optString("operatingSchedule", selectedNode.schedule)
+                    val operatingSchedule = obj.optString("schedule", selectedNode.schedule)
 
-                    if (!isWithinHours) {
-                        tvAvailabilityFeedback.text = "⚠️ Selected window is outside station operating hours ($operatingSchedule)."
-                        tvAvailabilityFeedback.setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.status_cancelled))
-                    } else if (availableKWh <= 0) {
-                        tvAvailabilityFeedback.text = "⚠️ Station fully booked or in maintenance during this time window."
-                        tvAvailabilityFeedback.setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.status_cancelled))
-                    } else {
-                        tvAvailabilityFeedback.text = "⚡ Available in this window: $availableKWh kWh ($totalActiveSlots active slots open). Slots auto-allocate on booking."
-                        tvAvailabilityFeedback.setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.primary))
+                    val slotsArr = obj.optJSONArray("slots")
+                    if (slotsArr != null && slotsArr.length() > 0) {
+                        availableSlotsList.clear()
+                        for (i in 0 until slotsArr.length()) {
+                            val sObj = slotsArr.getJSONObject(i)
+                            availableSlotsList.add(
+                                BatterySlotUI(
+                                    id = sObj.optString("id", ""),
+                                    slotNumber = sObj.optInt("slotNumber", i + 1),
+                                    capacityKWh = sObj.optDouble("capacityKWh", 0.0),
+                                    status = sObj.optString("status", "Available"),
+                                    isBooked = sObj.optBoolean("isBooked", false),
+                                    isAvailable = sObj.optBoolean("isAvailable", true)
+                                )
+                            )
+                        }
+                        // Remove selected slots that are no longer available in this window
+                        val validIds = availableSlotsList.filter { it.isAvailable }.map { it.id }.toSet()
+                        selectedSlotIds.retainAll(validIds)
+                    }
+
+                    runOnUiThread {
+                        if (!isWithinHours) {
+                            tvAvailabilityFeedback.text = "⚠️ Selected window is outside station operating hours ($operatingSchedule)."
+                            tvAvailabilityFeedback.setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.status_cancelled))
+                        } else if (availableKWh <= 0) {
+                            tvAvailabilityFeedback.text = "⚠️ Station fully booked or under maintenance during this time window."
+                            tvAvailabilityFeedback.setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.status_cancelled))
+                        } else {
+                            tvAvailabilityFeedback.text = "⚡ Available in this window: $availableKWh kWh across station slots. Tap slots below to select."
+                            tvAvailabilityFeedback.setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.primary))
+                        }
+                        renderSlotsUI()
+                        updateCalculatedEnergyDisplay()
                     }
                 } catch (_: Exception) {}
             }
 
             override fun onError(error: String) {
-                // Non-blocking fallback preview
-                tvAvailabilityFeedback.text = "Slots are dynamically auto-allocated on booking confirmation."
-                tvAvailabilityFeedback.setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.text_secondary))
+                runOnUiThread {
+                    tvAvailabilityFeedback.text = "Choose slots below to configure your energy drop-off."
+                    tvAvailabilityFeedback.setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.text_secondary))
+                }
             }
         })
+    }
+
+    // Render physical battery slot selection cards
+    private fun renderSlotsUI() {
+        llSlotsListContainer.removeAllViews()
+
+        if (availableSlotsList.isEmpty()) {
+            val tv = TextView(this).apply {
+                text = "No battery storage slots found for this station."
+                textSize = 12f
+                setPadding(20, 20, 20, 20)
+                setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.text_secondary))
+            }
+            llSlotsListContainer.addView(tv)
+            return
+        }
+
+        for (slot in availableSlotsList) {
+            val isSelected = selectedSlotIds.contains(slot.id)
+            val card = MaterialCardView(this).apply {
+                radius = 24f
+                strokeWidth = 2
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, 0, 0, 16)
+                }
+                layoutParams = params
+
+                if (isSelected) {
+                    setCardBackgroundColor(Color.parseColor("#D1FAE5"))
+                    strokeColor = Color.parseColor("#006D44")
+                } else if (slot.status.equals("Maintenance", ignoreCase = true)) {
+                    setCardBackgroundColor(Color.parseColor("#FEE2E2"))
+                    strokeColor = Color.parseColor("#EF4444")
+                    alpha = 0.55f
+                } else if (slot.isBooked) {
+                    setCardBackgroundColor(Color.parseColor("#FEF3C7"))
+                    strokeColor = Color.parseColor("#F59E0B")
+                    alpha = 0.55f
+                } else {
+                    setCardBackgroundColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.card_background))
+                    strokeColor = ContextCompat.getColor(this@CreateReservationActivity, R.color.card_border)
+                    alpha = 1.0f
+                }
+            }
+
+            val itemLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(28, 20, 28, 20)
+            }
+
+            val topRow = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+
+            val tvTitle = TextView(this).apply {
+                text = "🔋 Slot #${slot.slotNumber}"
+                textSize = 14f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(if (isSelected) Color.parseColor("#006D44") else ContextCompat.getColor(this@CreateReservationActivity, R.color.text_primary))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f)
+            }
+
+            val tvBadge = TextView(this).apply {
+                textSize = 11f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setPadding(12, 4, 12, 4)
+                if (isSelected) {
+                    text = "✓ SELECTED"
+                    setTextColor(Color.parseColor("#006D44"))
+                } else if (slot.status.equals("Maintenance", ignoreCase = true)) {
+                    text = "🔧 MAINTENANCE"
+                    setTextColor(Color.parseColor("#EF4444"))
+                } else if (slot.isBooked) {
+                    text = "⏳ BOOKED"
+                    setTextColor(Color.parseColor("#D97706"))
+                } else {
+                    text = "● AVAILABLE"
+                    setTextColor(Color.parseColor("#059669"))
+                }
+            }
+
+            topRow.addView(tvTitle)
+            topRow.addView(tvBadge)
+
+            val tvCapacity = TextView(this).apply {
+                text = "${slot.capacityKWh} kWh Capacity"
+                textSize = 13f
+                setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.text_secondary))
+                setPadding(0, 6, 0, 0)
+            }
+
+            itemLayout.addView(topRow)
+            itemLayout.addView(tvCapacity)
+            card.addView(itemLayout)
+
+            if (slot.isAvailable) {
+                card.isClickable = true
+                card.isFocusable = true
+                card.setOnClickListener {
+                    if (selectedSlotIds.contains(slot.id)) {
+                        selectedSlotIds.remove(slot.id)
+                    } else {
+                        selectedSlotIds.add(slot.id)
+                    }
+                    renderSlotsUI()
+                    updateCalculatedEnergyDisplay()
+                }
+            } else {
+                card.isClickable = false
+            }
+
+            llSlotsListContainer.addView(card)
+        }
+    }
+
+    private fun updateCalculatedEnergyDisplay() {
+        val totalKWh = availableSlotsList
+            .filter { selectedSlotIds.contains(it.id) }
+            .sumOf { it.capacityKWh }
+
+        tvSelectedSlotsCount.text = "CALCULATED ENERGY TO SUPPLY (${selectedSlotIds.size} SLOTS SELECTED)"
+        tvCalculatedEnergyTotal.text = String.format(Locale.US, "%.1f kWh", totalKWh)
+        etEnergyKWh.setText(String.format(Locale.US, "%.1f", totalKWh))
     }
 
     // Validate inputs and submit the reservation
@@ -238,10 +446,9 @@ class CreateReservationActivity : AppCompatActivity() {
         val dateStr = etDate.text.toString().trim()
         val startStr = etStartTime.text.toString().trim()
         val endStr = etEndTime.text.toString().trim()
-        val kwhStr = etEnergyKWh.text.toString().trim()
 
-        if (dateStr.isEmpty() || startStr.isEmpty() || endStr.isEmpty() || kwhStr.isEmpty()) {
-            Toast.makeText(this, "Please fill in all date, time, and energy fields", Toast.LENGTH_SHORT).show()
+        if (dateStr.isEmpty() || startStr.isEmpty() || endStr.isEmpty()) {
+            Toast.makeText(this, "Please select date and time window", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -250,26 +457,46 @@ class CreateReservationActivity : AppCompatActivity() {
             return
         }
 
-        val kwh = try {
-            kwhStr.toDouble()
-        } catch (_: Exception) {
-            Toast.makeText(this, "Invalid energy amount", Toast.LENGTH_SHORT).show()
+        // Validate station operating hours
+        val sched = if (selectedNode.schedule.isNotEmpty()) selectedNode.schedule else "06:00-18:00"
+        val schedParts = sched.split("-")
+        if (schedParts.size == 2) {
+            val schedStart = schedParts[0].trim()
+            val schedEnd = schedParts[1].trim()
+            if (startStr < schedStart || endStr > schedEnd) {
+                Toast.makeText(this, "Reservation ($startStr - $endStr) must remain within station operating schedule ($sched)", Toast.LENGTH_LONG).show()
+                return
+            }
+        }
+
+        if (selectedSlotIds.isEmpty()) {
+            Toast.makeText(this, "Please tap at least one available battery slot to allocate capacity", Toast.LENGTH_SHORT).show()
             return
         }
 
-        if (kwh <= 0) {
-            Toast.makeText(this, "Energy amount must be greater than 0 kWh", Toast.LENGTH_SHORT).show()
+        val totalKWh = availableSlotsList
+            .filter { selectedSlotIds.contains(it.id) }
+            .sumOf { it.capacityKWh }
+
+        if (totalKWh <= 0) {
+            Toast.makeText(this, "Selected slot capacity must be greater than 0 kWh", Toast.LENGTH_SHORT).show()
             return
         }
 
         try {
+            val selectedSlotsArr = JSONArray()
+            for (id in selectedSlotIds) {
+                selectedSlotsArr.put(id)
+            }
+
             val req = JSONObject().apply {
                 put("prosumerNic", session.getUserNic())
                 put("nodeId", selectedNode.id)
                 put("reservationDate", "${dateStr}T00:00:00Z")
                 put("startTime", startStr)
                 put("endTime", endStr)
-                put("energyKWh", kwh)
+                put("energyKWh", totalKWh)
+                put("selectedSlotIds", selectedSlotsArr)
             }
 
             ApiClient.request("reservation", "POST", req, session.getToken(), object : ApiClient.ApiCallback {
@@ -296,7 +523,7 @@ class CreateReservationActivity : AppCompatActivity() {
                             reservationDate = dateStr,
                             startTime = startStr,
                             endTime = endStr,
-                            energyKWh = kwh,
+                            energyKWh = totalKWh,
                             status = "Pending",
                             allocatedSlotIds = allocatedSlotsList
                         )
@@ -309,7 +536,7 @@ class CreateReservationActivity : AppCompatActivity() {
                     val slotsText = if (allocatedSlotsList.isNotEmpty()) {
                         "${allocatedSlotsList.joinToString(", ")} (${allocatedSlotsList.size} slot${if (allocatedSlotsList.size > 1) "s" else ""})"
                     } else {
-                        "Auto-allocated by Grid"
+                        "${selectedSlotsArr.length()} slot(s) selected"
                     }
 
                     AlertDialog.Builder(this@CreateReservationActivity)
@@ -319,8 +546,8 @@ class CreateReservationActivity : AppCompatActivity() {
                             "• Station: ${selectedNode.nodeName} (${selectedNode.location})\n" +
                             "• Time Window: $startStr - $endStr\n" +
                             "• Scheduled Date: $dateStr\n" +
-                            "• Transfer Energy: $kwh kWh\n" +
-                            "• Auto-Allocated Battery Slots: $slotsText\n" +
+                            "• Transfer Energy: ${String.format(Locale.US, "%.1f", totalKWh)} kWh\n" +
+                            "• Chosen Battery Slots: $slotsText\n" +
                             "• Status: Pending Approval\n\n" +
                             "Your request has been dispatched to the Grid Operator. Once approved, your secure QR transaction pass will become active."
                         )

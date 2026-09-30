@@ -98,6 +98,13 @@ class ReservationListActivity : AppCompatActivity() {
                                 allocatedSlots.add(slotsArr.getString(j))
                             }
                         }
+                        val slotNamesArr = obj.optJSONArray("allocatedSlotNames")
+                        val allocatedSlotNamesList = ArrayList<String>()
+                        if (slotNamesArr != null) {
+                            for (j in 0 until slotNamesArr.length()) {
+                                allocatedSlotNamesList.add(slotNamesArr.getString(j))
+                            }
+                        }
                         val r = Reservation(
                             id = obj.getString("id"),
                             prosumerNic = obj.optString("prosumerNic", nic),
@@ -109,7 +116,8 @@ class ReservationListActivity : AppCompatActivity() {
                             energyKWh = obj.optDouble("energyKWh", 0.0),
                             status = obj.optString("status", "Pending"),
                             qrCodeData = obj.optString("qrCodeData", ""),
-                            allocatedSlotIds = allocatedSlots
+                            allocatedSlotIds = allocatedSlots,
+                            allocatedSlotNames = allocatedSlotNamesList
                         )
                         allList.add(r)
                     }
@@ -174,13 +182,13 @@ class ReservationListActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val r = filteredList[position]
-            holder.tvResId.text = "Booking #${if (r.id.length > 8) r.id.substring(0, 8) else r.id}"
+            holder.tvResId.text = "⚡ Energy Booking • ${r.energyKWh} kWh"
             holder.tvResStatus.text = r.status
             val formattedDate = if (r.reservationDate.length >= 10) r.reservationDate.substring(0, 10) else r.reservationDate
             val timeWindowStr = if (r.startTime.isNotEmpty() && r.endTime.isNotEmpty()) " (${r.startTime}-${r.endTime})" else ""
             holder.tvResDate.text = "📅 $formattedDate$timeWindowStr"
-            holder.tvResSlot.text = if (r.allocatedSlotIds.isNotEmpty()) "${r.allocatedSlotIds.size} slot(s)" else if (r.slotId.isNotEmpty()) "Slot: ${r.slotId}" else "Auto-allocated"
-            holder.tvResKWh.text = "⚡ ${r.energyKWh} kWh"
+            holder.tvResSlot.text = if (r.allocatedSlotNames.isNotEmpty()) r.allocatedSlotNames.joinToString(", ") else if (r.allocatedSlotIds.isNotEmpty()) "${r.allocatedSlotIds.size} slot(s)" else "Auto-allocated"
+            holder.tvResKWh.text = "Slot Details ›"
 
             // Status color-coding
             val statusColor = when (r.status.lowercase()) {

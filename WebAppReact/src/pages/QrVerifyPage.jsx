@@ -335,22 +335,25 @@ export default function QrVerifyPage() {
               <table>
                 <thead>
                   <tr>
-                    <th>ID</th>
                     <th>Prosumer NIC</th>
                     <th>Station</th>
-                    <th>Date</th>
+                    <th>Date &amp; Time Window</th>
                     <th>Energy</th>
                     <th>Status</th>
-                    <th>QR Data</th>
+                    <th>Verification</th>
                   </tr>
                 </thead>
                 <tbody>
                   {approvedBookings.map(r => (
                     <tr key={r.id}>
-                      <td><span className="truncate" title={r.id}>{r.id.substring(0, 8)}...</span></td>
                       <td><strong>{r.prosumerNic}</strong></td>
                       <td>{getNodeName(r.nodeId)}</td>
-                      <td>{new Date(r.reservationDate).toLocaleDateString()}</td>
+                      <td>
+                        <div>{new Date(r.reservationDate).toLocaleDateString()}</div>
+                        {r.startTime && r.endTime && (
+                          <small className="text-muted" style={{ display: 'block' }}>⏱️ {r.startTime} - {r.endTime}</small>
+                        )}
+                      </td>
                       <td>{r.energyKWh} kWh</td>
                       <td><StatusBadge status={r.status} /></td>
                       <td>

@@ -18,7 +18,8 @@ import {
   updateProsumer,
   deactivateProsumer,
   getAvailability,
-  getHourlyAvailability
+  getHourlyAvailability,
+  getSlotsByNode
 } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { toast } from 'react-toastify';
@@ -84,7 +85,8 @@ export default function ProsumerPortal() {
 
   // Modify Booking Modal state
   const [modifyingRes, setModifyingRes] = useState(null);
-  const [modifyData, setModifyData] = useState({ reservationDate: '', startTime: '08:00', endTime: '12:00', energyKWh: 10 });
+  const [modifyData, setModifyData] = useState({ reservationDate: '', startTime: '08:00', endTime: '09:00', energyKWh: 10, selectedSlotIds: [] });
+  const [modifySlots, setModifySlots] = useState([]);
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState('All');
@@ -94,13 +96,24 @@ export default function ProsumerPortal() {
   const tomorrowDateStr = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   const maxDateStr = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+  function addOneHour(timeStr) {
+    if (!timeStr || !timeStr.includes(':')) return '09:00';
+    const [h, m] = timeStr.split(':').map(Number);
+    const nextH = h + 1;
+    if (nextH === 24 && m === 0) return '24:00';
+    const paddedH = String(Math.min(23, nextH)).padStart(2, '0');
+    const paddedM = String(m).padStart(2, '0');
+    return `${paddedH}:${paddedM}`;
+  }
+
   const [bookingForm, setBookingForm] = useState({
     nodeId: '',
     reservationDate: tomorrowDateStr,
     startTime: '08:00',
-    endTime: '12:00',
-    energyKWh: 15.0
+    endTime: '09:00',
+    selectedSlotIds: []
   });
+  const [stationSlots, setStationSlots] = useState([]);
   const [hourlyAvailability, setHourlyAvailability] = useState(null);
   const [loadingHourly, setLoadingHourly] = useState(false);
   const [windowAvailability, setWindowAvailability] = useState(null);
@@ -179,6 +192,19 @@ export default function ProsumerPortal() {
 
 
 
+
+  // Load station battery slots when node changes
+  useEffect(() => {
+    if (bookingForm.nodeId) {
+      let active = true;
+      getSlotsByNode(bookingForm.nodeId)
+        .then(data => { if (active) setStationSlots(data || []); })
+        .catch(() => { if (active) setStationSlots([]); });
+      return () => { active = false; };
+    } else {
+      setStationSlots([]);
+    }
+  }, [bookingForm.nodeId]);
 
   // Load hourly breakdown when node and date change
   useEffect(() => {
@@ -269,19 +295,39 @@ export default function ProsumerPortal() {
     }
   }
 
+  // Helper for available slots in the current window
+  const displayedSlots = (windowAvailability && Array.isArray(windowAvailability.slots) && windowAvailability.slots.length > 0)
+    ? windowAvailability.slots
+    : stationSlots.map(s => ({
+        id: s.id,
+        slotNumber: s.slotNumber,
+        capacityKWh: s.availableKWh,
+        status: s.status,
+        isBooked: false,
+        isAvailable: s.status !== 'Maintenance'
+      }));
+
+  const selectedSlots = displayedSlots.filter(s => (bookingForm.selectedSlotIds || []).includes(s.id));
+  const totalCalculatedKWh = selectedSlots.reduce((sum, s) => sum + (s.capacityKWh || 0), 0);
+
   // --- Handlers: Modify Booking (12-hour rule) ---
   function openModifyModal(res) {
     if (!canModifyOrCancel(res)) {
       toast.error('Updates require at least 12 hours’ notice before the scheduled slot.');
       return;
     }
+    const start = res.startTime || '08:00';
     setModifyingRes(res);
     setModifyData({
       reservationDate: res.reservationDate ? new Date(res.reservationDate).toISOString().split('T')[0] : '',
-      startTime: res.startTime || '08:00',
-      endTime: res.endTime || '12:00',
-      energyKWh: res.energyKWh
+      startTime: start,
+      endTime: addOneHour(start),
+      energyKWh: res.energyKWh,
+      selectedSlotIds: res.allocatedSlotIds || []
     });
+    getSlotsByNode(res.nodeId)
+      .then(data => setModifySlots(data || []))
+      .catch(() => setModifySlots([]));
   }
 
   async function handleSaveModify(e) {
@@ -291,12 +337,16 @@ export default function ProsumerPortal() {
       toast.error('Start time must be earlier than end time.');
       return;
     }
+    const activeModifySlots = modifySlots.filter(s => (modifyData.selectedSlotIds || []).includes(s.id));
+    const newEnergy = activeModifySlots.reduce((sum, s) => sum + (s.availableKWh || 0), 0);
+
     try {
       await updateReservation(modifyingRes.id, {
         reservationDate: modifyData.reservationDate,
         startTime: modifyData.startTime,
         endTime: modifyData.endTime,
-        energyKWh: parseFloat(modifyData.energyKWh)
+        energyKWh: newEnergy > 0 ? newEnergy : modifyingRes.energyKWh,
+        selectedSlotIds: modifyData.selectedSlotIds && modifyData.selectedSlotIds.length > 0 ? modifyData.selectedSlotIds : modifyingRes.allocatedSlotIds
       });
       toast.success('Reservation updated successfully!');
       setModifyingRes(null);
@@ -329,6 +379,16 @@ export default function ProsumerPortal() {
       return;
     }
 
+    if (!bookingForm.selectedSlotIds || bookingForm.selectedSlotIds.length === 0) {
+      toast.error('Please select at least one available battery storage slot.');
+      return;
+    }
+
+    if (totalCalculatedKWh <= 0) {
+      toast.error('Selected slot capacity must be greater than 0 kWh.');
+      return;
+    }
+
     setSubmittingBooking(true);
     try {
       await createReservation({
@@ -337,9 +397,10 @@ export default function ProsumerPortal() {
         reservationDate: bookingForm.reservationDate,
         startTime: bookingForm.startTime,
         endTime: bookingForm.endTime,
-        energyKWh: parseFloat(bookingForm.energyKWh)
+        energyKWh: totalCalculatedKWh,
+        selectedSlotIds: bookingForm.selectedSlotIds
       });
-      toast.success('Energy reservation created successfully with auto-allocated battery slots! Awaiting station operator approval.');
+      toast.success(`Energy reservation of ${totalCalculatedKWh.toFixed(1)} kWh created successfully! Awaiting station operator approval.`);
       setActiveTab('bookings');
       loadProsumerData();
     } catch (err) {
@@ -523,7 +584,6 @@ export default function ProsumerPortal() {
                 <table>
                   <thead>
                     <tr>
-                      <th>Booking ID</th>
                       <th>Grid Station</th>
                       <th>Scheduled Date &amp; Time</th>
                       <th>Energy (kWh)</th>
@@ -543,7 +603,6 @@ export default function ProsumerPortal() {
 
                       return (
                         <tr key={r.id}>
-                          <td className="truncate" style={{ maxWidth: '100px' }}>{r.id.substring(0, 8)}...</td>
                           <td>
                             <strong>{stationName}</strong>
                           </td>
@@ -555,7 +614,11 @@ export default function ProsumerPortal() {
                           </td>
                           <td><strong style={{ color: 'var(--color-primary-light)' }}>{r.energyKWh} kWh</strong></td>
                           <td>
-                            {r.allocatedSlotIds?.length > 0 ? (
+                            {r.allocatedSlotNames?.length > 0 ? (
+                              <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                                {r.allocatedSlotNames.join(', ')}
+                              </span>
+                            ) : r.allocatedSlotIds?.length > 0 ? (
                               <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
                                 {r.allocatedSlotIds.length} slot(s)
                               </span>
@@ -752,7 +815,7 @@ export default function ProsumerPortal() {
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <strong style={{ fontSize: '0.9rem' }}>📊 Station Hourly Capacity on {bookingForm.reservationDate}</strong>
-                    <span className="text-muted" style={{ fontSize: '0.75rem' }}>Operating Hours: {hourlyAvailability.schedule}</span>
+                    <span className="text-muted" style={{ fontSize: '0.75rem' }}>Operating Hours: {hourlyAvailability.schedule} (1-hr slots)</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.5rem' }}>
                     {getHourlySlots(hourlyAvailability).filter(isBookableHour).map(s => {
@@ -824,24 +887,136 @@ export default function ProsumerPortal() {
                 </div>
               )}
 
-              {/* Energy Amount */}
-              <div className="form-group">
-                <label className="form-label">Energy to Supply (kWh)</label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0.5"
-                  max="500"
-                  className="form-input"
-                  placeholder="e.g. 15.0"
-                  value={bookingForm.energyKWh}
-                  onChange={e => setBookingForm({ ...bookingForm, energyKWh: e.target.value })}
-                  required
-                />
-                {windowAvailability && !windowAvailability.error && Number(bookingForm.energyKWh) > windowAvailability.availableKWh && (
-                  <small style={{ color: '#ef4444', display: 'block', marginTop: '4px' }}>
-                    ⚠️ Requested energy ({bookingForm.energyKWh} kWh) exceeds available capacity ({windowAvailability.availableKWh} kWh) in this time window!
-                  </small>
+              {/* Select Physical Battery Slot(s) */}
+              <div className="form-group" style={{ marginTop: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <label className="form-label" style={{ margin: 0, fontWeight: 700, fontSize: '0.95rem' }}>
+                    🔋 Select Station Battery Storage Slot(s)
+                  </label>
+                  <span className="text-muted" style={{ fontSize: '0.8rem' }}>
+                    Click available slots to reserve capacity
+                  </span>
+                </div>
+
+                {!bookingForm.nodeId ? (
+                  <div style={{ padding: '1rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--color-border)', color: 'var(--color-text-secondary)', fontSize: '0.85rem', textAlign: 'center' }}>
+                    Please choose a microgrid station above to view its actual battery slots.
+                  </div>
+                ) : displayedSlots.length === 0 ? (
+                  <div style={{ padding: '1rem', background: 'var(--color-surface)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-border)', color: 'var(--color-text-secondary)', fontSize: '0.85rem', textAlign: 'center' }}>
+                    ⏳ Loading station battery slots...
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                      {displayedSlots.map(slot => {
+                        const isSelected = (bookingForm.selectedSlotIds || []).includes(slot.id);
+                        const isMaintenance = slot.status === 'Maintenance';
+                        const isBooked = slot.isBooked;
+                        const isSelectable = !isMaintenance && !isBooked;
+
+                        return (
+                          <div
+                            key={slot.id || slot.slotNumber}
+                            onClick={() => {
+                              if (!isSelectable) return;
+                              setBookingForm(prev => {
+                                const current = prev.selectedSlotIds || [];
+                                const next = isSelected
+                                  ? current.filter(id => id !== slot.id)
+                                  : [...current, slot.id];
+                                return { ...prev, selectedSlotIds: next };
+                              });
+                            }}
+                            style={{
+                              padding: '0.85rem',
+                              borderRadius: 'var(--radius-md)',
+                              border: isSelected
+                                ? '2px solid var(--color-primary)'
+                                : isSelectable
+                                  ? '1px solid var(--color-border)'
+                                  : '1px dashed rgba(255, 255, 255, 0.1)',
+                              background: isSelected
+                                ? 'rgba(34, 197, 94, 0.18)'
+                                : isSelectable
+                                  ? 'var(--color-surface)'
+                                  : 'rgba(255, 255, 255, 0.03)',
+                              cursor: isSelectable ? 'pointer' : 'not-allowed',
+                              opacity: isSelectable ? 1 : 0.45,
+                              transition: 'all 0.2s ease',
+                              boxShadow: isSelected ? '0 0 12px rgba(34, 197, 94, 0.35)' : 'none',
+                              position: 'relative'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                              <strong style={{ fontSize: '0.9rem', color: isSelected ? 'var(--color-primary-light)' : 'var(--color-text)' }}>
+                                🔋 Slot #{slot.slotNumber}
+                              </strong>
+                              {isSelected && (
+                                <span style={{ fontSize: '0.8rem', color: 'var(--color-primary-light)', fontWeight: 700 }}>✓ Selected</span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--color-text)', marginBottom: '0.35rem' }}>
+                              {slot.capacityKWh} <span style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>kWh</span>
+                            </div>
+                            <div>
+                              {isMaintenance ? (
+                                <span style={{ fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', fontWeight: 600 }}>
+                                  🔧 Maintenance
+                                </span>
+                              ) : isBooked ? (
+                                <span style={{ fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontWeight: 600 }}>
+                                  ⏳ Booked in Window
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: '0.72rem', padding: '2px 6px', borderRadius: '4px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', fontWeight: 600 }}>
+                                  ● Available
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Calculated Energy Summary */}
+                    <div style={{
+                      padding: '1rem',
+                      borderRadius: 'var(--radius-sm)',
+                      background: totalCalculatedKWh > 0 ? 'rgba(34, 197, 94, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+                      border: `1px solid ${totalCalculatedKWh > 0 ? 'var(--color-primary)' : 'var(--color-border)'}`,
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '0.75rem'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Calculated Energy to Supply
+                        </div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: totalCalculatedKWh > 0 ? 'var(--color-primary-light)' : 'var(--color-text-secondary)' }}>
+                          {totalCalculatedKWh.toFixed(1)} kWh
+                          <span style={{ fontSize: '0.85rem', fontWeight: 400, color: 'var(--color-text-secondary)', marginLeft: '0.5rem' }}>
+                            ({selectedSlots.length} slot{selectedSlots.length === 1 ? '' : 's'} selected)
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '2px' }}>
+                          ⚡ Capacity is determined directly by your physical battery slot choice
+                        </div>
+                      </div>
+                      {selectedSlots.length > 0 && (
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setBookingForm(prev => ({ ...prev, selectedSlotIds: [] }))}
+                          style={{ color: 'var(--color-text-secondary)', fontSize: '0.8rem' }}
+                        >
+                          ✕ Clear Selection
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -849,10 +1024,10 @@ export default function ProsumerPortal() {
               <button
                 type="submit"
                 className="btn btn-primary btn-lg"
-                style={{ width: '100%', justifyContent: 'center', marginTop: '1rem' }}
-                disabled={submittingBooking || !bookingForm.nodeId || (windowAvailability && !windowAvailability.error && (!windowAvailability.isWithinOperatingHours || Number(bookingForm.energyKWh) > windowAvailability.availableKWh))}
+                style={{ width: '100%', justifyContent: 'center', marginTop: '1.25rem' }}
+                disabled={submittingBooking || !bookingForm.nodeId || selectedSlots.length === 0 || (windowAvailability && !windowAvailability.error && !windowAvailability.isWithinOperatingHours)}
               >
-                {submittingBooking ? 'Submitting Reservation...' : '⚡ Confirm Energy Reservation'}
+                {submittingBooking ? 'Submitting Reservation...' : `⚡ Confirm Energy Reservation (${totalCalculatedKWh.toFixed(1)} kWh)`}
               </button>
             </form>
           </div>
@@ -1214,11 +1389,10 @@ export default function ProsumerPortal() {
 
               {/* Pass Metadata */}
               <div style={{ fontSize: '0.85rem', textAlign: 'left', background: 'var(--color-surface)', padding: '1rem', borderRadius: 'var(--radius-sm)', lineHeight: '1.8' }}>
-                <div>Booking: <strong>#{selectedQrPass.id}</strong></div>
                 <div>Prosumer NIC: <strong>{selectedQrPass.prosumerNic}</strong></div>
                 <div>Station: <strong>{nodes.find(n => n.id === selectedQrPass.nodeId)?.nodeName || selectedQrPass.nodeId}</strong></div>
                 <div>Time Window: <strong>{selectedQrPass.startTime && selectedQrPass.endTime ? `${selectedQrPass.startTime} - ${selectedQrPass.endTime}` : 'Full Day'}</strong></div>
-                <div>Allocated Slots: <strong>{selectedQrPass.allocatedSlotIds?.length > 0 ? `${selectedQrPass.allocatedSlotIds.length} slot(s)` : 'Auto-allocated'}</strong></div>
+                <div>Allocated Slots: <strong>{selectedQrPass.allocatedSlotNames?.length > 0 ? selectedQrPass.allocatedSlotNames.join(', ') : (selectedQrPass.allocatedSlotIds?.length > 0 ? `${selectedQrPass.allocatedSlotIds.length} slot(s)` : 'Auto-allocated')}</strong></div>
                 <div>Energy to Transfer: <strong style={{ color: 'var(--color-primary)' }}>{selectedQrPass.energyKWh} kWh</strong></div>
                 <div>Scheduled Date: <strong>{new Date(selectedQrPass.reservationDate).toLocaleDateString()}</strong></div>
               </div>
@@ -1314,18 +1488,28 @@ export default function ProsumerPortal() {
                       type="time"
                       className="form-input"
                       value={modifyData.startTime}
-                      onChange={e => setModifyData({ ...modifyData, startTime: e.target.value })}
+                      onChange={e => {
+                        const start = e.target.value;
+                        const end = addOneHour(start);
+                        setModifyData(prev => ({ ...prev, startTime: start, endTime: end }));
+                      }}
                       required
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">End Time</label>
+                    <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      End Time
+                      <span style={{ fontSize: '0.7rem', color: 'var(--color-primary-light)', background: 'rgba(56, 189, 248, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                        🔒 1-Hour Fixed
+                      </span>
+                    </label>
                     <input
                       type="time"
                       className="form-input"
                       value={modifyData.endTime}
-                      onChange={e => setModifyData({ ...modifyData, endTime: e.target.value })}
-                      required
+                      readOnly
+                      disabled
+                      style={{ opacity: 0.85, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}
                     />
                   </div>
                 </div>
