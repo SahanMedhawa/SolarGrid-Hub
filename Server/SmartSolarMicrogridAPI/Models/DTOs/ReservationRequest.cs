@@ -32,14 +32,19 @@ namespace SmartSolarMicrogridAPI.Models.DTOs
         public string StartTime { get; set; } = null!;
 
         /// <summary>
-        /// End time of the booking window (e.g., "10:00").
+        /// End time of the booking window. Automatically set by the system to exactly one hour after StartTime.
         /// </summary>
-        [Required]
-        public string EndTime { get; set; } = null!;
+        public string? EndTime { get; set; }
 
-        [Required]
-        [Range(0.1, double.MaxValue)]
+        [Range(0.0, double.MaxValue)]
         public double EnergyKWh { get; set; }
+
+        /// <summary>
+        /// Specific battery slot IDs selected by the prosumer.
+        /// When provided, the system allocates these actual slots and
+        /// sets EnergyKWh to the sum of their capacities.
+        /// </summary>
+        public List<string>? SelectedSlotIds { get; set; }
     }
 
     /// <summary>
@@ -52,5 +57,6 @@ namespace SmartSolarMicrogridAPI.Models.DTOs
         public string? StartTime { get; set; }
         public string? EndTime { get; set; }
         public double? EnergyKWh { get; set; }
+        public List<string>? SelectedSlotIds { get; set; }
     }
 }

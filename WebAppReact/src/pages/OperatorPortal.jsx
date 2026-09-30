@@ -475,7 +475,6 @@ export default function OperatorPortal() {
             <table>
               <thead>
                 <tr>
-                  <th>Booking ID</th>
                   <th>Prosumer NIC</th>
                   <th>Station</th>
                   <th>Date &amp; Time Window</th>
@@ -490,7 +489,6 @@ export default function OperatorPortal() {
                   const nodeName = nodes.find(n => n.id === r.nodeId)?.nodeName || r.nodeId;
                   return (
                     <tr key={r.id}>
-                      <td className="truncate" style={{ maxWidth: '100px' }}>{r.id.substring(0, 8)}...</td>
                       <td><strong>{r.prosumerNic}</strong></td>
                       <td>{nodeName}</td>
                       <td>
@@ -500,7 +498,11 @@ export default function OperatorPortal() {
                         )}
                       </td>
                       <td>
-                        {r.allocatedSlotIds?.length > 0 ? (
+                        {r.allocatedSlotNames?.length > 0 ? (
+                          <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                            {r.allocatedSlotNames.join(', ')}
+                          </span>
+                        ) : r.allocatedSlotIds?.length > 0 ? (
                           <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
                             {r.allocatedSlotIds.length} slot(s)
                           </span>

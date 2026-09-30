@@ -39,25 +39,50 @@ namespace SmartSolarMicrogridAPI.Services
         // Returns all reservations.
         public async Task<List<Reservation>> GetAllAsync()
         {
-            return await _context.Reservations.Find(_ => true).ToListAsync();
+            var list = await _context.Reservations.Find(_ => true).ToListAsync();
+            await PopulateSlotNamesAsync(list);
+            return list;
         }
 
         // Finds a reservation by ID.
         public async Task<Reservation?> GetByIdAsync(string id)
         {
-            return await _context.Reservations.Find(r => r.Id == id).FirstOrDefaultAsync();
+            var res = await _context.Reservations.Find(r => r.Id == id).FirstOrDefaultAsync();
+            if (res != null) await PopulateSlotNamesAsync(new List<Reservation> { res });
+            return res;
         }
 
         // Returns all reservations for a given prosumer NIC.
         public async Task<List<Reservation>> GetByProsumerNicAsync(string nic)
         {
-            return await _context.Reservations.Find(r => r.ProsumerNic == nic).ToListAsync();
+            var list = await _context.Reservations.Find(r => r.ProsumerNic == nic).ToListAsync();
+            await PopulateSlotNamesAsync(list);
+            return list;
         }
 
         // Returns reservations filtered by status.
         public async Task<List<Reservation>> GetByStatusAsync(string status)
         {
-            return await _context.Reservations.Find(r => r.Status == status).ToListAsync();
+            var list = await _context.Reservations.Find(r => r.Status == status).ToListAsync();
+            await PopulateSlotNamesAsync(list);
+            return list;
+        }
+
+        private async Task PopulateSlotNamesAsync(List<Reservation> reservations)
+        {
+            var missing = reservations.Where(r => (r.AllocatedSlotNames == null || r.AllocatedSlotNames.Count == 0) && r.AllocatedSlotIds != null && r.AllocatedSlotIds.Count > 0).ToList();
+            if (!missing.Any()) return;
+
+            var allSlotIds = missing.SelectMany(r => r.AllocatedSlotIds).Distinct().ToList();
+            var slots = await _context.EnergySlots.Find(s => allSlotIds.Contains(s.Id!)).ToListAsync();
+            var slotMap = slots.ToDictionary(s => s.Id!, s => $"Slot #{s.SlotNumber}");
+
+            foreach (var r in missing)
+            {
+                r.AllocatedSlotNames = r.AllocatedSlotIds
+                    .Select((id, idx) => slotMap.TryGetValue(id, out var name) ? name : $"Slot #{idx + 1}")
+                    .ToList();
+            }
         }
 
         // Counts approved reservations with future dates for a prosumer.
@@ -104,6 +129,38 @@ namespace SmartSolarMicrogridAPI.Services
             // Check operating hours
             var isWithinHours = IsWithinOperatingHours(node.Schedule, startTime, endTime);
 
+            // Determine occupied slots in this specific time window
+            var dateStart = date.Date;
+            var dateEnd = dateStart.AddDays(1);
+            var dayReservations = await _context.Reservations
+                .Find(r => r.NodeId == nodeId &&
+                           r.ReservationDate >= dateStart && r.ReservationDate < dateEnd &&
+                           (r.Status == "Pending" || r.Status == "Approved"))
+                .ToListAsync();
+
+            var overlapping = dayReservations
+                .Where(r => !string.IsNullOrEmpty(r.StartTime) && !string.IsNullOrEmpty(r.EndTime))
+                .Where(r => TimesOverlap(r.StartTime, r.EndTime, startTime, endTime))
+                .ToList();
+
+            var occupiedSlotIds = overlapping
+                .SelectMany(r => r.AllocatedSlotIds ?? new List<string>())
+                .ToHashSet();
+
+            var slotList = slots
+                .OrderBy(s => s.SlotNumber)
+                .Select(s => new SlotAvailabilityInfo
+                {
+                    Id = s.Id ?? string.Empty,
+                    SlotNumber = s.SlotNumber,
+                    CapacityKWh = s.AvailableKWh,
+                    Status = s.Status,
+                    IsBooked = occupiedSlotIds.Contains(s.Id ?? string.Empty),
+                    IsAvailable = !occupiedSlotIds.Contains(s.Id ?? string.Empty) &&
+                                  !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase)
+                })
+                .ToList();
+
             return new AvailabilityResponse
             {
                 NodeId = nodeId,
@@ -117,7 +174,8 @@ namespace SmartSolarMicrogridAPI.Services
                 MaintenanceSlotsCount = maintenanceSlots.Count,
                 MaintenanceCapacityKWh = maintenanceSlots.Sum(s => s.AvailableKWh),
                 Schedule = node.Schedule,
-                IsWithinOperatingHours = isWithinHours
+                IsWithinOperatingHours = isWithinHours,
+                Slots = slotList
             };
         }
 
@@ -202,15 +260,33 @@ namespace SmartSolarMicrogridAPI.Services
             CreateReservationRequest request)
         {
             // ── Validate time format ──
-            if (!TryParseTime(request.StartTime, out var reqStart) ||
-                !TryParseTime(request.EndTime, out var reqEnd))
+            if (!TryParseTime(request.StartTime, out var reqStart))
             {
-                return (false, "Start time and end time must be valid times in HH:mm format.", null);
+                return (false, "Start time must be a valid time in HH:mm format.", null);
             }
 
-            if (reqEnd <= reqStart)
+            // ── Business Rule: Every energy reservation is exactly one hour ──
+            // Automatically sets the end time to one hour after start time. Multi-hour reservations not supported.
+            var calculatedEnd = reqStart.AddHours(1);
+            string calculatedEndStr = (calculatedEnd.Hour == 0 && reqStart.Hour == 23) ? "24:00" : calculatedEnd.ToString("HH:mm");
+
+            if (string.IsNullOrWhiteSpace(request.EndTime))
             {
-                return (false, "End time must be after start time.", null);
+                request.EndTime = calculatedEndStr;
+            }
+            else
+            {
+                if (!TryParseTime(request.EndTime, out var reqEnd))
+                {
+                    return (false, "End time must be a valid time in HH:mm format.", null);
+                }
+
+                var durationMinutes = (reqEnd.ToTimeSpan() - reqStart.ToTimeSpan()).TotalMinutes;
+                if (Math.Abs(durationMinutes - 60) > 1)
+                {
+                    return (false, $"Every energy reservation must be exactly one hour. For start time {request.StartTime}, end time is automatically {calculatedEndStr}. Multi-hour reservations are not supported.", null);
+                }
+                request.EndTime = calculatedEndStr;
             }
 
             // ── Business Rule: Reservation must be scheduled within 7 days ──
@@ -225,10 +301,10 @@ namespace SmartSolarMicrogridAPI.Services
                 return (false, "Reservation date cannot be in the past.", null);
             }
 
-            // ── Business Rule: Validate energy amount is positive ──
-            if (request.EnergyKWh <= 0)
+            // ── Business Rule: Validate energy amount is positive or specific slots selected ──
+            if (request.EnergyKWh <= 0 && (request.SelectedSlotIds == null || !request.SelectedSlotIds.Any()))
             {
-                return (false, "Energy amount must be greater than 0 kWh.", null);
+                return (false, "Energy amount must be greater than 0 kWh or specific battery slots must be selected.", null);
             }
 
             // ── Business Rule: Prosumer must exist and have "Active" status ──
@@ -280,30 +356,77 @@ namespace SmartSolarMicrogridAPI.Services
 
                 var totalCapacity = activeSlots.Sum(s => s.AvailableKWh);
 
-                // ── Business Rule: Requested energy cannot exceed total operational capacity ──
-                if (request.EnergyKWh > totalCapacity)
+                List<string> allocatedSlotIds;
+                double effectiveEnergyKWh = request.EnergyKWh;
+
+                if (request.SelectedSlotIds != null && request.SelectedSlotIds.Any())
                 {
-                    return (false, $"Requested energy ({request.EnergyKWh} kWh) exceeds the station's operational capacity ({totalCapacity} kWh).", null);
+                    // Prosumer selected specific physical battery slots
+                    var selectedSlots = activeSlots.Where(s => request.SelectedSlotIds.Contains(s.Id!)).ToList();
+                    if (selectedSlots.Count != request.SelectedSlotIds.Distinct().Count())
+                    {
+                        return (false, "One or more selected battery slots do not exist or are currently under maintenance.", null);
+                    }
+
+                    // Check if any selected slot is already occupied during this time window
+                    var dateStart = request.ReservationDate.Date;
+                    var dateEnd = dateStart.AddDays(1);
+                    var dayReservations = await _context.Reservations
+                        .Find(r => r.NodeId == request.NodeId &&
+                                   r.ReservationDate >= dateStart && r.ReservationDate < dateEnd &&
+                                   (r.Status == "Pending" || r.Status == "Approved"))
+                        .ToListAsync();
+
+                    var occupiedSlotIds = dayReservations
+                        .Where(r => !string.IsNullOrEmpty(r.StartTime) && !string.IsNullOrEmpty(r.EndTime))
+                        .Where(r => TimesOverlap(r.StartTime, r.EndTime, request.StartTime, request.EndTime))
+                        .SelectMany(r => r.AllocatedSlotIds ?? new List<string>())
+                        .ToHashSet();
+
+                    var conflict = selectedSlots.FirstOrDefault(s => occupiedSlotIds.Contains(s.Id!));
+                    if (conflict != null)
+                    {
+                        return (false, $"Slot #{conflict.SlotNumber} ({conflict.AvailableKWh} kWh) is already reserved for this time window. Please choose another slot.", null);
+                    }
+
+                    allocatedSlotIds = selectedSlots.Select(s => s.Id!).ToList();
+                    effectiveEnergyKWh = selectedSlots.Sum(s => s.AvailableKWh);
+                }
+                else
+                {
+                    // ── Business Rule: Requested energy cannot exceed total operational capacity ──
+                    if (request.EnergyKWh > totalCapacity)
+                    {
+                        return (false, $"Requested energy ({request.EnergyKWh} kWh) exceeds the station's operational capacity ({totalCapacity} kWh).", null);
+                    }
+
+                    // ── Business Rule: Check overlapping reservations and available capacity ──
+                    var reservedKWh = await GetOverlappingReservedKWhAsync(
+                        request.NodeId, request.ReservationDate, request.StartTime, request.EndTime);
+
+                    var availableKWh = totalCapacity - reservedKWh;
+
+                    if (request.EnergyKWh > availableKWh)
+                    {
+                        return (false,
+                            $"Insufficient capacity for {request.StartTime}–{request.EndTime} on {request.ReservationDate:yyyy-MM-dd}. " +
+                            $"Available: {availableKWh:0.##} kWh, Requested: {request.EnergyKWh} kWh.",
+                            null);
+                    }
+
+                    // ── Allocate battery slots (first-fit) ──
+                    allocatedSlotIds = await AllocateSlotsAsync(
+                        request.NodeId, request.ReservationDate,
+                        request.StartTime, request.EndTime, request.EnergyKWh);
                 }
 
-                // ── Business Rule: Check overlapping reservations and available capacity ──
-                var reservedKWh = await GetOverlappingReservedKWhAsync(
-                    request.NodeId, request.ReservationDate, request.StartTime, request.EndTime);
-
-                var availableKWh = totalCapacity - reservedKWh;
-
-                if (request.EnergyKWh > availableKWh)
+                // ── Resolve Slot Names for human-friendly display ──
+                var slotObjects = await _context.EnergySlots.Find(s => allocatedSlotIds.Contains(s.Id!)).ToListAsync();
+                var allocatedSlotNames = slotObjects.OrderBy(s => s.SlotNumber).Select(s => $"Slot #{s.SlotNumber}").ToList();
+                if (!allocatedSlotNames.Any() && allocatedSlotIds.Any())
                 {
-                    return (false,
-                        $"Insufficient capacity for {request.StartTime}–{request.EndTime} on {request.ReservationDate:yyyy-MM-dd}. " +
-                        $"Available: {availableKWh:0.##} kWh, Requested: {request.EnergyKWh} kWh.",
-                        null);
+                    allocatedSlotNames = allocatedSlotIds.Select((_, idx) => $"Slot #{idx + 1}").ToList();
                 }
-
-                // ── Allocate battery slots (first-fit) ──
-                var allocatedSlotIds = await AllocateSlotsAsync(
-                    request.NodeId, request.ReservationDate,
-                    request.StartTime, request.EndTime, request.EnergyKWh);
 
                 var reservation = new Reservation
                 {
@@ -312,8 +435,9 @@ namespace SmartSolarMicrogridAPI.Services
                     ReservationDate = request.ReservationDate.Date,
                     StartTime = request.StartTime,
                     EndTime = request.EndTime,
-                    EnergyKWh = request.EnergyKWh,
+                    EnergyKWh = effectiveEnergyKWh,
                     AllocatedSlotIds = allocatedSlotIds,
+                    AllocatedSlotNames = allocatedSlotNames,
                     Status = "Pending",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -373,13 +497,26 @@ namespace SmartSolarMicrogridAPI.Services
             var currentEndTime = !string.IsNullOrWhiteSpace(request.EndTime) ? request.EndTime : reservation.EndTime;
             var currentEnergy = request.EnergyKWh ?? reservation.EnergyKWh;
 
-            // Validate time format if provided
-            if (!string.IsNullOrWhiteSpace(request.StartTime) || !string.IsNullOrWhiteSpace(request.EndTime))
+            // ── Business Rule: Every energy reservation is exactly one hour ──
+            if (!string.IsNullOrWhiteSpace(request.StartTime))
             {
-                if (!TryParseTime(currentStartTime, out var newStart) || !TryParseTime(currentEndTime, out var newEnd))
+                if (!TryParseTime(currentStartTime, out var newStart))
+                    return (false, "Start time must be a valid time in HH:mm format.");
+
+                var calcEnd = newStart.AddHours(1);
+                currentEndTime = (calcEnd.Hour == 0 && newStart.Hour == 23) ? "24:00" : calcEnd.ToString("HH:mm");
+                updateBuilder = updateBuilder
+                    .Set(r => r.StartTime, currentStartTime)
+                    .Set(r => r.EndTime, currentEndTime);
+            }
+            else if (!string.IsNullOrWhiteSpace(request.EndTime))
+            {
+                if (!TryParseTime(currentStartTime, out var sStart) || !TryParseTime(currentEndTime, out var sEnd))
                     return (false, "Start time and end time must be valid times in HH:mm format.");
-                if (newEnd <= newStart)
-                    return (false, "End time must be after start time.");
+
+                var duration = (sEnd.ToTimeSpan() - sStart.ToTimeSpan()).TotalMinutes;
+                if (Math.Abs(duration - 60) > 1)
+                    return (false, "Every energy reservation must be exactly one hour. Multi-hour reservations are not supported.");
             }
 
             // Validate node if changed
@@ -447,10 +584,37 @@ namespace SmartSolarMicrogridAPI.Services
                         $"Available: {(totalCapacity - reservedKWh):0.##} kWh, Requested: {currentEnergy} kWh.");
                 }
 
-                // Re-allocate slots for new parameters
-                var allocatedSlotIds = await AllocateSlotsAsync(
-                    currentNodeId, currentDate, currentStartTime, currentEndTime, currentEnergy, excludeReservationId: id);
-                updateBuilder = updateBuilder.Set(r => r.AllocatedSlotIds, allocatedSlotIds);
+                if (request.SelectedSlotIds != null && request.SelectedSlotIds.Any())
+                {
+                    var allNodeSlots = await _context.EnergySlots.Find(s => s.NodeId == currentNodeId).ToListAsync();
+                    var selectedSlots = allNodeSlots
+                        .Where(s => !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase))
+                        .Where(s => request.SelectedSlotIds.Contains(s.Id!))
+                        .ToList();
+
+                    if (selectedSlots.Count != request.SelectedSlotIds.Distinct().Count())
+                    {
+                        return (false, "One or more selected slots are invalid or under maintenance.");
+                    }
+
+                    var newEnergy = selectedSlots.Sum(s => s.AvailableKWh);
+                    var newSlotNames = selectedSlots.OrderBy(s => s.SlotNumber).Select(s => $"Slot #{s.SlotNumber}").ToList();
+                    updateBuilder = updateBuilder
+                        .Set(r => r.AllocatedSlotIds, request.SelectedSlotIds)
+                        .Set(r => r.AllocatedSlotNames, newSlotNames)
+                        .Set(r => r.EnergyKWh, newEnergy);
+                }
+                else
+                {
+                    // Re-allocate slots for new parameters
+                    var allocatedSlotIds = await AllocateSlotsAsync(
+                        currentNodeId, currentDate, currentStartTime, currentEndTime, currentEnergy, excludeReservationId: id);
+                    var reallocatedSlots = await _context.EnergySlots.Find(s => allocatedSlotIds.Contains(s.Id!)).ToListAsync();
+                    var reallocatedNames = reallocatedSlots.OrderBy(s => s.SlotNumber).Select(s => $"Slot #{s.SlotNumber}").ToList();
+                    updateBuilder = updateBuilder
+                        .Set(r => r.AllocatedSlotIds, allocatedSlotIds)
+                        .Set(r => r.AllocatedSlotNames, reallocatedNames);
+                }
 
                 var result = await _context.Reservations.UpdateOneAsync(
                     r => r.Id == id, updateBuilder);
