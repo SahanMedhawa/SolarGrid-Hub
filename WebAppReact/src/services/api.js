@@ -207,8 +207,8 @@ export async function updateSlot(id, slotData) {
 }
 
 // Toggles maintenance status on an energy slot.
-export async function toggleSlotMaintenance(id, underMaintenance) {
-  return apiRequest(`energyslot/${id}/maintenance`, 'PUT', { underMaintenance });
+export async function toggleSlotMaintenance(id, maintenanceRequest) {
+  return apiRequest(`energyslot/${id}/maintenance`, 'PUT', maintenanceRequest);
 }
 
 // Deletes an energy slot.

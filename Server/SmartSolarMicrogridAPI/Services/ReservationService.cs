@@ -93,8 +93,8 @@ namespace SmartSolarMicrogridAPI.Services
 
             // Get all battery slots for this node
             var slots = await _context.EnergySlots.Find(s => s.NodeId == nodeId).ToListAsync();
-            var activeSlots = slots.Where(s => !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase)).ToList();
-            var maintenanceSlots = slots.Where(s => string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase)).ToList();
+            var activeSlots = slots.Where(s => IsAvailableForWindow(s, date, startTime, endTime)).ToList();
+            var maintenanceSlots = slots.Except(activeSlots).ToList();
 
             var totalCapacity = activeSlots.Sum(s => s.AvailableKWh);
 
@@ -132,8 +132,9 @@ namespace SmartSolarMicrogridAPI.Services
                 throw new ArgumentException("Microgrid node not found.");
 
             var slots = await _context.EnergySlots.Find(s => s.NodeId == nodeId).ToListAsync();
-            var activeSlots = slots.Where(s => !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase)).ToList();
-            var totalCapacity = activeSlots.Sum(s => s.AvailableKWh);
+            var totalCapacity = slots
+                .Where(s => !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase) || s.MaintenanceDate.HasValue)
+                .Sum(s => s.AvailableKWh);
 
             var (open, close) = ParseSchedule(node.Schedule);
 
@@ -166,7 +167,10 @@ namespace SmartSolarMicrogridAPI.Services
                     .Where(r => TimesOverlap(r.StartTime, r.EndTime, startStr, endStr))
                     .Sum(r => r.EnergyKWh);
 
-                var available = Math.Max(0, totalCapacity - reserved);
+                var hourCapacity = slots
+                    .Where(s => IsAvailableForWindow(s, date, startStr, endStr))
+                    .Sum(s => s.AvailableKWh);
+                var available = Math.Max(0, hourCapacity - reserved);
 
                 hourlySlots.Add(new HourlySlot
                 {
@@ -275,7 +279,7 @@ namespace SmartSolarMicrogridAPI.Services
                 // ── Business Rule: Capacity must be available for the requested time window ──
                 var slots = await _context.EnergySlots.Find(s => s.NodeId == request.NodeId).ToListAsync();
                 var activeSlots = slots
-                    .Where(s => !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase))
+                    .Where(s => IsAvailableForWindow(s, request.ReservationDate, request.StartTime, request.EndTime))
                     .ToList();
 
                 var totalCapacity = activeSlots.Sum(s => s.AvailableKWh);
@@ -437,7 +441,7 @@ namespace SmartSolarMicrogridAPI.Services
 
                 var slots = await _context.EnergySlots.Find(s => s.NodeId == currentNodeId).ToListAsync();
                 var totalCapacity = slots
-                    .Where(s => !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase))
+                    .Where(s => IsAvailableForWindow(s, currentDate, currentStartTime, currentEndTime))
                     .Sum(s => s.AvailableKWh);
 
                 if (currentEnergy > totalCapacity - reservedKWh)
@@ -547,7 +551,7 @@ namespace SmartSolarMicrogridAPI.Services
 
             var slots = await _context.EnergySlots.Find(s => s.NodeId == reservation.NodeId).ToListAsync();
             var totalCapacity = slots
-                .Where(s => !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase))
+                .Where(s => IsAvailableForWindow(s, reservation.ReservationDate, reservation.StartTime, reservation.EndTime))
                 .Sum(s => s.AvailableKWh);
 
             if (reservation.EnergyKWh > totalCapacity - reservedKWh)
@@ -650,9 +654,11 @@ namespace SmartSolarMicrogridAPI.Services
         {
             // Get all non-maintenance slots for this node
             var allSlots = await _context.EnergySlots
-                .Find(s => s.NodeId == nodeId &&
-                           s.Status != "Maintenance")
+                .Find(s => s.NodeId == nodeId)
                 .ToListAsync();
+            allSlots = allSlots
+                .Where(s => IsAvailableForWindow(s, date, startTime, endTime))
+                .ToList();
 
             // Get all active reservations that overlap with this time window
             var dateStart = date.Date;
@@ -706,6 +712,24 @@ namespace SmartSolarMicrogridAPI.Services
                 return false;
 
             return sA < eB && sB < eA;
+        }
+
+        private static bool IsAvailableForWindow(EnergySlot slot, DateTime date, string startTime, string endTime)
+        {
+            if (!string.Equals(slot.Status, "Maintenance", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // Legacy maintenance entries without a scheduled window remain unavailable
+            // until an operator explicitly restores the slot.
+            if (!slot.MaintenanceDate.HasValue ||
+                string.IsNullOrWhiteSpace(slot.MaintenanceStartTime) ||
+                string.IsNullOrWhiteSpace(slot.MaintenanceEndTime))
+                return false;
+
+            if (slot.MaintenanceDate.Value.Date != date.Date)
+                return true;
+
+            return !TimesOverlap(slot.MaintenanceStartTime, slot.MaintenanceEndTime, startTime, endTime);
         }
 
         /// <summary>

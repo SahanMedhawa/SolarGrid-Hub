@@ -27,6 +27,32 @@ import MapboxLocationMap from '../components/MapboxLocationMap';
 
 const DEFAULT_MAP_CENTER = { lat: 7.8731, lng: 80.7718 };
 
+function isBookableHour(slot) {
+  return slot.isWithinOperatingHours && Number(slot.availableKWh) > 0 && Number(slot.reservedKWh) <= 0;
+}
+
+function getHourlySlots(availability) {
+  return availability?.hourlySlots || availability?.slots || [];
+}
+
+function getBookableStartTimes(availability) {
+  return getHourlySlots(availability).filter(isBookableHour).map(slot => slot.startTime);
+}
+
+function getBookableEndTimes(availability, startTime) {
+  if (!startTime) return [];
+  const slotsByStart = new Map(getHourlySlots(availability).map(slot => [slot.startTime, slot]));
+  const endTimes = [];
+  let currentTime = startTime;
+  while (true) {
+    const slot = slotsByStart.get(currentTime);
+    if (!slot || !isBookableHour(slot)) break;
+    endTimes.push(slot.endTime);
+    currentTime = slot.endTime;
+  }
+  return endTimes;
+}
+
 export default function ProsumerPortal() {
   const { user, logout } = useAuth();
   const prosumerNic = user?.userId || user?.nic || user?.displayName;
@@ -159,6 +185,7 @@ export default function ProsumerPortal() {
     if (bookingForm.nodeId && bookingForm.reservationDate) {
       let active = true;
       setLoadingHourly(true);
+      setHourlyAvailability(null);
       getHourlyAvailability(bookingForm.nodeId, bookingForm.reservationDate)
         .then(data => { if (active) setHourlyAvailability(data); })
         .catch(() => { if (active) setHourlyAvailability(null); })
@@ -166,6 +193,19 @@ export default function ProsumerPortal() {
       return () => { active = false; };
     }
   }, [bookingForm.nodeId, bookingForm.reservationDate]);
+
+  useEffect(() => {
+    if (!hourlyAvailability?.slots) return;
+    const startTimes = getBookableStartTimes(hourlyAvailability);
+    setBookingForm(current => {
+      const startTime = startTimes.includes(current.startTime) ? current.startTime : (startTimes[0] || '');
+      const endTimes = getBookableEndTimes(hourlyAvailability, startTime);
+      const endTime = endTimes.includes(current.endTime) ? current.endTime : (endTimes[0] || '');
+      return startTime === current.startTime && endTime === current.endTime
+        ? current
+        : { ...current, startTime, endTime };
+    });
+  }, [hourlyAvailability]);
 
   // Load window availability when node, date, and times change
   useEffect(() => {
@@ -660,23 +700,39 @@ export default function ProsumerPortal() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Start Time</label>
-                  <input
-                    type="time"
-                    className="form-input"
+                  <select
+                    className="form-select"
                     value={bookingForm.startTime}
-                    onChange={e => setBookingForm({ ...bookingForm, startTime: e.target.value })}
+                    onChange={event => {
+                      const startTime = event.target.value;
+                      const endTimes = getBookableEndTimes(hourlyAvailability, startTime);
+                      setBookingForm(current => ({
+                        ...current,
+                        startTime,
+                        endTime: endTimes.includes(current.endTime) ? current.endTime : (endTimes[0] || '')
+                      }));
+                    }}
                     required
-                  />
+                    disabled={loadingHourly || getBookableStartTimes(hourlyAvailability).length === 0}
+                  >
+                    {getBookableStartTimes(hourlyAvailability).length === 0
+                      ? <option value="">No unbooked times available</option>
+                      : getBookableStartTimes(hourlyAvailability).map(time => <option key={time} value={time}>{time}</option>)}
+                  </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label">End Time</label>
-                  <input
-                    type="time"
-                    className="form-input"
+                  <select
+                    className="form-select"
                     value={bookingForm.endTime}
-                    onChange={e => setBookingForm({ ...bookingForm, endTime: e.target.value })}
+                    onChange={event => setBookingForm(current => ({ ...current, endTime: event.target.value }))}
                     required
-                  />
+                    disabled={loadingHourly || getBookableEndTimes(hourlyAvailability, bookingForm.startTime).length === 0}
+                  >
+                    {getBookableEndTimes(hourlyAvailability, bookingForm.startTime).length === 0
+                      ? <option value="">No end time available</option>
+                      : getBookableEndTimes(hourlyAvailability, bookingForm.startTime).map(time => <option key={time} value={time}>{time}</option>)}
+                  </select>
                 </div>
               </div>
 
@@ -686,7 +742,7 @@ export default function ProsumerPortal() {
                   ⏳ Loading station hourly schedule and availability...
                 </div>
               )}
-              {hourlyAvailability && !loadingHourly && hourlyAvailability.slots && (
+              {hourlyAvailability && !loadingHourly && (
                 <div style={{
                   margin: '1rem 0',
                   padding: '1rem',
@@ -699,46 +755,42 @@ export default function ProsumerPortal() {
                     <span className="text-muted" style={{ fontSize: '0.75rem' }}>Operating Hours: {hourlyAvailability.schedule}</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.5rem' }}>
-                    {hourlyAvailability.slots.map(s => {
-                      const isSelected = bookingForm.startTime <= `${String(s.hour).padStart(2, '0')}:00` &&
-                                         bookingForm.endTime > `${String(s.hour).padStart(2, '0')}:00`;
+                    {getHourlySlots(hourlyAvailability).filter(isBookableHour).map(s => {
+                      const isSelected = bookingForm.startTime <= s.startTime && bookingForm.endTime > s.startTime;
                       return (
                         <div
-                          key={s.hour}
+                          key={s.startTime}
                           onClick={() => {
-                            if (s.isWithinOperatingHours) {
-                              const start = `${String(s.hour).padStart(2, '0')}:00`;
-                              const end = `${String(Math.min(23, s.hour + 2)).padStart(2, '0')}:00`;
-                              setBookingForm(prev => ({ ...prev, startTime: start, endTime: end }));
-                            }
+                            const endTimes = getBookableEndTimes(hourlyAvailability, s.startTime);
+                            setBookingForm(prev => ({
+                              ...prev,
+                              startTime: s.startTime,
+                              endTime: endTimes.includes(prev.endTime) ? prev.endTime : (endTimes[0] || '')
+                            }));
                           }}
                           style={{
                             padding: '0.5rem',
                             borderRadius: 'var(--radius-sm)',
-                            cursor: s.isWithinOperatingHours ? 'pointer' : 'not-allowed',
+                            cursor: 'pointer',
                             fontSize: '0.75rem',
                             textAlign: 'center',
-                            opacity: s.isWithinOperatingHours ? 1 : 0.45,
                             border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
                             background: isSelected
                               ? 'rgba(34, 197, 94, 0.15)'
-                              : s.isWithinOperatingHours
-                                ? 'var(--color-bg)'
-                                : 'rgba(150, 150, 150, 0.1)'
+                              : 'var(--color-bg)'
                           }}
-                          title={s.isWithinOperatingHours ? 'Click to select this slot time' : 'Outside operating hours'}
+                          title="Click to select this unbooked time"
                         >
-                          <div style={{ fontWeight: 600 }}>{s.timeLabel}</div>
-                          {s.isWithinOperatingHours ? (
-                            <div style={{ color: s.availableKWh > 0 ? 'var(--color-primary-light)' : '#ef4444' }}>
-                              {s.availableKWh} / {hourlyAvailability.totalCapacityKWh} kWh
-                            </div>
-                          ) : (
-                            <div className="text-muted">Closed</div>
-                          )}
+                          <div style={{ fontWeight: 600 }}>{s.startTime}–{s.endTime}</div>
+                          <div style={{ color: 'var(--color-primary-light)' }}>
+                            {s.availableKWh} / {hourlyAvailability.totalCapacityKWh} kWh
+                          </div>
                         </div>
                       );
                     })}
+                    {getBookableStartTimes(hourlyAvailability).length === 0 && (
+                      <div className="text-muted">No unbooked times are available for this date.</div>
+                    )}
                   </div>
                 </div>
               )}

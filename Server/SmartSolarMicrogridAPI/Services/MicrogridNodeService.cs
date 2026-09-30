@@ -133,9 +133,10 @@ namespace SmartSolarMicrogridAPI.Services
             var slots = await _context.EnergySlots.Find(s => s.NodeId == nodeId).ToListAsync();
 
             var totalSlots = slots.Count;
-            var activeSlots = slots.Count(s => !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase));
+            var activeSlots = slots.Count(s =>
+                !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase) || s.MaintenanceDate.HasValue);
             var totalCapacity = slots
-                .Where(s => !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase))
+                .Where(s => !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase) || s.MaintenanceDate.HasValue)
                 .Sum(s => s.AvailableKWh);
 
             var update = Builders<MicrogridNode>.Update

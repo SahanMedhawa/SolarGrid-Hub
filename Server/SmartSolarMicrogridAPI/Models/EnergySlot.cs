@@ -46,6 +46,15 @@ namespace SmartSolarMicrogridAPI.Models
         [BsonElement("status")]
         public string Status { get; set; } = "Available";
 
+        [BsonElement("maintenanceDate")]
+        public DateTime? MaintenanceDate { get; set; }
+
+        [BsonElement("maintenanceStartTime")]
+        public string? MaintenanceStartTime { get; set; }
+
+        [BsonElement("maintenanceEndTime")]
+        public string? MaintenanceEndTime { get; set; }
+
         [BsonElement("createdAt")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

@@ -144,10 +144,44 @@ namespace SmartSolarMicrogridAPI.Controllers
             if (existing == null)
                 return NotFound(new { message = "Slot not found." });
 
-            var newStatus = request.UnderMaintenance ? "Maintenance" : "Available";
+            UpdateDefinition<EnergySlot> update;
+            if (request.UnderMaintenance)
+            {
+                if (!request.MaintenanceDate.HasValue || request.MaintenanceDate.Value.Date < DateTime.Today ||
+                    !MaintenanceTimeValidation.TryParseTime(request.StartTime, out var start) || !MaintenanceTimeValidation.TryParseTime(request.EndTime, out var end) || end <= start)
+                {
+                    return BadRequest(new { message = "Choose a valid maintenance date and a finish time later than the start time." });
+                }
 
-            var update = Builders<EnergySlot>.Update
-                .Set(s => s.Status, newStatus);
+                var maintenanceDate = request.MaintenanceDate.Value.Date;
+                if (maintenanceDate == DateTime.Today && maintenanceDate.Add(start.ToTimeSpan()) <= DateTime.Now)
+                    return BadRequest(new { message = "Maintenance must start in the future." });
+
+                var activeReservations = await _context.Reservations.Find(r =>
+                    r.AllocatedSlotIds.Contains(id) &&
+                    r.ReservationDate >= maintenanceDate && r.ReservationDate < maintenanceDate.AddDays(1) &&
+                    (r.Status == "Pending" || r.Status == "Approved")).ToListAsync();
+                var conflictingReservation = activeReservations.Any(reservation =>
+                    MaintenanceTimeValidation.TimesOverlap(reservation.StartTime, reservation.EndTime, request.StartTime!, request.EndTime!));
+                if (conflictingReservation)
+                {
+                    return Conflict(new { message = "This slot has an active reservation during the requested maintenance time." });
+                }
+
+                update = Builders<EnergySlot>.Update
+                    .Set(s => s.Status, "Maintenance")
+                    .Set(s => s.MaintenanceDate, maintenanceDate)
+                    .Set(s => s.MaintenanceStartTime, request.StartTime)
+                    .Set(s => s.MaintenanceEndTime, request.EndTime);
+            }
+            else
+            {
+                update = Builders<EnergySlot>.Update
+                    .Set(s => s.Status, "Available")
+                    .Unset(s => s.MaintenanceDate)
+                    .Unset(s => s.MaintenanceStartTime)
+                    .Unset(s => s.MaintenanceEndTime);
+            }
 
             var result = await _context.EnergySlots.UpdateOneAsync(
                 s => s.Id == id, update);
@@ -159,7 +193,7 @@ namespace SmartSolarMicrogridAPI.Controllers
             await _nodeService.SyncNodeCapacityAsync(existing.NodeId);
 
             var msg = request.UnderMaintenance
-                ? $"Slot {existing.SlotNumber} marked as under maintenance. Its {existing.AvailableKWh} kWh capacity is excluded from availability."
+                ? $"Slot {existing.SlotNumber} scheduled for maintenance on {request.MaintenanceDate:yyyy-MM-dd} from {request.StartTime} to {request.EndTime}."
                 : $"Slot {existing.SlotNumber} returned to service. Its {existing.AvailableKWh} kWh capacity is now available.";
 
             return Ok(new { message = msg });
@@ -198,5 +232,29 @@ namespace SmartSolarMicrogridAPI.Controllers
     public class MaintenanceRequest
     {
         public bool UnderMaintenance { get; set; }
+        public DateTime? MaintenanceDate { get; set; }
+        public string? StartTime { get; set; }
+        public string? EndTime { get; set; }
+    }
+
+    public static class MaintenanceTimeValidation
+    {
+        public static bool TryParseTime(string? value, out TimeOnly time)
+        {
+            if (string.Equals(value?.Trim(), "24:00", StringComparison.Ordinal))
+            {
+                time = new TimeOnly(23, 59);
+                return true;
+            }
+            return TimeOnly.TryParseExact(value, "HH:mm", System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out time);
+        }
+
+        public static bool TimesOverlap(string? startA, string? endA, string startB, string endB)
+        {
+            return TryParseTime(startA, out var aStart) && TryParseTime(endA, out var aEnd) &&
+                   TryParseTime(startB, out var bStart) && TryParseTime(endB, out var bEnd) &&
+                   aStart < bEnd && bStart < aEnd;
+        }
     }
 }
