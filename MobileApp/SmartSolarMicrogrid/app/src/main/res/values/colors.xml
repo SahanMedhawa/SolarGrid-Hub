@@ -96,4 +96,30 @@
     <color name="battery_green">#10B981</color>
     <color name="battery_green_container">#D1FAE5</color>
     <color name="qr_background">#FFFFFF</color>
+
+    <color name="background">#F5F7FA</color>
+
+
+    <!-- Dark background -->
+    <color name="dark_background">#050F1D</color>
+    <color name="dark_surface">#0D1B2E</color>
+    <color name="dark_input">#101F34</color>
+    <color name="dark_border">#28476D</color>
+
+    <!-- Energy accents -->
+    <color name="energy_cyan">#00E5C3</color>
+    <color name="energy_blue">#1689FF</color>
+    <color name="energy_green">#39F5A3</color>
+
+    <!-- Text -->
+    <color name="text_dark_secondary">#91A9CA</color>
+    <color name="text_hint_dark">#7189AA</color>
+
+    <!-- Icons -->
+    <color name="icon_blue">#A5C6F4</color>
+
+    <color name="input_stroke">#294B78</color>
+
+    <color name="transparent">#00000000</color>
+
 </resources>

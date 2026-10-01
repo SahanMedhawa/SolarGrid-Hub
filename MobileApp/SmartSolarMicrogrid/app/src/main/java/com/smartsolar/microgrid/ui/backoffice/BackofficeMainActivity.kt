@@ -1,5 +1,5 @@
 package com.smartsolar.microgrid.ui.backoffice
-
+import com.smartsolar.microgrid.ui.operator.ProfileActivity
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -55,6 +55,10 @@ class BackofficeMainActivity : AppCompatActivity() {
             session.logout()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
+        }
+
+        findViewById<Button>(R.id.btnMyProfile).setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
         }
     }
 
