@@ -12,7 +12,7 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <!-- Operator Header Card -->
+        <!-- Operator Header Card with Stitch Telemetry & Diagnostics -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -26,57 +26,164 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
+                android:orientation="vertical"
                 android:padding="16dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:text="Grid Operator Portal"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/accent" />
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-                    <TextView
-                        android:id="@+id/tvOperatorWelcome"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Welcome, Station Operator"
-                        android:textSize="13sp"
-                        android:textColor="@color/text_secondary"
-                        android:layout_marginTop="2dp" />
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="4dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="ROLE: GRID OPERATOR"
-                        android:textSize="11sp"
-                        android:textStyle="bold"
-                        android:textColor="@color/primary"
-                        android:layout_marginTop="4dp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Grid Operator Portal"
+                                android:textSize="18sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/accent" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text=" ● LIVE GRID "
+                                android:textSize="10sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/status_completed"
+                                android:background="@color/status_completed_bg"
+                                android:paddingStart="6dp"
+                                android:paddingEnd="6dp"
+                                android:paddingTop="2dp"
+                                android:paddingBottom="2dp"
+                                android:layout_marginStart="8dp" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tvOperatorWelcome"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Welcome, Station Operator"
+                            android:textSize="13sp"
+                            android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="SUBSTATION: CENTRAL HUB #01  |  SLOT SYSTEM ACTIVE"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/primary"
+                            android:layout_marginTop="4dp" />
+                    </LinearLayout>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        app:cardCornerRadius="24dp"
+                        app:cardBackgroundColor="@color/md_theme_light_secondaryContainer"
+                        app:cardElevation="0dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:text="⚡"
+                            android:textSize="22sp"
+                            android:gravity="center" />
+                    </com.google.android.material.card.MaterialCardView>
                 </LinearLayout>
 
-                <com.google.android.material.card.MaterialCardView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    app:cardCornerRadius="24dp"
-                    app:cardBackgroundColor="@color/md_theme_light_secondaryContainer"
-                    app:cardElevation="0dp">
+                <!-- Stitch Substation Live Telemetry Strip -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:weightSum="3"
+                    android:background="@color/card_background_elevated"
+                    android:padding="10dp"
+                    android:layout_marginTop="12dp">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:text="⚡"
-                        android:textSize="22sp"
-                        android:gravity="center" />
-                </com.google.android.material.card.MaterialCardView>
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="STATION INFLOW"
+                            android:textSize="9sp"
+                            android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="24.5 kW"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="LINE VOLTAGE"
+                            android:textSize="9sp"
+                            android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="400V 3-Ph"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/text_primary" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:gravity="center">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="BATTERY LEVEL"
+                            android:textSize="9sp"
+                            android:textColor="@color/text_secondary" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="94% Optimal"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/status_completed" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -263,6 +370,17 @@
                         android:textColor="@color/text_primary"
                         android:textSize="13sp" />
                 </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Physical Safety Interlock Check (Stitch Operator Requirement) -->
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cbSafetyInterlock"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Inverter Physical Interlock Latched &amp; Earth Grounded"
+                    android:textSize="12sp"
+                    android:checked="true"
+                    android:textColor="@color/text_secondary"
+                    android:layout_marginBottom="10dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnManualVerify"

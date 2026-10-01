@@ -15,7 +15,7 @@ class DatabaseHelper(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "SmartSolarMicrogrid.db"
-        private const val DATABASE_VERSION = 2
+        private const val DATABASE_VERSION = 3
 
         // Table: Local User
         const val TABLE_USER = "local_user"
@@ -32,6 +32,9 @@ class DatabaseHelper(context: Context) :
         const val COL_RES_SLOT_ID = "slot_id"
         const val COL_RES_NODE_ID = "node_id"
         const val COL_RES_DATE = "reservation_date"
+        const val COL_RES_START_TIME = "start_time"
+        const val COL_RES_END_TIME = "end_time"
+        const val COL_RES_ALLOCATED_SLOTS = "allocated_slots"
         const val COL_RES_KWH = "energy_kwh"
         const val COL_RES_STATUS = "status"
         const val COL_RES_QR = "qr_data"
@@ -55,6 +58,9 @@ class DatabaseHelper(context: Context) :
                 $COL_RES_SLOT_ID TEXT,
                 $COL_RES_NODE_ID TEXT,
                 $COL_RES_DATE TEXT,
+                $COL_RES_START_TIME TEXT,
+                $COL_RES_END_TIME TEXT,
+                $COL_RES_ALLOCATED_SLOTS TEXT,
                 $COL_RES_KWH REAL,
                 $COL_RES_STATUS TEXT,
                 $COL_RES_QR TEXT
@@ -124,6 +130,9 @@ class DatabaseHelper(context: Context) :
                     put(COL_RES_SLOT_ID, r.slotId)
                     put(COL_RES_NODE_ID, r.nodeId)
                     put(COL_RES_DATE, r.reservationDate)
+                    put(COL_RES_START_TIME, r.startTime)
+                    put(COL_RES_END_TIME, r.endTime)
+                    put(COL_RES_ALLOCATED_SLOTS, r.allocatedSlotIds.joinToString(","))
                     put(COL_RES_KWH, r.energyKWh)
                     put(COL_RES_STATUS, r.status)
                     put(COL_RES_QR, r.qrCodeData)
@@ -146,15 +155,20 @@ class DatabaseHelper(context: Context) :
 
         cursor.use {
             while (it.moveToNext()) {
+                val slotsStr = it.getString(it.getColumnIndexOrThrow(COL_RES_ALLOCATED_SLOTS)) ?: ""
+                val allocatedSlots = if (slotsStr.isNotEmpty()) slotsStr.split(",").map { s -> s.trim() }.filter { s -> s.isNotEmpty() } else emptyList()
                 val r = Reservation(
                     id = it.getString(it.getColumnIndexOrThrow(COL_RES_ID)) ?: "",
                     prosumerNic = it.getString(it.getColumnIndexOrThrow(COL_RES_NIC)) ?: "",
                     slotId = it.getString(it.getColumnIndexOrThrow(COL_RES_SLOT_ID)) ?: "",
                     nodeId = it.getString(it.getColumnIndexOrThrow(COL_RES_NODE_ID)) ?: "",
                     reservationDate = it.getString(it.getColumnIndexOrThrow(COL_RES_DATE)) ?: "",
+                    startTime = it.getString(it.getColumnIndexOrThrow(COL_RES_START_TIME)) ?: "",
+                    endTime = it.getString(it.getColumnIndexOrThrow(COL_RES_END_TIME)) ?: "",
                     energyKWh = it.getDouble(it.getColumnIndexOrThrow(COL_RES_KWH)),
                     status = it.getString(it.getColumnIndexOrThrow(COL_RES_STATUS)) ?: "",
-                    qrCodeData = it.getString(it.getColumnIndexOrThrow(COL_RES_QR)) ?: ""
+                    qrCodeData = it.getString(it.getColumnIndexOrThrow(COL_RES_QR)) ?: "",
+                    allocatedSlotIds = allocatedSlots
                 )
                 list.add(r)
             }

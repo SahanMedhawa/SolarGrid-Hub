@@ -1,6 +1,7 @@
 package com.smartsolar.microgrid.ui.prosumer
 
 import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -11,7 +12,6 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -22,6 +22,7 @@ import com.journeyapps.barcodescanner.BarcodeEncoder
 import com.smartsolar.microgrid.R
 import com.smartsolar.microgrid.api.ApiClient
 import com.smartsolar.microgrid.data.SessionManager
+import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -50,10 +51,13 @@ class ReservationDetailActivity : AppCompatActivity() {
 
     private var currentStatus: String = ""
     private var currentDateStr: String = ""
+    private var currentStartTime: String = ""
+    private var currentEndTime: String = ""
     private var currentEnergyKWh: Double = 0.0
     private var currentQrData: String = ""
     private var currentSlotId: String = ""
     private var currentNodeId: String = ""
+    private val currentAllocatedSlots = ArrayList<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -120,11 +124,18 @@ class ReservationDetailActivity : AppCompatActivity() {
                 put("id", cached.id)
                 put("status", cached.status)
                 put("reservationDate", cached.reservationDate)
+                put("startTime", cached.startTime)
+                put("endTime", cached.endTime)
                 put("energyKWh", cached.energyKWh)
                 put("qrCodeData", cached.qrCodeData)
                 put("slotId", cached.slotId)
                 put("nodeId", cached.nodeId)
                 put("prosumerNic", cached.prosumerNic)
+                val slotsArr = JSONArray()
+                for (s in cached.allocatedSlotIds) {
+                    slotsArr.put(s)
+                }
+                put("allocatedSlotIds", slotsArr)
             }
             displayReservationDetails(json)
         } else {
@@ -136,14 +147,47 @@ class ReservationDetailActivity : AppCompatActivity() {
     private fun displayReservationDetails(obj: JSONObject) {
         currentStatus = obj.optString("status", "Pending")
         currentDateStr = obj.optString("reservationDate", "")
+        currentStartTime = obj.optString("startTime", "")
+        currentEndTime = obj.optString("endTime", "")
         currentEnergyKWh = obj.optDouble("energyKWh", 0.0)
         currentQrData = obj.optString("qrCodeData", "")
-        currentSlotId = obj.optString("slotId", "SLOT-01")
+        currentSlotId = obj.optString("slotId", "")
         currentNodeId = obj.optString("nodeId", "")
         val prosumerNic = obj.optString("prosumerNic", session.getUserNic())
 
+        currentAllocatedSlots.clear()
+        val slotsArr = obj.optJSONArray("allocatedSlotIds")
+        if (slotsArr != null) {
+            for (i in 0 until slotsArr.length()) {
+                currentAllocatedSlots.add(slotsArr.getString(i))
+            }
+        }
+
+        val currentAllocatedSlotNames = ArrayList<String>()
+        val slotNamesArr = obj.optJSONArray("allocatedSlotNames")
+        if (slotNamesArr != null) {
+            for (i in 0 until slotNamesArr.length()) {
+                currentAllocatedSlotNames.add(slotNamesArr.getString(i))
+            }
+        }
+
         // Format Date
         val displayDate = if (currentDateStr.length >= 10) currentDateStr.substring(0, 10) else currentDateStr
+        val displayTimeWindow = if (currentStartTime.isNotEmpty() && currentEndTime.isNotEmpty()) {
+            "$currentStartTime - $currentEndTime"
+        } else {
+            "Standard Window"
+        }
+
+        val displaySlots = if (currentAllocatedSlotNames.isNotEmpty()) {
+            currentAllocatedSlotNames.joinToString(", ")
+        } else if (currentAllocatedSlots.isNotEmpty()) {
+            "${currentAllocatedSlots.size} slot${if (currentAllocatedSlots.size > 1) "s" else ""}"
+        } else if (currentSlotId.isNotEmpty()) {
+            "Slot #1"
+        } else {
+            "Dynamic Auto-Allocation"
+        }
 
         // Status Badge styling
         tvDetailStatusBadge.text = currentStatus
@@ -158,11 +202,10 @@ class ReservationDetailActivity : AppCompatActivity() {
 
         // Specifications list
         val specs = StringBuilder()
-            .append("• Booking ID: ").append(resId).append("\n")
             .append("• Prosumer NIC: ").append(prosumerNic).append("\n")
-            .append("• Grid Hub Station: ").append(currentNodeId).append("\n")
-            .append("• Battery Slot: ").append(currentSlotId).append("\n")
             .append("• Scheduled Date: ").append(displayDate).append("\n")
+            .append("• Time Window: ").append(displayTimeWindow).append("\n")
+            .append("• Battery Storage Slots: ").append(displaySlots).append("\n")
             .append("• Energy Transfer Amount: ").append(currentEnergyKWh).append(" kWh\n")
             .append("• Current Status: ").append(currentStatus)
         tvDetailInfo.text = specs.toString()
@@ -209,17 +252,20 @@ class ReservationDetailActivity : AppCompatActivity() {
         } catch (_: Exception) { }
     }
 
-    // Show dialog to modify / reschedule energy booking (Date & kWh)
+    // Show dialog to modify / reschedule energy booking (Date, Time Window & kWh)
     private fun showModifyDialog() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.activity_create_reservation, null)
 
-        // Hide node and slot selectors in modification mode to keep station consistent
+        // Hide node selector in modification mode to keep station consistent
         val spinnerNodes = dialogView.findViewById<View>(R.id.spinnerNodes)
-        val spinnerSlots = dialogView.findViewById<View>(R.id.spinnerSlots)
         (spinnerNodes.parent as? View)?.visibility = View.GONE
-        (spinnerSlots.parent as? View)?.visibility = View.GONE
+
+        val cardAvailabilityStatus = dialogView.findViewById<View>(R.id.cardAvailabilityStatus)
+        cardAvailabilityStatus?.visibility = View.GONE
 
         val etDate = dialogView.findViewById<EditText>(R.id.etDate)
+        val etStartTime = dialogView.findViewById<EditText>(R.id.etStartTime)
+        val etEndTime = dialogView.findViewById<EditText>(R.id.etEndTime)
         val etEnergyKWh = dialogView.findViewById<EditText>(R.id.etEnergyKWh)
         val btnSubmit = dialogView.findViewById<Button>(R.id.btnSubmitReservation)
 
@@ -228,12 +274,20 @@ class ReservationDetailActivity : AppCompatActivity() {
         if (currentDateStr.length >= 10) {
             etDate.setText(currentDateStr.substring(0, 10))
         }
+        val initStart = if (currentStartTime.isNotEmpty()) currentStartTime else "08:00"
+        etStartTime.setText(initStart)
+        val startParts = initStart.split(":")
+        val sH = startParts[0].toIntOrNull() ?: 8
+        val sM = if (startParts.size > 1) startParts[1].toIntOrNull() ?: 0 else 0
+        val endH = sH + 1
+        val initEnd = if (endH >= 24) "24:00" else String.format(Locale.US, "%02d:%02d", endH, sM)
+        etEndTime.setText(initEnd)
         etEnergyKWh.setText(currentEnergyKWh.toString())
 
         btnSubmit.text = "Save Updated Reservation"
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Modify Booking #$resId")
+            .setTitle("Modify Reservation")
             .setView(dialogView)
             .setNegativeButton("Cancel", null)
             .create()
@@ -259,12 +313,36 @@ class ReservationDetailActivity : AppCompatActivity() {
             dpd.show()
         }
 
+        etStartTime.setOnClickListener {
+            val currentParts = etStartTime.text.toString().split(":")
+            val h = if (currentParts.size == 2) currentParts[0].toIntOrNull() ?: 8 else 8
+            val m = if (currentParts.size == 2) currentParts[1].toIntOrNull() ?: 0 else 0
+            TimePickerDialog(this, { _, hour, minute ->
+                val newStart = String.format(Locale.US, "%02d:%02d", hour, minute)
+                val newEndH = hour + 1
+                val newEnd = if (newEndH >= 24) "24:00" else String.format(Locale.US, "%02d:%02d", newEndH, minute)
+                etStartTime.setText(newStart)
+                etEndTime.setText(newEnd)
+            }, h, m, true).show()
+        }
+
+        etEndTime.setOnClickListener {
+            Toast.makeText(this, "Every energy reservation is exactly 1 hour. Tap Start Time to select.", Toast.LENGTH_SHORT).show()
+        }
+
         btnSubmit.setOnClickListener {
             val newDateStr = etDate.text.toString().trim()
+            val newStartStr = etStartTime.text.toString().trim()
+            val newEndStr = etEndTime.text.toString().trim()
             val newKwhStr = etEnergyKWh.text.toString().trim()
 
-            if (newDateStr.isEmpty() || newKwhStr.isEmpty()) {
+            if (newDateStr.isEmpty() || newStartStr.isEmpty() || newEndStr.isEmpty() || newKwhStr.isEmpty()) {
                 Toast.makeText(this, "Please enter all fields", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            if (newStartStr >= newEndStr) {
+                Toast.makeText(this, "End time must be after start time", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -276,7 +354,9 @@ class ReservationDetailActivity : AppCompatActivity() {
 
             try {
                 val updateBody = JSONObject().apply {
-                    put("reservationDate", "${newDateStr}T10:00:00Z")
+                    put("reservationDate", "${newDateStr}T00:00:00Z")
+                    put("startTime", newStartStr)
+                    put("endTime", newEndStr)
                     put("energyKWh", newKwh)
                 }
 

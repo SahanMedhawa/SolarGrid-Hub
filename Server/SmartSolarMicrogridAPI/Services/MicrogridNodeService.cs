@@ -2,10 +2,13 @@
 // File: MicrogridNodeService.cs
 // Project: SmartSolarMicrogridAPI
 // Description: Implements microgrid node management with
-//              deactivation guard against active reservations.
+//              auto-calculated capacity from battery slots,
+//              deactivation guard against active reservations,
+//              and slot-count synchronisation.
 // ============================================================
 
 using MongoDB.Driver;
+using System.Globalization;
 using SmartSolarMicrogridAPI.Data;
 using SmartSolarMicrogridAPI.Models;
 
@@ -42,13 +45,31 @@ namespace SmartSolarMicrogridAPI.Services
             return await _context.MicrogridNodes.Find(n => n.Id == id).FirstOrDefaultAsync();
         }
 
-        // Creates a new microgrid node.
+        // Creates a new microgrid node. CapacityKWh is auto-calculated from slot capacities.
         public async Task<MicrogridNode> CreateAsync(MicrogridNode node)
         {
+            ValidateSchedule(node.Schedule);
+
+            if (node.BatterySlotCapacities.Count == 0 || node.BatterySlotCapacities.Any(capacity => capacity <= 0))
+                throw new ArgumentException("Enter a positive capacity for at least one battery slot.");
+
+            // Auto-calculate total capacity from battery slot capacities
+            node.CapacityKWh = node.BatterySlotCapacities.Sum();
+            node.BatterySlots = node.BatterySlotCapacities.Count;
+            node.AvailableBatterySlots = node.BatterySlots;
             node.CreatedAt = DateTime.UtcNow;
             node.UpdatedAt = DateTime.UtcNow;
-            node.AvailableBatterySlots = node.BatterySlots;
             await _context.MicrogridNodes.InsertOneAsync(node);
+
+            var slots = node.BatterySlotCapacities.Select((capacity, index) => new EnergySlot
+            {
+                NodeId = node.Id!,
+                SlotNumber = index + 1,
+                AvailableKWh = capacity,
+                Status = "Available"
+            }).ToList();
+            await _context.EnergySlots.InsertManyAsync(slots);
+
             return node;
         }
 
@@ -58,20 +79,31 @@ namespace SmartSolarMicrogridAPI.Services
             var existing = await GetByIdAsync(id);
             if (existing == null) return false;
 
+            ValidateSchedule(!string.IsNullOrWhiteSpace(node.Schedule) ? node.Schedule : existing.Schedule);
+
             var update = Builders<MicrogridNode>.Update
                 .Set(n => n.NodeName, !string.IsNullOrWhiteSpace(node.NodeName) ? node.NodeName : existing.NodeName)
                 .Set(n => n.Location, !string.IsNullOrWhiteSpace(node.Location) ? node.Location : existing.Location)
                 .Set(n => n.Latitude, node.Latitude != 0 ? node.Latitude : existing.Latitude)
                 .Set(n => n.Longitude, node.Longitude != 0 ? node.Longitude : existing.Longitude)
-                .Set(n => n.CapacityKWh, node.CapacityKWh > 0 ? node.CapacityKWh : existing.CapacityKWh)
-                .Set(n => n.BatterySlots, node.BatterySlots > 0 ? node.BatterySlots : existing.BatterySlots)
-                .Set(n => n.AvailableBatterySlots, node.AvailableBatterySlots >= 0 ? node.AvailableBatterySlots : existing.AvailableBatterySlots)
                 .Set(n => n.Schedule, !string.IsNullOrWhiteSpace(node.Schedule) ? node.Schedule : existing.Schedule)
                 .Set(n => n.UpdatedAt, DateTime.UtcNow);
 
             var result = await _context.MicrogridNodes.UpdateOneAsync(
                 n => n.Id == id, update);
             return result.ModifiedCount > 0;
+        }
+
+        private static void ValidateSchedule(string? schedule)
+        {
+            var times = schedule?.Split('-', StringSplitOptions.TrimEntries);
+            if (times == null || times.Length != 2 ||
+                !TimeOnly.TryParseExact(times[0], "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var startTime) ||
+                !TimeOnly.TryParseExact(times[1], "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var endTime) ||
+                endTime <= startTime)
+            {
+                throw new ArgumentException("Schedule must use valid times, and finish time must be later than start time.");
+            }
         }
 
         // Directly updates available battery slots (Grid Operator / Backoffice responsibility).
@@ -92,7 +124,30 @@ namespace SmartSolarMicrogridAPI.Services
             return result.ModifiedCount > 0;
         }
 
-        // Deactivates a node only if no active reservations reference it.
+        /// <summary>
+        /// Recalculates a node's CapacityKWh and slot counts from its EnergySlot documents.
+        /// Called after slot additions, deletions, or maintenance status changes.
+        /// </summary>
+        public async Task SyncNodeCapacityAsync(string nodeId)
+        {
+            var slots = await _context.EnergySlots.Find(s => s.NodeId == nodeId).ToListAsync();
+
+            var totalSlots = slots.Count;
+            var activeSlots = slots.Count(s => !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase));
+            var totalCapacity = slots
+                .Where(s => !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase))
+                .Sum(s => s.AvailableKWh);
+
+            var update = Builders<MicrogridNode>.Update
+                .Set(n => n.BatterySlots, totalSlots)
+                .Set(n => n.AvailableBatterySlots, activeSlots)
+                .Set(n => n.CapacityKWh, totalCapacity)
+                .Set(n => n.UpdatedAt, DateTime.UtcNow);
+
+            await _context.MicrogridNodes.UpdateOneAsync(n => n.Id == nodeId, update);
+        }
+
+        // Deactivates a node only if it has no active reservations.
         public async Task<(bool Success, string Message)> DeactivateAsync(string id)
         {
             // Check for active reservations on this node
@@ -116,6 +171,18 @@ namespace SmartSolarMicrogridAPI.Services
             return result.ModifiedCount > 0
                 ? (true, "Node deactivated successfully.")
                 : (false, "Node not found.");
+        }
+
+        // Reactivates a deactivated node.
+        public async Task<bool> ActivateAsync(string id)
+        {
+            var update = Builders<MicrogridNode>.Update
+                .Set(n => n.IsActive, true)
+                .Set(n => n.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.MicrogridNodes.UpdateOneAsync(
+                n => n.Id == id, update);
+            return result.ModifiedCount > 0;
         }
     }
 }

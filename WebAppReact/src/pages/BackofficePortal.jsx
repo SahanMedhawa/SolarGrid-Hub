@@ -12,6 +12,7 @@ import {
   getNodes,
   createNode,
   deactivateNode,
+  reactivateNode,
   getProsumers,
   activateProsumer,
   reactivateProsumer,
@@ -24,6 +25,8 @@ import {
   approveReservation
 } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
+import LocationPicker from '../components/LocationPicker';
+import SchedulePicker from '../components/SchedulePicker';
 import { toast } from 'react-toastify';
 
 export default function BackofficePortal() {
@@ -48,8 +51,7 @@ export default function BackofficePortal() {
     latitude: 6.9271,
     longitude: 79.8612,
     capacityKWh: 100,
-    batterySlots: 10,
-    availableBatterySlots: 10,
+    batterySlotCapacities: [''],
     schedule: '06:00-18:00'
   });
 
@@ -112,20 +114,25 @@ export default function BackofficePortal() {
   // --- Handlers: Grid Nodes ---
   async function handleCreateNode(e) {
     e.preventDefault();
+    const slotCapacities = newNode.batterySlotCapacities.map(Number);
     if (!newNode.nodeName || !newNode.location) {
       toast.warning('Node name and location are required.');
       return;
     }
+    if (slotCapacities.length === 0 || slotCapacities.some(value => !Number.isFinite(value) || value <= 0)) {
+      toast.error('Enter a positive capacity for every battery slot.');
+      return;
+    }
+    const sumCap = slotCapacities.reduce((sum, value) => sum + value, 0);
     try {
       await createNode({
         ...newNode,
         latitude: parseFloat(newNode.latitude),
         longitude: parseFloat(newNode.longitude),
-        capacityKWh: parseFloat(newNode.capacityKWh),
-        batterySlots: parseInt(newNode.batterySlots, 10),
-        availableBatterySlots: parseInt(newNode.availableBatterySlots, 10)
+        capacityKWh: sumCap,
+        batterySlotCapacities: slotCapacities
       });
-      toast.success('Grid Node Hub created successfully!');
+      toast.success('Grid Node Hub created with auto-calculated slot capacity!');
       setShowNodeModal(false);
       setNewNode({
         nodeName: '',
@@ -133,8 +140,7 @@ export default function BackofficePortal() {
         latitude: 6.9271,
         longitude: 79.8612,
         capacityKWh: 100,
-        batterySlots: 10,
-        availableBatterySlots: 10,
+        batterySlotCapacities: [''],
         schedule: '06:00-18:00'
       });
       loadAllData();
@@ -144,7 +150,15 @@ export default function BackofficePortal() {
   }
 
   async function handleDeactivateNode(id, name) {
-    if (!window.confirm(`Are you sure you want to deactivate node "${name}"? Active reservations rule will apply.`)) {
+    const hasActiveBooking = reservations.some(
+      r => r.nodeId === id && (r.status === 'Pending' || r.status === 'Approved')
+    );
+    if (hasActiveBooking) {
+      toast.error(`Cannot deactivate node "${name}". It has active reservations.`);
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to deactivate node "${name}"?`)) {
       return;
     }
     try {
@@ -152,8 +166,20 @@ export default function BackofficePortal() {
       toast.success(`Node "${name}" deactivated successfully.`);
       loadAllData();
     } catch (err) {
-      // Backend enforces active reservation check
       toast.error(err.message || 'Cannot deactivate node.');
+    }
+  }
+
+  async function handleReactivateNode(id, name) {
+    if (!window.confirm(`Reactivate node "${name}"? It will become available for new reservations.`)) {
+      return;
+    }
+    try {
+      await reactivateNode(id);
+      toast.success(`Node "${name}" reactivated successfully.`);
+      loadAllData();
+    } catch (err) {
+      toast.error(err.message || 'Failed to reactivate node.');
     }
   }
 
@@ -438,10 +464,10 @@ export default function BackofficePortal() {
                   <table>
                     <thead>
                       <tr>
-                        <th>ID</th>
                         <th>Prosumer NIC</th>
-                        <th>Slot</th>
-                        <th>Scheduled Date</th>
+                        <th>Station</th>
+                        <th>Scheduled Date &amp; Time</th>
+                        <th>Slots</th>
                         <th>Energy (kWh)</th>
                         <th>Status</th>
                         <th>Action</th>
@@ -450,10 +476,27 @@ export default function BackofficePortal() {
                     <tbody>
                       {pendingReservations.slice(0, 5).map(r => (
                         <tr key={r.id}>
-                          <td className="truncate" style={{ maxWidth: '120px' }}>{r.id}</td>
                           <td><strong>{r.prosumerNic}</strong></td>
-                          <td>{r.slotId}</td>
-                          <td>{new Date(r.reservationDate).toLocaleString()}</td>
+                          <td>{nodes.find(n => n.id === r.nodeId)?.nodeName || r.nodeId}</td>
+                          <td>
+                            <div>{new Date(r.reservationDate).toLocaleDateString()}</div>
+                            {r.startTime && r.endTime && (
+                              <small className="text-muted" style={{ display: 'block' }}>⏱️ {r.startTime} - {r.endTime}</small>
+                            )}
+                          </td>
+                          <td>
+                            {r.allocatedSlotNames?.length > 0 ? (
+                              <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                                {r.allocatedSlotNames.join(', ')}
+                              </span>
+                            ) : r.allocatedSlotIds?.length > 0 ? (
+                              <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                                {r.allocatedSlotIds.length} slot(s)
+                              </span>
+                            ) : (
+                              <span className="text-muted">Auto</span>
+                            )}
+                          </td>
                           <td>{r.energyKWh} kWh</td>
                           <td><StatusBadge status={r.status} /></td>
                           <td>
@@ -527,7 +570,12 @@ export default function BackofficePortal() {
                             Deactivate
                           </button>
                         ) : (
-                          <span className="text-muted" style={{ fontSize: '0.8rem' }}>Inactive</span>
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleReactivateNode(n.id, n.nodeName)}
+                          >
+                            Reactivate
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -713,48 +761,66 @@ export default function BackofficePortal() {
                 <table>
                   <thead>
                     <tr>
-                      <th>ID</th>
                       <th>Prosumer NIC</th>
-                      <th>Node Station</th>
-                      <th>Slot</th>
-                      <th>Scheduled Date</th>
+                      <th>Station</th>
+                      <th>Date &amp; Time Window</th>
+                      <th>Slots</th>
                       <th>Energy (kWh)</th>
                       <th>Status</th>
                       <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredReservations.map(r => (
-                      <tr key={r.id}>
-                        <td className="truncate" style={{ maxWidth: '100px' }}>{r.id}</td>
-                        <td><strong>{r.prosumerNic}</strong></td>
-                        <td>{r.nodeId}</td>
-                        <td>{r.slotId}</td>
-                        <td>{new Date(r.reservationDate).toLocaleString()}</td>
-                        <td>{r.energyKWh} kWh</td>
-                        <td><StatusBadge status={r.status} /></td>
-                        <td>
-                          {r.status === 'Pending' && (
-                            <button
-                              className="btn btn-primary btn-sm"
-                              onClick={() => handleApproveReservation(r.id)}
-                            >
-                              Approve &amp; QR
-                            </button>
-                          )}
-                          {r.status === 'Approved' && (
-                            <span style={{ fontSize: '0.8rem', color: 'var(--color-primary-light)' }}>
-                              QR Ready
-                            </span>
-                          )}
-                          {r.status === 'Completed' && (
-                            <span style={{ fontSize: '0.8rem', color: 'var(--color-accent-light)' }}>
-                              ⚡ Transferred
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredReservations.map(r => {
+                      const stationName = nodes.find(n => n.id === r.nodeId)?.nodeName || r.nodeId;
+                      return (
+                        <tr key={r.id}>
+                          <td><strong>{r.prosumerNic}</strong></td>
+                          <td>{stationName}</td>
+                          <td>
+                            <div>{new Date(r.reservationDate).toLocaleDateString()}</div>
+                            {r.startTime && r.endTime && (
+                              <small className="text-muted" style={{ display: 'block' }}>⏱️ {r.startTime} - {r.endTime}</small>
+                            )}
+                          </td>
+                          <td>
+                            {r.allocatedSlotNames?.length > 0 ? (
+                              <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                                {r.allocatedSlotNames.join(', ')}
+                              </span>
+                            ) : r.allocatedSlotIds?.length > 0 ? (
+                              <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                                {r.allocatedSlotIds.length} slot(s)
+                              </span>
+                            ) : (
+                              <span className="text-muted">Auto</span>
+                            )}
+                          </td>
+                          <td>{r.energyKWh} kWh</td>
+                          <td><StatusBadge status={r.status} /></td>
+                          <td>
+                            {r.status === 'Pending' && (
+                              <button
+                                className="btn btn-primary btn-sm"
+                                onClick={() => handleApproveReservation(r.id)}
+                              >
+                                Approve &amp; QR
+                              </button>
+                            )}
+                            {r.status === 'Approved' && (
+                              <span style={{ fontSize: '0.8rem', color: 'var(--color-primary-light)' }}>
+                                QR Ready
+                              </span>
+                            )}
+                            {r.status === 'Completed' && (
+                              <span style={{ fontSize: '0.8rem', color: 'var(--color-accent-light)' }}>
+                                ⚡ Transferred
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               )}
@@ -774,82 +840,56 @@ export default function BackofficePortal() {
             <form onSubmit={handleCreateNode}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Station Name</label>
+                  <label className="form-label">Node Name</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Colombo South Station"
                     value={newNode.nodeName}
                     onChange={e => setNewNode({ ...newNode, nodeName: e.target.value })}
                     required
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Physical Location</label>
+                  <label className="form-label">Location</label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="e.g. Havelock City, Colombo 05"
                     value={newNode.location}
                     onChange={e => setNewNode({ ...newNode, location: e.target.value })}
                     required
                   />
                 </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Latitude</label>
-                    <input
-                      type="number"
-                      step="any"
-                      className="form-input"
-                      value={newNode.latitude}
-                      onChange={e => setNewNode({ ...newNode, latitude: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Longitude</label>
-                    <input
-                      type="number"
-                      step="any"
-                      className="form-input"
-                      value={newNode.longitude}
-                      onChange={e => setNewNode({ ...newNode, longitude: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Capacity (kWh)</label>
-                    <input
-                      type="number"
-                      className="form-input"
-                      value={newNode.capacityKWh}
-                      onChange={e => setNewNode({ ...newNode, capacityKWh: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Battery Slots</label>
-                    <input
-                      type="number"
-                      className="form-input"
-                      value={newNode.batterySlots}
-                      onChange={e => setNewNode({ ...newNode, batterySlots: e.target.value, availableBatterySlots: e.target.value })}
-                      required
-                    />
-                  </div>
+                <LocationPicker
+                  latitude={newNode.latitude}
+                  longitude={newNode.longitude}
+                  onChange={({ latitude, longitude, address }) =>
+                    setNewNode(prev => ({
+                      ...prev,
+                      latitude,
+                      longitude,
+                      location: address || prev.location
+                    }))
+                  }
+                />
+                <div className="form-group">
+                  <label className="form-label">Battery Slot Capacities (kWh)</label>
+                  <p className="text-muted">
+                    Total station capacity is auto-calculated from slot capacities: <strong>{newNode.batterySlotCapacities.reduce((sum, value) => sum + (Number(value) || 0), 0)} kWh</strong>.
+                  </p>
+                  {newNode.batterySlotCapacities.map((capacity, index) => (
+                    <div className="slot-capacity-row" key={index}>
+                      <div className="form-group slot-capacity-input">
+                        <label className="form-label">Slot {index + 1}</label>
+                        <input type="number" min="0.1" step="0.1" className="form-input" value={capacity} onChange={e => setNewNode({ ...newNode, batterySlotCapacities: newNode.batterySlotCapacities.map((value, slotIndex) => slotIndex === index ? e.target.value : value) })} required />
+                      </div>
+                      {newNode.batterySlotCapacities.length > 1 && <button type="button" className="btn btn-danger btn-sm slot-remove-btn" onClick={() => setNewNode({ ...newNode, batterySlotCapacities: newNode.batterySlotCapacities.filter((_, slotIndex) => slotIndex !== index) })}>Remove</button>}
+                    </div>
+                  ))}
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => setNewNode({ ...newNode, batterySlotCapacities: [...newNode.batterySlotCapacities, '50'] })}>+ Add battery slot</button>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Operating Schedule</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="06:00-18:00"
-                    value={newNode.schedule}
-                    onChange={e => setNewNode({ ...newNode, schedule: e.target.value })}
-                  />
+                  <SchedulePicker value={newNode.schedule} onChange={schedule => setNewNode({ ...newNode, schedule })} />
                 </div>
               </div>
               <div className="modal-footer">
@@ -857,7 +897,7 @@ export default function BackofficePortal() {
                   Cancel
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Create Station Node
+                  Create
                 </button>
               </div>
             </form>

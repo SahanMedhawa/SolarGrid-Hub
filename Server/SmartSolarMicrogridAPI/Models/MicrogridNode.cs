@@ -46,6 +46,10 @@ namespace SmartSolarMicrogridAPI.Models
         [BsonElement("availableBatterySlots")]
         public int AvailableBatterySlots { get; set; }
 
+        /// <summary>Capacities for slots supplied while creating a node; persisted as EnergySlot documents.</summary>
+        [BsonIgnore]
+        public List<double> BatterySlotCapacities { get; set; } = new();
+
         /// <summary>
         /// Operating schedule (e.g., "06:00-18:00")
         /// </summary>
