@@ -1,5 +1,4 @@
 package com.smartsolar.microgrid.ui.operator
-
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -19,6 +18,7 @@ import com.smartsolar.microgrid.data.SessionManager
 import com.smartsolar.microgrid.ui.auth.LoginActivity
 import org.json.JSONArray
 import org.json.JSONObject
+import com.smartsolar.microgrid.ui.operator.ProfileActivity
 
 /**
  * Grid Operator Main Dashboard Activity.
@@ -62,6 +62,10 @@ class OperatorMainActivity : AppCompatActivity() {
             session.logout()
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
+        }
+
+        findViewById<Button>(R.id.btnMyProfile).setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
         }
     }
 

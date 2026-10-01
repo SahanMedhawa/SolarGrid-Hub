@@ -6,6 +6,7 @@ import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.RadioButton
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -30,6 +31,7 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var etPassword: EditText
     private lateinit var rbProsumer: RadioButton
     private lateinit var btnLogin: Button
+    private lateinit var btnForgotPassword: TextView
     private lateinit var session: SessionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,10 +53,14 @@ class LoginActivity : AppCompatActivity() {
         etPassword = findViewById(R.id.etPassword)
         rbProsumer = findViewById(R.id.rbProsumer)
         btnLogin = findViewById(R.id.btnLogin)
+        btnForgotPassword = findViewById(R.id.btnForgotPassword)
         val btnRegister: Button = findViewById(R.id.btnRegister)
 
         btnLogin.setOnClickListener { handleLogin() }
         btnRegister.setOnClickListener { startActivity(Intent(this, RegisterActivity::class.java)) }
+        btnForgotPassword.setOnClickListener {
+            startActivity(Intent(this, ForgotPasswordActivity::class.java))
+        }
     }
 
     // Validate inputs and send login request to the central API
