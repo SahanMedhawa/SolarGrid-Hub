@@ -46,6 +46,9 @@
             android:name=".ui.operator.QrScannerActivity"
             android:screenOrientation="portrait"
             android:stateNotNeeded="true" />
+        <activity android:name=".ui.operator.ProfileActivity" />
+        <activity android:name=".ui.auth.ForgotPasswordActivity" />
+        <activity android:name=".ui.auth.ResetPasswordActivity" />
 
     </application>
 

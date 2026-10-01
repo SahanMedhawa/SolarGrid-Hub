@@ -59,7 +59,24 @@ object ApiClient {
         try {
             val url = URL(fullUrl)
             conn = url.openConnection() as HttpURLConnection
-            conn.requestMethod = method
+
+            // HttpURLConnection does not support PATCH natively (Java/Android platform
+            // limitation - only GET, POST, PUT, DELETE, HEAD, OPTIONS, TRACE are allowed).
+            // Workaround: set method to POST, then override the internal "method" field
+            // via reflection so the actual HTTP request line sent over the wire is PATCH.
+            if (method.equals("PATCH", ignoreCase = true)) {
+                conn.requestMethod = "POST"
+                try {
+                    val methodField = conn.javaClass.superclass.getDeclaredField("method")
+                    methodField.isAccessible = true
+                    methodField.set(conn, "PATCH")
+                } catch (e: Exception) {
+                    Log.w(TAG, "PATCH override failed, falling back to POST: ${e.message}")
+                }
+            } else {
+                conn.requestMethod = method
+            }
+
             conn.setRequestProperty("Content-Type", "application/json; charset=utf-8")
             conn.setRequestProperty("Accept", "application/json")
 
@@ -70,7 +87,7 @@ object ApiClient {
             conn.connectTimeout = 6000
             conn.readTimeout = 8000
 
-            if (payload != null && (method.equals("POST", ignoreCase = true) || method.equals("PUT", ignoreCase = true))) {
+            if (payload != null && (method.equals("POST", ignoreCase = true) || method.equals("PUT", ignoreCase = true) || method.equals("PATCH", ignoreCase = true))) {
                 conn.doOutput = true
                 conn.outputStream.use { os ->
                     val input = payload.toString().toByteArray(Charsets.UTF_8)
