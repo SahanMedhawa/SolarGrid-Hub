@@ -147,6 +147,16 @@ namespace SmartSolarMicrogridAPI.Controllers
             UpdateDefinition<EnergySlot> update;
             if (request.UnderMaintenance)
             {
+                if (string.Equals(existing.Status, "Maintenance", StringComparison.OrdinalIgnoreCase))
+                {
+                    var scheduledWindow = existing.MaintenanceDate.HasValue &&
+                                          !string.IsNullOrWhiteSpace(existing.MaintenanceStartTime) &&
+                                          !string.IsNullOrWhiteSpace(existing.MaintenanceEndTime)
+                        ? $" for {existing.MaintenanceDate.Value:yyyy-MM-dd} from {existing.MaintenanceStartTime} to {existing.MaintenanceEndTime}"
+                        : string.Empty;
+                    return Conflict(new { message = $"Slot {existing.SlotNumber} already has maintenance scheduled{scheduledWindow}. Refresh the page to see it." });
+                }
+
                 if (!request.MaintenanceDate.HasValue || request.MaintenanceDate.Value.Date < DateTime.Today ||
                     !MaintenanceTimeValidation.TryParseTime(request.StartTime, out var start) || !MaintenanceTimeValidation.TryParseTime(request.EndTime, out var end) || end <= start)
                 {
@@ -170,7 +180,7 @@ namespace SmartSolarMicrogridAPI.Controllers
 
                 update = Builders<EnergySlot>.Update
                     .Set(s => s.Status, "Maintenance")
-                    .Set(s => s.MaintenanceDate, maintenanceDate)
+                    .Set(s => s.MaintenanceDate, DateTime.SpecifyKind(maintenanceDate, DateTimeKind.Utc))
                     .Set(s => s.MaintenanceStartTime, request.StartTime)
                     .Set(s => s.MaintenanceEndTime, request.EndTime);
             }
@@ -183,11 +193,27 @@ namespace SmartSolarMicrogridAPI.Controllers
                     .Unset(s => s.MaintenanceEndTime);
             }
 
-            var result = await _context.EnergySlots.UpdateOneAsync(
-                s => s.Id == id, update);
+            var updateFilter = request.UnderMaintenance
+                ? Builders<EnergySlot>.Filter.Eq(s => s.Id, id) &
+                  Builders<EnergySlot>.Filter.Ne(s => s.Status, "Maintenance")
+                : Builders<EnergySlot>.Filter.Eq(s => s.Id, id);
+            var result = await _context.EnergySlots.UpdateOneAsync(updateFilter, update);
 
             if (result.ModifiedCount == 0)
+            {
+                var latest = await _context.EnergySlots.Find(s => s.Id == id).FirstOrDefaultAsync();
+                if (request.UnderMaintenance && latest != null &&
+                    string.Equals(latest.Status, "Maintenance", StringComparison.OrdinalIgnoreCase))
+                {
+                    var window = latest.MaintenanceDate.HasValue &&
+                                 !string.IsNullOrWhiteSpace(latest.MaintenanceStartTime) &&
+                                 !string.IsNullOrWhiteSpace(latest.MaintenanceEndTime)
+                        ? $" for {latest.MaintenanceDate.Value:yyyy-MM-dd} from {latest.MaintenanceStartTime} to {latest.MaintenanceEndTime}"
+                        : string.Empty;
+                    return Conflict(new { message = $"Slot {latest.SlotNumber} already has maintenance scheduled{window}. Refresh the page to see it." });
+                }
                 return NotFound(new { message = "Slot not found." });
+            }
 
             // Sync node capacity after maintenance status change
             await _nodeService.SyncNodeCapacityAsync(existing.NodeId);

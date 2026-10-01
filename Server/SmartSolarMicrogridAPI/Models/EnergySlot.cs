@@ -13,6 +13,19 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace SmartSolarMicrogridAPI.Models
 {
+    public static class MaintenanceDateHelper
+    {
+        // Maintenance dates are calendar dates. New values are stored at UTC midnight;
+        // older values may have been shifted by MongoDB from local midnight to UTC.
+        public static DateTime ToCalendarDate(DateTime value)
+        {
+            if (value.Kind == DateTimeKind.Utc && value.TimeOfDay != TimeSpan.Zero)
+                return value.ToLocalTime().Date;
+
+            return value.Date;
+        }
+    }
+
     /// <summary>
     /// Physical battery storage slot within a microgrid node.
     /// </summary>

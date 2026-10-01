@@ -66,6 +66,30 @@ export default function NodesPage() {
   // Loads all nodes on mount.
   useEffect(() => { loadNodes(); }, []);
 
+  // Keep an open node's slot and maintenance data current across operator sessions.
+  useEffect(() => {
+    if (!selectedNode?.id) return undefined;
+
+    let disposed = false;
+    const refreshSlots = async () => {
+      try {
+        const data = await getSlotsByNode(selectedNode.id);
+        if (!disposed) setSlots(data);
+      } catch {
+        // Keep the last successful view; the next interval or focus will retry.
+      }
+    };
+    const handleFocus = () => refreshSlots();
+    const intervalId = window.setInterval(refreshSlots, 10000);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [selectedNode?.id]);
+
   // Fetches node list from the backend.
   async function loadNodes() {
     try {
@@ -228,16 +252,25 @@ export default function NodesPage() {
 
   // Toggles maintenance status on a slot.
   async function handleToggleMaintenance(slot) {
-    const isMaint = slot.status === 'Maintenance';
+    let currentSlot = slot;
+    try {
+      const latestSlots = await getSlotsByNode(selectedNode.id);
+      setSlots(latestSlots);
+      currentSlot = latestSlots.find(item => item.id === slot.id) || slot;
+    } catch {
+      // The server validates the current status again when the schedule is saved.
+    }
+
+    const isMaint = currentSlot.status === 'Maintenance';
     if (!isMaint) {
-      setMaintenanceTarget(slot);
+      setMaintenanceTarget(currentSlot);
       setMaintenanceForm(getDefaultMaintenanceForm());
       setShowMaintenanceModal(true);
       return;
     }
     try {
-      await toggleSlotMaintenance(slot.id, { underMaintenance: false });
-      toast.success(`Slot ${slot.slotNumber || ''} returned to service.`);
+      await toggleSlotMaintenance(currentSlot.id, { underMaintenance: false });
+      toast.success(`Slot ${currentSlot.slotNumber || ''} returned to service.`);
       await viewSlots(selectedNode);
       await loadNodes();
     } catch (error) {

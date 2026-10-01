@@ -113,7 +113,6 @@ export default function ProsumerPortal() {
     endTime: '09:00',
     selectedSlotIds: []
   });
-  const [stationSlots, setStationSlots] = useState([]);
   const [hourlyAvailability, setHourlyAvailability] = useState(null);
   const [loadingHourly, setLoadingHourly] = useState(false);
   const [windowAvailability, setWindowAvailability] = useState(null);
@@ -192,19 +191,6 @@ export default function ProsumerPortal() {
 
 
 
-
-  // Load station battery slots when node changes
-  useEffect(() => {
-    if (bookingForm.nodeId) {
-      let active = true;
-      getSlotsByNode(bookingForm.nodeId)
-        .then(data => { if (active) setStationSlots(data || []); })
-        .catch(() => { if (active) setStationSlots([]); });
-      return () => { active = false; };
-    } else {
-      setStationSlots([]);
-    }
-  }, [bookingForm.nodeId]);
 
   // Load hourly breakdown when node and date change
   useEffect(() => {
@@ -296,16 +282,14 @@ export default function ProsumerPortal() {
   }
 
   // Helper for available slots in the current window
-  const displayedSlots = (windowAvailability && Array.isArray(windowAvailability.slots) && windowAvailability.slots.length > 0)
+  const availabilityMatchesSelection = windowAvailability &&
+    windowAvailability.nodeId === bookingForm.nodeId &&
+    String(windowAvailability.date || '').slice(0, 10) === bookingForm.reservationDate &&
+    windowAvailability.startTime === bookingForm.startTime &&
+    windowAvailability.endTime === bookingForm.endTime;
+  const displayedSlots = availabilityMatchesSelection && Array.isArray(windowAvailability.slots)
     ? windowAvailability.slots
-    : stationSlots.map(s => ({
-        id: s.id,
-        slotNumber: s.slotNumber,
-        capacityKWh: s.availableKWh,
-        status: s.status,
-        isBooked: false,
-        isAvailable: s.status !== 'Maintenance'
-      }));
+    : [];
 
   const selectedSlots = displayedSlots.filter(s => (bookingForm.selectedSlotIds || []).includes(s.id));
   const totalCalculatedKWh = selectedSlots.reduce((sum, s) => sum + (s.capacityKWh || 0), 0);
@@ -766,15 +750,7 @@ export default function ProsumerPortal() {
                   <select
                     className="form-select"
                     value={bookingForm.startTime}
-                    onChange={event => {
-                      const startTime = event.target.value;
-                      const endTimes = getBookableEndTimes(hourlyAvailability, startTime);
-                      setBookingForm(current => ({
-                        ...current,
-                        startTime,
-                        endTime: endTimes.includes(current.endTime) ? current.endTime : (endTimes[0] || '')
-                      }));
-                    }}
+                    onChange={e => setBookingForm({ ...bookingForm, startTime: e.target.value })}
                     required
                     disabled={loadingHourly || getBookableStartTimes(hourlyAvailability).length === 0}
                   >
@@ -785,17 +761,13 @@ export default function ProsumerPortal() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">End Time</label>
-                  <select
-                    className="form-select"
+                  <input
+                    type="time"
+                    className="form-input"
                     value={bookingForm.endTime}
-                    onChange={event => setBookingForm(current => ({ ...current, endTime: event.target.value }))}
+                    onChange={e => setBookingForm({ ...bookingForm, endTime: e.target.value })}
                     required
-                    disabled={loadingHourly || getBookableEndTimes(hourlyAvailability, bookingForm.startTime).length === 0}
-                  >
-                    {getBookableEndTimes(hourlyAvailability, bookingForm.startTime).length === 0
-                      ? <option value="">No end time available</option>
-                      : getBookableEndTimes(hourlyAvailability, bookingForm.startTime).map(time => <option key={time} value={time}>{time}</option>)}
-                  </select>
+                  />
                 </div>
               </div>
 
@@ -824,12 +796,11 @@ export default function ProsumerPortal() {
                         <div
                           key={s.startTime}
                           onClick={() => {
-                            const endTimes = getBookableEndTimes(hourlyAvailability, s.startTime);
-                            setBookingForm(prev => ({
-                              ...prev,
-                              startTime: s.startTime,
-                              endTime: endTimes.includes(prev.endTime) ? prev.endTime : (endTimes[0] || '')
-                            }));
+                            if (s.isWithinOperatingHours) {
+                              const start = `${String(s.hour).padStart(2, '0')}:00`;
+                              const end = `${String(Math.min(23, s.hour + 2)).padStart(2, '0')}:00`;
+                              setBookingForm(prev => ({ ...prev, startTime: start, endTime: end }));
+                            }
                           }}
                           style={{
                             padding: '0.5rem',

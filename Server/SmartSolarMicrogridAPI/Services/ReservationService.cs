@@ -149,15 +149,19 @@ namespace SmartSolarMicrogridAPI.Services
 
             var slotList = slots
                 .OrderBy(s => s.SlotNumber)
-                .Select(s => new SlotAvailabilityInfo
+                .Select(s =>
                 {
-                    Id = s.Id ?? string.Empty,
-                    SlotNumber = s.SlotNumber,
-                    CapacityKWh = s.AvailableKWh,
-                    Status = s.Status,
-                    IsBooked = occupiedSlotIds.Contains(s.Id ?? string.Empty),
-                    IsAvailable = !occupiedSlotIds.Contains(s.Id ?? string.Empty) &&
-                                  !string.Equals(s.Status, "Maintenance", StringComparison.OrdinalIgnoreCase)
+                    var isUnderMaintenance = !IsAvailableForWindow(s, date, startTime, endTime);
+                    var isBooked = occupiedSlotIds.Contains(s.Id ?? string.Empty);
+                    return new SlotAvailabilityInfo
+                    {
+                        Id = s.Id ?? string.Empty,
+                        SlotNumber = s.SlotNumber,
+                        CapacityKWh = s.AvailableKWh,
+                        Status = isUnderMaintenance ? "Maintenance" : "Available",
+                        IsBooked = isBooked,
+                        IsAvailable = !isBooked && !isUnderMaintenance
+                    };
                 })
                 .ToList();
 
@@ -890,7 +894,7 @@ namespace SmartSolarMicrogridAPI.Services
                 string.IsNullOrWhiteSpace(slot.MaintenanceEndTime))
                 return false;
 
-            if (slot.MaintenanceDate.Value.Date != date.Date)
+            if (MaintenanceDateHelper.ToCalendarDate(slot.MaintenanceDate.Value) != date.Date)
                 return true;
 
             return !TimesOverlap(slot.MaintenanceStartTime, slot.MaintenanceEndTime, startTime, endTime);

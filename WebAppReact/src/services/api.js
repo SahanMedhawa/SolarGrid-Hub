@@ -13,6 +13,7 @@ export async function apiRequest(endpoint, method = 'GET', body = null) {
   const token = localStorage.getItem(TOKEN_KEY);
   const options = {
     method,
+    ...(method === 'GET' ? { cache: 'no-store' } : {}),
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
