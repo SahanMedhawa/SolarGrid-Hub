@@ -104,6 +104,11 @@ export async function updateProsumer(nic, data) {
   return apiRequest(`prosumer/${nic}`, 'PUT', data);
 }
 
+// Changes the authenticated prosumer's own password.
+export async function changeProsumerPassword(currentPassword, newPassword) {
+  return apiRequest('prosumer/password', 'PATCH', { currentPassword, newPassword });
+}
+
 // Activates a pending prosumer account (Backoffice only).
 export async function activateProsumer(nic) {
   return apiRequest(`prosumer/${nic}/activate`, 'PUT');

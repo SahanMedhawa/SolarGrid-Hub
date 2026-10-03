@@ -16,6 +16,7 @@ import {
   updateReservation,
   getProsumerByNic,
   updateProsumer,
+  changeProsumerPassword,
   deactivateProsumer,
   getAvailability,
   getHourlyAvailability,
@@ -52,6 +53,12 @@ export default function ProsumerPortal() {
     phone: '',
     address: ''
   });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [savingPassword, setSavingPassword] = useState(false);
 
   // QR Modal state
   const [selectedQrPass, setSelectedQrPass] = useState(null);
@@ -167,6 +174,34 @@ export default function ProsumerPortal() {
       toast.error(err.message || 'Failed to update profile.');
     } finally {
       setSavingProfile(false);
+    }
+  }
+
+  async function handleChangePassword(e) {
+    e.preventDefault();
+
+    if (passwordForm.newPassword.length < 6) {
+      toast.error('New password must be at least 6 characters long.');
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error('New password and confirmation do not match.');
+      return;
+    }
+    if (passwordForm.currentPassword === passwordForm.newPassword) {
+      toast.error('New password must be different from the current password.');
+      return;
+    }
+
+    try {
+      setSavingPassword(true);
+      await changeProsumerPassword(passwordForm.currentPassword, passwordForm.newPassword);
+      toast.success('Password changed successfully!');
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      toast.error(err.message || 'Failed to change password.');
+    } finally {
+      setSavingPassword(false);
     }
   }
 
@@ -1237,6 +1272,50 @@ export default function ProsumerPortal() {
             )}
 
 
+          </div>
+
+          <div className="card" style={{ padding: '2rem', marginTop: '1.5rem' }}>
+            <h3 style={{ marginBottom: '1rem' }}>Change Password</h3>
+            <form onSubmit={handleChangePassword}>
+              <div className="form-group">
+                <label className="form-label">Current Password</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  value={passwordForm.currentPassword}
+                  onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">New Password</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  value={passwordForm.newPassword}
+                  onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Confirm New Password</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  value={passwordForm.confirmPassword}
+                  onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  minLength={6}
+                  required
+                />
+              </div>
+
+              <button type="submit" className="btn btn-primary" disabled={savingPassword}>
+                {savingPassword ? 'Changing...' : 'Change Password'}
+              </button>
+            </form>
           </div>
 
           <div style={{ marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--color-border)' }}>
