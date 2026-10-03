@@ -24,9 +24,7 @@
             android:name=".ui.prosumer.EditProfileActivity"
             android:exported="false" />
 
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE" /> <!-- Login is the default launcher activity -->
+        <!-- Login is the default launcher activity -->
         <activity
             android:name=".ui.auth.LoginActivity"
             android:exported="true">

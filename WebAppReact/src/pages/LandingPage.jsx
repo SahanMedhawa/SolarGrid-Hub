@@ -221,7 +221,7 @@ export default function LandingPage() {
                 </span>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                Log solar generation, locate nearby stations on Google Maps, book slots with 7-day rule, and get QR passes.
+                Log solar generation, locate nearby stations on Mapbox, book slots with 7-day rule, and get QR passes.
               </p>
               <ul className="space-y-2 text-xs text-slate-300 mb-6">
                 <li className="flex items-center gap-2">
