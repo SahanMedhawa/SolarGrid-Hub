@@ -13,6 +13,7 @@ export async function apiRequest(endpoint, method = 'GET', body = null) {
   const token = localStorage.getItem(TOKEN_KEY);
   const options = {
     method,
+    ...(method === 'GET' ? { cache: 'no-store' } : {}),
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
@@ -212,8 +213,8 @@ export async function updateSlot(id, slotData) {
 }
 
 // Toggles maintenance status on an energy slot.
-export async function toggleSlotMaintenance(id, underMaintenance) {
-  return apiRequest(`energyslot/${id}/maintenance`, 'PUT', { underMaintenance });
+export async function toggleSlotMaintenance(id, maintenanceRequest) {
+  return apiRequest(`energyslot/${id}/maintenance`, 'PUT', maintenanceRequest);
 }
 
 // Deletes an energy slot.

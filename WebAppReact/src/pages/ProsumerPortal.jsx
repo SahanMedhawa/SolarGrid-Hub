@@ -25,11 +25,35 @@ import {
 import StatusBadge from '../components/StatusBadge';
 import { toast } from 'react-toastify';
 import { QRCodeSVG } from 'qrcode.react';
-import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import MapboxLocationMap from '../components/MapboxLocationMap';
 
-const MAP_LIBRARIES = ['places'];
-const MAP_CONTAINER_STYLE = { width: '100%', height: '420px' };
 const DEFAULT_MAP_CENTER = { lat: 7.8731, lng: 80.7718 };
+
+function isBookableHour(slot) {
+  return slot.isWithinOperatingHours && Number(slot.availableKWh) > 0 && Number(slot.reservedKWh) <= 0;
+}
+
+function getHourlySlots(availability) {
+  return availability?.hourlySlots || availability?.slots || [];
+}
+
+function getBookableStartTimes(availability) {
+  return getHourlySlots(availability).filter(isBookableHour).map(slot => slot.startTime);
+}
+
+function getBookableEndTimes(availability, startTime) {
+  if (!startTime) return [];
+  const slotsByStart = new Map(getHourlySlots(availability).map(slot => [slot.startTime, slot]));
+  const endTimes = [];
+  let currentTime = startTime;
+  while (true) {
+    const slot = slotsByStart.get(currentTime);
+    if (!slot || !isBookableHour(slot)) break;
+    endTimes.push(slot.endTime);
+    currentTime = slot.endTime;
+  }
+  return endTimes;
+}
 
 export default function ProsumerPortal() {
   const { user, logout } = useAuth();
@@ -65,10 +89,6 @@ export default function ProsumerPortal() {
 
   // Nearby microgrid map modal state
   const [selectedMapNode, setSelectedMapNode] = useState(null);
-  const { isLoaded: isMapLoaded, loadError: mapLoadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: MAP_LIBRARIES
-  });
 
   // Modify Booking Modal state
   const [modifyingRes, setModifyingRes] = useState(null);
@@ -100,7 +120,6 @@ export default function ProsumerPortal() {
     endTime: '09:00',
     selectedSlotIds: []
   });
-  const [stationSlots, setStationSlots] = useState([]);
   const [hourlyAvailability, setHourlyAvailability] = useState(null);
   const [loadingHourly, setLoadingHourly] = useState(false);
   const [windowAvailability, setWindowAvailability] = useState(null);
@@ -208,24 +227,12 @@ export default function ProsumerPortal() {
 
 
 
-  // Load station battery slots when node changes
-  useEffect(() => {
-    if (bookingForm.nodeId) {
-      let active = true;
-      getSlotsByNode(bookingForm.nodeId)
-        .then(data => { if (active) setStationSlots(data || []); })
-        .catch(() => { if (active) setStationSlots([]); });
-      return () => { active = false; };
-    } else {
-      setStationSlots([]);
-    }
-  }, [bookingForm.nodeId]);
-
   // Load hourly breakdown when node and date change
   useEffect(() => {
     if (bookingForm.nodeId && bookingForm.reservationDate) {
       let active = true;
       setLoadingHourly(true);
+      setHourlyAvailability(null);
       getHourlyAvailability(bookingForm.nodeId, bookingForm.reservationDate)
         .then(data => { if (active) setHourlyAvailability(data); })
         .catch(() => { if (active) setHourlyAvailability(null); })
@@ -233,6 +240,19 @@ export default function ProsumerPortal() {
       return () => { active = false; };
     }
   }, [bookingForm.nodeId, bookingForm.reservationDate]);
+
+  useEffect(() => {
+    if (!hourlyAvailability?.slots) return;
+    const startTimes = getBookableStartTimes(hourlyAvailability);
+    setBookingForm(current => {
+      const startTime = startTimes.includes(current.startTime) ? current.startTime : (startTimes[0] || '');
+      const endTimes = getBookableEndTimes(hourlyAvailability, startTime);
+      const endTime = endTimes.includes(current.endTime) ? current.endTime : (endTimes[0] || '');
+      return startTime === current.startTime && endTime === current.endTime
+        ? current
+        : { ...current, startTime, endTime };
+    });
+  }, [hourlyAvailability]);
 
   // Load window availability when node, date, and times change
   useEffect(() => {
@@ -297,16 +317,14 @@ export default function ProsumerPortal() {
   }
 
   // Helper for available slots in the current window
-  const displayedSlots = (windowAvailability && Array.isArray(windowAvailability.slots) && windowAvailability.slots.length > 0)
+  const availabilityMatchesSelection = windowAvailability &&
+    windowAvailability.nodeId === bookingForm.nodeId &&
+    String(windowAvailability.date || '').slice(0, 10) === bookingForm.reservationDate &&
+    windowAvailability.startTime === bookingForm.startTime &&
+    windowAvailability.endTime === bookingForm.endTime;
+  const displayedSlots = availabilityMatchesSelection && Array.isArray(windowAvailability.slots)
     ? windowAvailability.slots
-    : stationSlots.map(s => ({
-        id: s.id,
-        slotNumber: s.slotNumber,
-        capacityKWh: s.availableKWh,
-        status: s.status,
-        isBooked: false,
-        isAvailable: s.status !== 'Maintenance'
-      }));
+    : [];
 
   const selectedSlots = displayedSlots.filter(s => (bookingForm.selectedSlotIds || []).includes(s.id));
   const totalCalculatedKWh = selectedSlots.reduce((sum, s) => sum + (s.capacityKWh || 0), 0);
@@ -764,31 +782,27 @@ export default function ProsumerPortal() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Start Time</label>
-                  <input
-                    type="time"
-                    className="form-input"
+                  <select
+                    className="form-select"
                     value={bookingForm.startTime}
-                    onChange={e => {
-                      const start = e.target.value;
-                      const end = addOneHour(start);
-                      setBookingForm(prev => ({ ...prev, startTime: start, endTime: end }));
-                    }}
+                    onChange={e => setBookingForm({ ...bookingForm, startTime: e.target.value })}
                     required
-                  />
+                    disabled={loadingHourly || getBookableStartTimes(hourlyAvailability).length === 0}
+                  >
+                    {getBookableStartTimes(hourlyAvailability).length === 0
+                      ? <option value="">No unbooked times available</option>
+                      : getBookableStartTimes(hourlyAvailability).map(time => <option key={time} value={time}>{time}</option>)}
+                  </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">End Time (Auto 1-Hour)</label>
+                  <label className="form-label">End Time</label>
                   <input
                     type="time"
                     className="form-input"
                     value={bookingForm.endTime}
-                    readOnly
-                    disabled
-                    style={{ opacity: 0.85, cursor: 'not-allowed', background: 'rgba(255, 255, 255, 0.05)' }}
+                    onChange={e => setBookingForm({ ...bookingForm, endTime: e.target.value })}
+                    required
                   />
-                  <span className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
-                    🔒 Fixed 1-Hour window
-                  </span>
                 </div>
               </div>
 
@@ -798,7 +812,7 @@ export default function ProsumerPortal() {
                   ⏳ Loading station hourly schedule and availability...
                 </div>
               )}
-              {hourlyAvailability && !loadingHourly && hourlyAvailability.slots && (
+              {hourlyAvailability && !loadingHourly && (
                 <div style={{
                   margin: '1rem 0',
                   padding: '1rem',
@@ -811,46 +825,41 @@ export default function ProsumerPortal() {
                     <span className="text-muted" style={{ fontSize: '0.75rem' }}>Operating Hours: {hourlyAvailability.schedule} (1-hr slots)</span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.5rem' }}>
-                    {hourlyAvailability.slots.map(s => {
-                      const isSelected = bookingForm.startTime <= `${String(s.hour).padStart(2, '0')}:00` &&
-                                         bookingForm.endTime > `${String(s.hour).padStart(2, '0')}:00`;
+                    {getHourlySlots(hourlyAvailability).filter(isBookableHour).map(s => {
+                      const isSelected = bookingForm.startTime <= s.startTime && bookingForm.endTime > s.startTime;
                       return (
                         <div
-                          key={s.hour}
+                          key={s.startTime}
                           onClick={() => {
                             if (s.isWithinOperatingHours) {
                               const start = `${String(s.hour).padStart(2, '0')}:00`;
-                              const end = s.hour === 23 ? '24:00' : `${String(s.hour + 1).padStart(2, '0')}:00`;
+                              const end = `${String(Math.min(23, s.hour + 2)).padStart(2, '0')}:00`;
                               setBookingForm(prev => ({ ...prev, startTime: start, endTime: end }));
                             }
                           }}
                           style={{
                             padding: '0.5rem',
                             borderRadius: 'var(--radius-sm)',
-                            cursor: s.isWithinOperatingHours ? 'pointer' : 'not-allowed',
+                            cursor: 'pointer',
                             fontSize: '0.75rem',
                             textAlign: 'center',
-                            opacity: s.isWithinOperatingHours ? 1 : 0.45,
                             border: isSelected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
                             background: isSelected
                               ? 'rgba(34, 197, 94, 0.15)'
-                              : s.isWithinOperatingHours
-                                ? 'var(--color-bg)'
-                                : 'rgba(150, 150, 150, 0.1)'
+                              : 'var(--color-bg)'
                           }}
-                          title={s.isWithinOperatingHours ? 'Click to select this slot time' : 'Outside operating hours'}
+                          title="Click to select this unbooked time"
                         >
-                          <div style={{ fontWeight: 600 }}>{s.timeLabel}</div>
-                          {s.isWithinOperatingHours ? (
-                            <div style={{ color: s.availableKWh > 0 ? 'var(--color-primary-light)' : '#ef4444' }}>
-                              {s.availableKWh} / {hourlyAvailability.totalCapacityKWh} kWh
-                            </div>
-                          ) : (
-                            <div className="text-muted">Closed</div>
-                          )}
+                          <div style={{ fontWeight: 600 }}>{s.startTime}–{s.endTime}</div>
+                          <div style={{ color: 'var(--color-primary-light)' }}>
+                            {s.availableKWh} / {hourlyAvailability.totalCapacityKWh} kWh
+                          </div>
                         </div>
                       );
                     })}
+                    {getBookableStartTimes(hourlyAvailability).length === 0 && (
+                      <div className="text-muted">No unbooked times are available for this date.</div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1464,46 +1473,22 @@ export default function ProsumerPortal() {
               <button className="btn btn-ghost btn-sm" onClick={() => setSelectedMapNode(null)}>✕</button>
             </div>
             <div className="modal-body" style={{ padding: '1rem' }}>
-              {mapLoadError && (
-                <p className="text-muted" style={{ marginBottom: '1rem' }}>
-                  Google Maps could not be loaded. Check the Maps API key configuration.
-                </p>
-              )}
-              {!mapLoadError && !isMapLoaded && (
-                <div className="loading-spinner" style={{ minHeight: '420px' }}>
-                  <div className="spinner"></div>
-                </div>
-              )}
-              {!mapLoadError && isMapLoaded && (
-                <GoogleMap
-                  mapContainerStyle={MAP_CONTAINER_STYLE}
-                  center={mapCenter}
-                  zoom={selectedMapNode ? 13 : 7}
-                  options={{ streetViewControl: false, mapTypeControl: false, fullscreenControl: true }}
-                >
-                  {mappedNodes.map(node => (
-                    <Marker
-                      key={node.id}
-                      position={{ lat: Number(node.latitude), lng: Number(node.longitude) }}
-                      title={node.nodeName}
-                      onClick={() => setSelectedMapNode(node)}
-                    />
-                  ))}
-                </GoogleMap>
-              )}
+              <MapboxLocationMap
+                height="420px"
+                center={mapCenter}
+                zoom={13}
+                markers={[{
+                  id: selectedMapNode.id,
+                  name: selectedMapNode.nodeName,
+                  latitude: Number(selectedMapNode.latitude),
+                  longitude: Number(selectedMapNode.longitude)
+                }]}
+              />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap' }}>
                 <div>
                   <strong>{selectedMapNode.nodeName}</strong>
                   <div className="text-muted" style={{ fontSize: '0.85rem' }}>{selectedMapNode.location}</div>
                 </div>
-                <a
-                  className="btn btn-primary"
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${selectedMapNode.latitude},${selectedMapNode.longitude}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  ↗ Get Directions
-                </a>
               </div>
             </div>
           </div>

@@ -27,6 +27,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IProsumerService, ProsumerService>();
 builder.Services.AddScoped<IMicrogridNodeService, MicrogridNodeService>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddHostedService<MaintenanceExpirationService>();
 
 // --------------- JWT Authentication ---------------
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "DefaultSuperSecretKey12345678901234";
