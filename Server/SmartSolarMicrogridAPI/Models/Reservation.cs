@@ -13,6 +13,7 @@ namespace SmartSolarMicrogridAPI.Models
     /// <summary>
     /// Energy reservation/booking entity.
     /// </summary>
+    [BsonIgnoreExtraElements]
     public class Reservation
     {
         [BsonId]

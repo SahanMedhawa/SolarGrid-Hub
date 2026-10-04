@@ -252,3 +252,11 @@ export async function deactivateMyAccount() {
 export async function activateUser(id) {
   return apiRequest(`user/${id}/activate`, 'PATCH');
 }
+
+export async function verifyForgotPassword(usernameOrNic, loginType) {
+  return apiRequest('auth/forgot-password/verify', 'POST', { usernameOrNic, loginType });
+}
+
+export async function resetForgotPassword(usernameOrNic, loginType, newPassword) {
+  return apiRequest('auth/forgot-password/reset', 'POST', { usernameOrNic, loginType, newPassword });
+}
