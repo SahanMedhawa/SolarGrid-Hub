@@ -7,6 +7,7 @@
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
 
 /* ── CSS Variables (Design Tokens) ── */
 :root {
@@ -61,42 +62,46 @@
 }
 
 /* ── Global Reset & Base ── */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+/* Keep the legacy base styles in Tailwind's base layer so utility classes
+   can still control spacing on the public pages. */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
-html {
-  scroll-behavior: smooth;
-  -webkit-font-smoothing: antialiased;
-}
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+  }
 
-body {
-  font-family: var(--font-family);
-  background: var(--color-bg);
-  color: var(--color-text);
-  min-height: 100vh;
-  line-height: 1.6;
-  overflow-x: hidden;
-}
+  body {
+    font-family: var(--font-family);
+    background: var(--color-bg);
+    color: var(--color-text);
+    min-height: 100vh;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
 
-#root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
 
-a {
-  color: var(--color-primary-light);
-  text-decoration: none;
-  transition: color var(--transition-fast);
-}
+  a {
+    color: var(--color-primary-light);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+  }
 
-a:hover {
-  color: var(--color-primary);
+  a:hover {
+    color: var(--color-primary);
+  }
 }
 
 /* ── Scrollbar ── */
@@ -627,6 +632,22 @@ table .actions {
   gap: 1rem;
 }
 
+.slot-capacity-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.slot-capacity-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.slot-remove-btn {
+  flex: 0 0 auto;
+  margin-bottom: 1.25rem;
+}
+
 .form-error {
   color: var(--color-danger);
   font-size: 0.8rem;
@@ -683,173 +704,9 @@ table .actions {
   border-top: 1px solid var(--color-border);
 }
 
-/* ── Hero Section ── */
-.hero {
-  background: var(--gradient-hero);
-  min-height: 70vh;
-  display: flex;
-  align-items: center;
-  position: relative;
-  overflow: hidden;
-}
+/* ── Legacy overrides removed for clean Tailwind rendering ── */
 
-.hero::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -30%;
-  width: 80%;
-  height: 200%;
-  background: radial-gradient(ellipse, rgba(34,197,94,0.08), transparent 70%);
-  pointer-events: none;
-}
-
-.hero-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 3rem 1.5rem;
-  position: relative;
-  z-index: 1;
-}
-
-.hero-title {
-  font-size: clamp(2.5rem, 5vw, 4rem);
-  font-weight: 900;
-  line-height: 1.1;
-  margin-bottom: 1.25rem;
-}
-
-.hero-title .highlight {
-  background: var(--gradient-solar);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.hero-subtitle {
-  font-size: 1.2rem;
-  color: var(--color-text-secondary);
-  max-width: 600px;
-  margin-bottom: 2rem;
-  line-height: 1.7;
-}
-
-.hero-actions {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.hero-features {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.5rem;
-  margin-top: 4rem;
-}
-
-.hero-feature-card {
-  background: var(--color-bg-glass);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
-  transition: all var(--transition-base);
-}
-
-.hero-feature-card:hover {
-  transform: translateY(-6px);
-  border-color: var(--color-border-glow);
-  box-shadow: var(--shadow-glow);
-}
-
-.hero-feature-card .feature-icon {
-  width: 48px;
-  height: 48px;
-  background: var(--color-primary-glow);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-.hero-feature-card h3 {
-  font-size: 1.05rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
-.hero-feature-card p {
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-}
-
-/* ── Login Page ── */
-.auth-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--gradient-hero);
-  padding: 2rem;
-}
-
-.auth-card {
-  background: var(--gradient-card);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: 2.5rem;
-  width: 100%;
-  max-width: 440px;
-  box-shadow: var(--shadow-lg);
-}
-
-.auth-card .logo {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.auth-card .logo h2 {
-  font-size: 1.5rem;
-  font-weight: 800;
-  margin-top: 0.75rem;
-}
-
-.auth-card .logo p {
-  color: var(--color-text-muted);
-  font-size: 0.9rem;
-}
-
-.auth-card .role-tabs {
-  display: flex;
-  background: var(--color-surface);
-  border-radius: var(--radius-sm);
-  padding: 3px;
-  margin-bottom: 1.5rem;
-}
-
-.auth-card .role-tab {
-  flex: 1;
-  padding: 0.6rem;
-  text-align: center;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  background: transparent;
-  border: none;
-  color: var(--color-text-muted);
-}
-
-.auth-card .role-tab.active {
-  background: var(--gradient-primary);
-  color: white;
-  box-shadow: 0 2px 8px rgba(34,197,94,0.3);
-}
+/* ── Legacy auth page styles removed ── */
 
 /* ── Page Headers ── */
 .page-header {

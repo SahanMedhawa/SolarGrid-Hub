@@ -365,8 +365,11 @@ export default function OperatorPortal() {
                 <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
                   <div>Prosumer NIC: <strong>{matchedReservation.prosumerNic}</strong></div>
                   <div>Energy: <strong style={{ color: 'var(--color-primary)' }}>{matchedReservation.energyKWh} kWh</strong></div>
-                  <div>Slot ID: <strong>{matchedReservation.slotId}</strong></div>
+                  <div>Time Window: <strong>{matchedReservation.startTime && matchedReservation.endTime ? `${matchedReservation.startTime} - ${matchedReservation.endTime}` : 'Full Day'}</strong></div>
                   <div>Scheduled: <strong>{new Date(matchedReservation.reservationDate).toLocaleDateString()}</strong></div>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    Allocated Slots: <strong>{matchedReservation.allocatedSlotIds?.length > 0 ? `${matchedReservation.allocatedSlotIds.length} slot(s) allocated` : 'Auto-allocated'}</strong>
+                  </div>
                 </div>
               </div>
             )}
@@ -435,7 +438,7 @@ export default function OperatorPortal() {
                           NIC: {r.prosumerNic} ({r.energyKWh} kWh)
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
-                          Slot: {r.slotId} | {new Date(r.reservationDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          ⏱️ {r.startTime && r.endTime ? `${r.startTime} - ${r.endTime}` : 'Full day'} | {r.allocatedSlotIds?.length || 0} slot(s)
                         </div>
                       </div>
                       <button
@@ -472,55 +475,73 @@ export default function OperatorPortal() {
             <table>
               <thead>
                 <tr>
-                  <th>Booking ID</th>
                   <th>Prosumer NIC</th>
-                  <th>Node</th>
-                  <th>Slot ID</th>
-                  <th>Scheduled Date</th>
+                  <th>Station</th>
+                  <th>Date &amp; Time Window</th>
+                  <th>Slots</th>
                   <th>Energy (kWh)</th>
                   <th>Status</th>
                   <th>Operator Action</th>
                 </tr>
               </thead>
               <tbody>
-                {reservations.map(r => (
-                  <tr key={r.id}>
-                    <td className="truncate" style={{ maxWidth: '100px' }}>{r.id}</td>
-                    <td><strong>{r.prosumerNic}</strong></td>
-                    <td>{r.nodeId}</td>
-                    <td>{r.slotId}</td>
-                    <td>{new Date(r.reservationDate).toLocaleString()}</td>
-                    <td><strong style={{ color: 'var(--color-primary-light)' }}>{r.energyKWh} kWh</strong></td>
-                    <td><StatusBadge status={r.status} /></td>
-                    <td>
-                      {r.status === 'Pending' && (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => handleApprove(r.id)}
-                        >
-                          ✅ Approve Booking
-                        </button>
-                      )}
-                      {r.status === 'Approved' && (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          onClick={() => {
-                            setActiveTab('qr');
-                            setQrInput(r.qrCodeData || `SMTS-${r.id}-${r.prosumerNic}`);
-                            processQrString(r.qrCodeData || `SMTS-${r.id}-${r.prosumerNic}`);
-                          }}
-                        >
-                          ⚡ Complete Transfer
-                        </button>
-                      )}
-                      {r.status === 'Completed' && (
-                        <span style={{ fontSize: '0.8rem', color: 'var(--color-primary)' }}>
-                          ✓ Transferred
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {reservations.map(r => {
+                  const nodeName = nodes.find(n => n.id === r.nodeId)?.nodeName || r.nodeId;
+                  return (
+                    <tr key={r.id}>
+                      <td><strong>{r.prosumerNic}</strong></td>
+                      <td>{nodeName}</td>
+                      <td>
+                        <div>{new Date(r.reservationDate).toLocaleDateString()}</div>
+                        {r.startTime && r.endTime && (
+                          <small className="text-muted" style={{ display: 'block' }}>⏱️ {r.startTime} - {r.endTime}</small>
+                        )}
+                      </td>
+                      <td>
+                        {r.allocatedSlotNames?.length > 0 ? (
+                          <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                            {r.allocatedSlotNames.join(', ')}
+                          </span>
+                        ) : r.allocatedSlotIds?.length > 0 ? (
+                          <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                            {r.allocatedSlotIds.length} slot(s)
+                          </span>
+                        ) : (
+                          <span className="text-muted">Auto</span>
+                        )}
+                      </td>
+                      <td><strong style={{ color: 'var(--color-primary-light)' }}>{r.energyKWh} kWh</strong></td>
+                      <td><StatusBadge status={r.status} /></td>
+                      <td>
+                        {r.status === 'Pending' && (
+                          <button
+                            className="btn btn-primary btn-sm"
+                            onClick={() => handleApprove(r.id)}
+                          >
+                            ✅ Approve Booking
+                          </button>
+                        )}
+                        {r.status === 'Approved' && (
+                          <button
+                            className="btn btn-secondary btn-sm"
+                            onClick={() => {
+                              setActiveTab('qr');
+                              setQrInput(r.qrCodeData || `SMTS-${r.id}-${r.prosumerNic}`);
+                              processQrString(r.qrCodeData || `SMTS-${r.id}-${r.prosumerNic}`);
+                            }}
+                          >
+                            ⚡ Complete Transfer
+                          </button>
+                        )}
+                        {r.status === 'Completed' && (
+                          <span style={{ fontSize: '0.8rem', color: 'var(--color-primary)' }}>
+                            ✓ Transferred
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -547,7 +568,7 @@ export default function OperatorPortal() {
                 <div style={{ background: 'var(--color-surface)', padding: '0.75rem', borderRadius: 'var(--radius-sm)' }}>
                   <div className="text-muted" style={{ fontSize: '0.75rem' }}>BATTERY SLOTS</div>
                   <strong style={{ color: 'var(--color-primary-light)' }}>
-                    {n.availableBatterySlots} / {n.batterySlots} Avail
+                    {n.availableBatterySlots} / {n.batterySlots} Active
                   </strong>
                 </div>
               </div>
@@ -568,8 +589,9 @@ export default function OperatorPortal() {
                 <tr>
                   <th>Booking ID</th>
                   <th>Prosumer NIC</th>
-                  <th>Slot ID</th>
-                  <th>Transferred Date</th>
+                  <th>Station</th>
+                  <th>Date &amp; Time Window</th>
+                  <th>Slots</th>
                   <th>Energy Received</th>
                   <th>Status</th>
                 </tr>
@@ -577,16 +599,33 @@ export default function OperatorPortal() {
               <tbody>
                 {reservations
                   .filter(r => r.status === 'Completed')
-                  .map(r => (
-                    <tr key={r.id}>
-                      <td className="truncate" style={{ maxWidth: '120px' }}>{r.id}</td>
-                      <td><strong>{r.prosumerNic}</strong></td>
-                      <td>{r.slotId}</td>
-                      <td>{new Date(r.reservationDate).toLocaleString()}</td>
-                      <td><strong style={{ color: 'var(--color-primary)' }}>{r.energyKWh} kWh</strong></td>
-                      <td><StatusBadge status="Completed" /></td>
-                    </tr>
-                  ))}
+                  .map(r => {
+                    const nodeName = nodes.find(n => n.id === r.nodeId)?.nodeName || r.nodeId;
+                    return (
+                      <tr key={r.id}>
+                        <td className="truncate" style={{ maxWidth: '120px' }}>{r.id.substring(0, 8)}...</td>
+                        <td><strong>{r.prosumerNic}</strong></td>
+                        <td>{nodeName}</td>
+                        <td>
+                          <div>{new Date(r.reservationDate).toLocaleDateString()}</div>
+                          {r.startTime && r.endTime && (
+                            <small className="text-muted" style={{ display: 'block' }}>⏱️ {r.startTime} - {r.endTime}</small>
+                          )}
+                        </td>
+                        <td>
+                          {r.allocatedSlotIds?.length > 0 ? (
+                            <span className="badge badge-info" style={{ fontSize: '0.75rem' }}>
+                              {r.allocatedSlotIds.length} slot(s)
+                            </span>
+                          ) : (
+                            <span className="text-muted">—</span>
+                          )}
+                        </td>
+                        <td><strong style={{ color: 'var(--color-primary)' }}>{r.energyKWh} kWh</strong></td>
+                        <td><StatusBadge status="Completed" /></td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>

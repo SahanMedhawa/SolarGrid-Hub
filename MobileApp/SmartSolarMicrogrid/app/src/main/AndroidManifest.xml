@@ -3,11 +3,14 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -17,21 +20,22 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SmartSolarMicrogrid"
         android:usesCleartextTraffic="true">
+        <activity
+            android:name=".ui.prosumer.EditProfileActivity"
+            android:exported="false" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE" />
-
-        <!-- Login is the default launcher activity -->
+            android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE" /> <!-- Login is the default launcher activity -->
         <activity
             android:name=".ui.auth.LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity android:name=".ui.auth.RegisterActivity" />
         <activity android:name=".ui.prosumer.ProsumerMainActivity" />
         <activity android:name=".ui.prosumer.ProfileActivity" />
@@ -45,6 +49,9 @@
             android:name=".ui.operator.QrScannerActivity"
             android:screenOrientation="portrait"
             android:stateNotNeeded="true" />
+        <activity android:name=".ui.operator.ProfileActivity" />
+        <activity android:name=".ui.auth.ForgotPasswordActivity" />
+        <activity android:name=".ui.auth.ResetPasswordActivity" />
 
     </application>
 

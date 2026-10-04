@@ -134,7 +134,34 @@ export async function getNodeById(id) {
 
 // Creates a new microgrid node.
 export async function createNode(nodeData) {
-  return apiRequest('microgridnode', 'POST', nodeData);
+  const latitude = Number(nodeData.latitude);
+  const longitude = Number(nodeData.longitude);
+  const batterySlotCapacities = Array.isArray(nodeData.batterySlotCapacities)
+    ? nodeData.batterySlotCapacities.map(Number)
+    : [];
+  const slotSum = batterySlotCapacities.reduce((sum, value) => sum + value, 0);
+  const capacityKWh = Number(nodeData.capacityKWh) || slotSum;
+
+  if (!nodeData.nodeName?.trim() || !nodeData.location?.trim()) {
+    throw new Error('Node name and location are required.');
+  }
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error('Choose a valid node location.');
+  }
+  if (batterySlotCapacities.length === 0 || batterySlotCapacities.some(value => !Number.isFinite(value) || value <= 0)) {
+    throw new Error('Enter a positive capacity for every battery slot.');
+  }
+  if (!Number.isFinite(capacityKWh) || capacityKWh <= 0) {
+    throw new Error('Grid capacity must be greater than 0 kWh.');
+  }
+
+  return apiRequest('microgridnode', 'POST', {
+    ...nodeData,
+    latitude,
+    longitude,
+    capacityKWh,
+    batterySlotCapacities
+  });
 }
 
 // Updates a microgrid node.
@@ -142,9 +169,19 @@ export async function updateNode(id, nodeData) {
   return apiRequest(`microgridnode/${id}`, 'PUT', nodeData);
 }
 
+// Directly updates available battery slots on a microgrid node.
+export async function updateBatterySlots(id, availableBatterySlots) {
+  return apiRequest(`microgridnode/${id}/battery-slots`, 'PATCH', { availableBatterySlots });
+}
+
 // Deactivates a microgrid node (blocked if active reservations exist).
 export async function deactivateNode(id) {
   return apiRequest(`microgridnode/${id}`, 'DELETE');
+}
+
+// Reactivates a deactivated microgrid node (Backoffice only).
+export async function reactivateNode(id) {
+  return apiRequest(`microgridnode/${id}/activate`, 'PUT');
 }
 
 // ── Energy Slot endpoints ──
@@ -167,6 +204,11 @@ export async function createSlot(slotData) {
 // Updates an energy slot.
 export async function updateSlot(id, slotData) {
   return apiRequest(`energyslot/${id}`, 'PUT', slotData);
+}
+
+// Toggles maintenance status on an energy slot.
+export async function toggleSlotMaintenance(id, underMaintenance) {
+  return apiRequest(`energyslot/${id}/maintenance`, 'PUT', { underMaintenance });
 }
 
 // Deletes an energy slot.
@@ -199,6 +241,23 @@ export async function getReservationsByStatus(status) {
 // Gets the count of approved future reservations for a prosumer.
 export async function getApprovedFutureCount(nic) {
   return apiRequest(`reservation/prosumer/${nic}/future-count`);
+}
+
+// Gets the count of pending reservations for a prosumer.
+export async function getPendingCount(nic) {
+  return apiRequest(`reservation/prosumer/${nic}/pending-count`);
+}
+
+// Retrieves availability for a specific node, date, and time window.
+export async function getAvailability(nodeId, date, startTime, endTime) {
+  const params = new URLSearchParams({ nodeId, date, startTime, endTime });
+  return apiRequest(`reservation/availability?${params.toString()}`);
+}
+
+// Retrieves hourly capacity availability breakdown for a node on a date.
+export async function getHourlyAvailability(nodeId, date) {
+  const params = new URLSearchParams({ nodeId, date });
+  return apiRequest(`reservation/availability/hourly?${params.toString()}`);
 }
 
 // Creates a new reservation (7-day rule enforced server-side).

@@ -27,6 +27,7 @@ namespace SmartSolarMicrogridAPI.Models.DTOs
         public string Email { get; set; } = null!;
 
         [Required]
+        [RegularExpression(@"^(?:\+94|0)7\d{8}$")]
         public string Phone { get; set; } = null!;
 
         [Required]
