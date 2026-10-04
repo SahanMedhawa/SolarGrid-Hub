@@ -1191,6 +1191,13 @@ export default function ProsumerPortal() {
                     onChange={e =>
                       setProfileForm({ ...profileForm, phone: e.target.value })
                     }
+                    pattern="07[0-9]{8}"
+                    onInvalid={e =>
+                      e.currentTarget.setCustomValidity(
+                        'Enter a valid Sri Lankan mobile number (e.g. 0771234567).'
+                      )
+                    }
+                    onInput={e => e.currentTarget.setCustomValidity('')}
                     required
                   />
                 </div>
