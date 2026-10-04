@@ -91,7 +91,9 @@
             app:boxCornerRadiusBottomStart="12dp"
             app:boxCornerRadiusBottomEnd="12dp"
             app:boxStrokeColor="@color/register_border"
-            app:hintTextColor="@color/register_text_secondary">
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_id_card"
+            app:startIconTint="@color/icon_blue">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etNic"
@@ -119,7 +121,9 @@
             app:boxCornerRadiusBottomStart="12dp"
             app:boxCornerRadiusBottomEnd="12dp"
             app:boxStrokeColor="@color/register_border"
-            app:hintTextColor="@color/register_text_secondary">
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_person"
+            app:startIconTint="@color/icon_blue">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etFirstName"
@@ -146,7 +150,9 @@
             app:boxCornerRadiusBottomStart="12dp"
             app:boxCornerRadiusBottomEnd="12dp"
             app:boxStrokeColor="@color/register_border"
-            app:hintTextColor="@color/register_text_secondary">
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_person"
+            app:startIconTint="@color/icon_blue">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etLastName"
@@ -173,7 +179,9 @@
             app:boxCornerRadiusBottomStart="12dp"
             app:boxCornerRadiusBottomEnd="12dp"
             app:boxStrokeColor="@color/register_border"
-            app:hintTextColor="@color/register_text_secondary">
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_email"
+            app:startIconTint="@color/icon_blue">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etEmail"
@@ -200,7 +208,9 @@
             app:boxCornerRadiusBottomStart="12dp"
             app:boxCornerRadiusBottomEnd="12dp"
             app:boxStrokeColor="@color/register_border"
-            app:hintTextColor="@color/register_text_secondary">
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_phone"
+            app:startIconTint="@color/icon_blue">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etPhone"
@@ -227,7 +237,9 @@
             app:boxCornerRadiusBottomStart="12dp"
             app:boxCornerRadiusBottomEnd="12dp"
             app:boxStrokeColor="@color/register_border"
-            app:hintTextColor="@color/register_text_secondary">
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_location"
+            app:startIconTint="@color/icon_blue">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etAddress"
@@ -258,8 +270,10 @@
             app:boxCornerRadiusBottomEnd="12dp"
             app:boxStrokeColor="@color/register_border"
             app:endIconMode="password_toggle"
-            app:endIconTint="@color/register_text_secondary"
-            app:hintTextColor="@color/register_text_secondary">
+            app:endIconTint="@color/icon_blue"
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_lock"
+            app:startIconTint="@color/icon_blue">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etRegPassword"
@@ -287,8 +301,10 @@
             app:boxCornerRadiusBottomEnd="12dp"
             app:boxStrokeColor="@color/register_border"
             app:endIconMode="password_toggle"
-            app:endIconTint="@color/register_text_secondary"
-            app:hintTextColor="@color/register_text_secondary">
+            app:endIconTint="@color/icon_blue"
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_lock"
+            app:startIconTint="@color/icon_blue">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/etConfirmPassword"
@@ -305,14 +321,14 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSubmitRegister"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:backgroundTint="@color/register_primary"
+            android:layout_height="58dp"
+            android:backgroundTint="@color/energy_cyan"
             android:text="Complete Registration  →"
             android:textAllCaps="false"
-            android:textColor="@color/register_background"
-            android:textSize="15sp"
+            android:textColor="@color/white"
+            android:textSize="17sp"
             android:textStyle="bold"
-            app:cornerRadius="13dp" />
+            app:cornerRadius="18dp" />
 
         <!-- Sign in message -->
         <LinearLayout

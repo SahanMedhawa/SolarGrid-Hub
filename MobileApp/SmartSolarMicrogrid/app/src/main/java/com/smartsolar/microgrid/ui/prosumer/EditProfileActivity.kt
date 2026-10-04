@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.util.Patterns
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -51,6 +52,11 @@ class EditProfileActivity : AppCompatActivity() {
         // Save only when the user explicitly presses Save Changes
         btnSaveProfile.setOnClickListener {
             validateAndUpdateProfile()
+        }
+
+        // Back navigation to Profile
+        findViewById<ImageView>(R.id.ivEditProfileBack).setOnClickListener {
+            finish()
         }
 
         // Return to Profile without making changes

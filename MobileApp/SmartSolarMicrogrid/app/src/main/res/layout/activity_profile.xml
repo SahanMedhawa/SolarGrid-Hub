@@ -18,17 +18,39 @@
         android:paddingTop="24dp"
         android:paddingBottom="32dp">
 
-        <!-- Brand -->
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- Top Action Bar / Back Navigation -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:text="⚡  SMART SOLAR TRADING"
-            android:textColor="@color/register_primary"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.08"
-            android:layout_marginBottom="20dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <ImageView
+                android:id="@+id/ivProfileBack"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@color/register_text_primary"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Back to Dashboard" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="⚡  SMART SOLAR TRADING"
+                android:textColor="@color/register_primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginEnd="40dp" />
+
+        </LinearLayout>
 
         <!-- Page title -->
         <TextView
@@ -255,15 +277,162 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnUpdateProfile"
             android:layout_width="match_parent"
-            android:layout_height="54dp"
+            android:layout_height="58dp"
             android:text="✎  Edit Profile"
             android:textAllCaps="false"
-            android:textSize="14sp"
+            android:textSize="17sp"
             android:textStyle="bold"
-            android:textColor="@color/register_background"
-            android:backgroundTint="@color/register_primary"
-            app:cornerRadius="12dp"
+            android:textColor="@color/white"
+            android:backgroundTint="@color/energy_cyan"
+            app:cornerRadius="18dp"
             android:layout_marginBottom="28dp" />
+
+
+        <!-- ACCOUNT SECURITY heading -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ACCOUNT SECURITY"
+            android:textColor="@color/register_text_secondary"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08"
+            android:layout_marginBottom="10dp" />
+
+
+        <!-- ACCOUNT SECURITY CARD -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardBackgroundColor="@color/register_surface"
+            app:strokeColor="@color/register_border"
+            app:strokeWidth="1dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="28dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Change Password"
+                    android:textColor="@color/register_text_primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="14dp" />
+
+                <!-- Current Password -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layoutCurrentPassword"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:hint="Current Password *"
+                    app:boxBackgroundColor="@color/register_input"
+                    app:boxCornerRadiusTopStart="12dp"
+                    app:boxCornerRadiusTopEnd="12dp"
+                    app:boxCornerRadiusBottomStart="12dp"
+                    app:boxCornerRadiusBottomEnd="12dp"
+                    app:boxStrokeColor="@color/register_border"
+                    app:endIconMode="password_toggle"
+                    app:endIconTint="@color/icon_blue"
+                    app:hintTextColor="@color/register_text_secondary"
+                    app:startIconDrawable="@drawable/ic_lock"
+                    app:startIconTint="@color/icon_blue">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etCurrentPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPassword"
+                        android:textColor="@color/register_text_primary"
+                        android:textColorHint="@color/register_text_hint" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- New Password -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layoutNewPassword"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:hint="New Password *"
+                    app:boxBackgroundColor="@color/register_input"
+                    app:boxCornerRadiusTopStart="12dp"
+                    app:boxCornerRadiusTopEnd="12dp"
+                    app:boxCornerRadiusBottomStart="12dp"
+                    app:boxCornerRadiusBottomEnd="12dp"
+                    app:boxStrokeColor="@color/register_border"
+                    app:endIconMode="password_toggle"
+                    app:endIconTint="@color/icon_blue"
+                    app:hintTextColor="@color/register_text_secondary"
+                    app:startIconDrawable="@drawable/ic_lock"
+                    app:startIconTint="@color/icon_blue">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etNewPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPassword"
+                        android:textColor="@color/register_text_primary"
+                        android:textColorHint="@color/register_text_hint"
+                        android:hint="Minimum 6 characters" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Confirm New Password -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/layoutConfirmNewPassword"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:hint="Confirm New Password *"
+                    app:boxBackgroundColor="@color/register_input"
+                    app:boxCornerRadiusTopStart="12dp"
+                    app:boxCornerRadiusTopEnd="12dp"
+                    app:boxCornerRadiusBottomStart="12dp"
+                    app:boxCornerRadiusBottomEnd="12dp"
+                    app:boxStrokeColor="@color/register_border"
+                    app:endIconMode="password_toggle"
+                    app:endIconTint="@color/icon_blue"
+                    app:hintTextColor="@color/register_text_secondary"
+                    app:startIconDrawable="@drawable/ic_lock"
+                    app:startIconTint="@color/icon_blue">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etConfirmNewPassword"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textPassword"
+                        android:textColor="@color/register_text_primary"
+                        android:textColorHint="@color/register_text_hint" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <!-- Change Password Button -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnChangePassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="58dp"
+                    android:backgroundTint="@color/energy_cyan"
+                    android:text="Change Password"
+                    android:textAllCaps="false"
+                    android:textColor="@color/white"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="18dp" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
 
 
         <!-- Account heading -->
