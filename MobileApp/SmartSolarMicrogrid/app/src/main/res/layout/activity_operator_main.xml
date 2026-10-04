@@ -59,7 +59,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text=" ● LIVE GRID "
+                                android:text=" LIVE GRID "
                                 android:textSize="10sp"
                                 android:textStyle="bold"
                                 android:textColor="@color/status_completed"
@@ -99,7 +99,7 @@
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:text="⚡"
+                            android:text="GRID"
                             android:textSize="22sp"
                             android:gravity="center" />
                     </com.google.android.material.card.MaterialCardView>
@@ -325,7 +325,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⚡ Energy Transfer QR Verification"
+                    android:text="Energy Transfer QR Verification"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
@@ -344,7 +344,7 @@
                     android:id="@+id/btnScanQr"
                     android:layout_width="match_parent"
                     android:layout_height="54dp"
-                    android:text="📷  Open Camera QR Scanner"
+                    android:text="Open Camera QR Scanner"
                     android:textSize="15sp"
                     android:textStyle="bold"
                     app:cornerRadius="14dp"
@@ -395,6 +395,17 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnOpenNodeManagement"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Node Management"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="18dp"
+            app:cornerRadius="14dp"
+            android:backgroundTint="@color/accent"
+            android:textColor="@color/white" />
         <!-- Bookings Queue Title & Search -->
         <LinearLayout
             android:layout_width="match_parent"
@@ -417,7 +428,7 @@
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
-                android:text="🔄 Refresh"
+                android:text="Refresh"
                 android:textSize="12sp"
                 android:textColor="@color/primary" />
         </LinearLayout>
@@ -435,7 +446,7 @@
             android:id="@+id/btnMyProfile"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:text="👤 My Profile"
+            android:text="My Profile"
             app:cornerRadius="12dp"
             android:backgroundTint="@color/accent"
             android:textColor="@color/white"
