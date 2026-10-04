@@ -1,80 +1,261 @@
 package com.smartsolar.microgrid.ui.prosumer
 
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.mapbox.geojson.Point
+import com.mapbox.maps.CameraOptions
+import com.mapbox.maps.EdgeInsets
+import com.mapbox.maps.MapView
+import com.mapbox.maps.Style
+import com.mapbox.maps.plugin.annotation.annotations
+import com.mapbox.maps.plugin.annotation.generated.CircleAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.CircleAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.createCircleAnnotationManager
 import com.smartsolar.microgrid.R
 import com.smartsolar.microgrid.api.ApiClient
 import com.smartsolar.microgrid.data.SessionManager
 import org.json.JSONArray
+import java.util.Locale
 
-/**
- * Nearby Nodes Activity - displays active microgrid node locations
- * on a Google Maps view with capacity and battery slot details.
- */
-class NearbyNodesActivity : FragmentActivity(), OnMapReadyCallback {
+/** Shows active microgrids on Mapbox and in a detailed list. */
+class NearbyNodesActivity : FragmentActivity() {
 
-    private var mMap: GoogleMap? = null
+    private lateinit var mapView: MapView
+    private var circleAnnotationManager: CircleAnnotationManager? = null
+    private var mapIsReady = false
+    private var selectedNodeId: String? = null
     private lateinit var session: SessionManager
+    private lateinit var nodeAdapter: GridNodeAdapter
+    private lateinit var emptyState: TextView
+    private lateinit var gridCount: TextView
+    private val nodes = mutableListOf<GridNode>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         session = SessionManager(this)
         setContentView(R.layout.activity_nearby_nodes)
 
-        val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment
-        mapFragment?.getMapAsync(this)
+        mapView = findViewById(R.id.mapView)
+        mapView.mapboxMap.loadStyleUri(Style.MAPBOX_STREETS) {
+            circleAnnotationManager = mapView.annotations.createCircleAnnotationManager()
+            mapIsReady = true
+            renderMapSelection()
+        }
+
+        emptyState = findViewById(R.id.tvEmptyState)
+        gridCount = findViewById(R.id.tvGridCount)
+        findViewById<View>(R.id.btnBack).setOnClickListener { finish() }
+        findViewById<View>(R.id.btnMapOverview).setOnClickListener {
+            selectedNodeId = null
+            renderMapSelection()
+        }
+        nodeAdapter = GridNodeAdapter { node -> focusNode(node) }
+        findViewById<RecyclerView>(R.id.rvGridNodes).apply {
+            layoutManager = LinearLayoutManager(this@NearbyNodesActivity)
+            adapter = nodeAdapter
+        }
+
+        loadNodes()
     }
 
-    // Called when the Google Map is ready; enable zoom controls and load node markers
-    override fun onMapReady(googleMap: GoogleMap) {
-        mMap = googleMap
-        mMap?.uiSettings?.isZoomControlsEnabled = true
-        loadNodeMarkers()
-    }
-
-    // Fetch active microgrid nodes from the central API and plot them as map markers
-    private fun loadNodeMarkers() {
+    private fun loadNodes() {
         ApiClient.request("microgridnode/active", "GET", null, session.getToken(), object : ApiClient.ApiCallback {
             override fun onSuccess(response: String) {
                 try {
-                    val arr = JSONArray(response)
-                    var firstNode: LatLng? = null
-                    for (i in 0 until arr.length()) {
-                        val node = arr.getJSONObject(i)
-                        val lat = node.getDouble("latitude")
-                        val lng = node.getDouble("longitude")
-                        val name = node.getString("nodeName")
-                        val details = "Capacity: ${node.getDouble("capacityKWh")} kWh | Slots: ${node.getInt("availableBatterySlots")}"
-
-                        val pos = LatLng(lat, lng)
-                        if (firstNode == null) firstNode = pos
-
-                        mMap?.addMarker(
-                            MarkerOptions()
-                                .position(pos)
-                                .title(name)
-                                .snippet(details)
-                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                    val array = JSONArray(response)
+                    nodes.clear()
+                    for (index in 0 until array.length()) {
+                        val item = array.getJSONObject(index)
+                        nodes.add(
+                            GridNode(
+                                id = item.optString("id"),
+                                name = item.optString("nodeName", "Microgrid"),
+                                location = item.optString("location", "Location unavailable"),
+                                latitude = item.optDouble("latitude", 0.0),
+                                longitude = item.optDouble("longitude", 0.0),
+                                capacityKWh = item.optDouble("capacityKWh", 0.0),
+                                totalSlots = item.optInt("batterySlots", 0),
+                                availableSlots = item.optInt("availableBatterySlots", 0),
+                                schedule = item.optString("schedule", "Not specified")
+                            )
                         )
                     }
 
-                    if (firstNode != null) {
-                        mMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(firstNode, 12f))
-                    }
-                } catch (_: Exception) { }
+                    gridCount.text = "${nodes.size} ${if (nodes.size == 1) "grid" else "grids"} found"
+                    emptyState.visibility = if (nodes.isEmpty()) View.VISIBLE else View.GONE
+                    emptyState.text = "No active grid nodes are available right now."
+                    nodeAdapter.submitList(nodes.toList())
+                    renderMapSelection()
+                } catch (_: Exception) {
+                    showLoadError("Could not read grid node details.")
+                }
             }
 
             override fun onError(error: String) {
-                Toast.makeText(this@NearbyNodesActivity, "Failed to load node locations", Toast.LENGTH_SHORT).show()
+                showLoadError("Could not load grid nodes. Check your connection and try again.")
+                Toast.makeText(this@NearbyNodesActivity, error, Toast.LENGTH_SHORT).show()
             }
         })
+    }
+
+    private fun showLoadError(message: String) {
+        gridCount.text = "Unavailable"
+        emptyState.text = message
+        emptyState.visibility = View.VISIBLE
+        nodes.clear()
+        nodeAdapter.submitList(emptyList())
+        renderMapSelection()
+    }
+
+    private fun focusNode(node: GridNode) {
+        if (!node.hasValidCoordinates()) {
+            Toast.makeText(this, "This grid has no valid map location.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        selectedNodeId = node.id
+        renderMapSelection()
+    }
+
+    private fun renderMapSelection() {
+        if (!mapIsReady) return
+
+        val selectedNode = nodes.firstOrNull { it.id == selectedNodeId && it.hasValidCoordinates() }
+        val visibleNodes = if (selectedNode != null) listOf(selectedNode) else nodes.filter { it.hasValidCoordinates() }
+        val points = visibleNodes.map { Point.fromLngLat(it.longitude, it.latitude) }
+        circleAnnotationManager?.let { manager ->
+            manager.deleteAll()
+            points.forEach { point ->
+                manager.create(
+                    CircleAnnotationOptions()
+                        .withPoint(point)
+                        .withCircleColor("#16A34A")
+                        .withCircleRadius(9.0)
+                        .withCircleStrokeColor("#FFFFFF")
+                        .withCircleStrokeWidth(3.0)
+                        .withDraggable(false)
+                )
+            }
+        }
+
+        if (selectedNode != null) {
+            mapView.mapboxMap.setCamera(
+                CameraOptions.Builder()
+                    .center(points.first())
+                    .zoom(15.0)
+                    .build()
+            )
+        } else if (points.isNotEmpty()) {
+            mapView.mapboxMap.cameraForCoordinates(
+                points,
+                CameraOptions.Builder().build(),
+                EdgeInsets(36.0, 36.0, 36.0, 36.0),
+                15.0,
+                null
+            ) { fittedCamera ->
+                mapView.mapboxMap.setCamera(fittedCamera)
+            }
+        } else {
+            mapView.mapboxMap.setCamera(
+                CameraOptions.Builder()
+                    .center(Point.fromLngLat(DEFAULT_LONGITUDE, DEFAULT_LATITUDE))
+                    .zoom(12.0)
+                    .build()
+            )
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (::mapView.isInitialized) mapView.onStart()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::mapView.isInitialized) mapView.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+    }
+
+    override fun onStop() {
+        if (::mapView.isInitialized) mapView.onStop()
+        super.onStop()
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+        if (::mapView.isInitialized) mapView.onLowMemory()
+    }
+
+    override fun onDestroy() {
+        if (::mapView.isInitialized) mapView.onDestroy()
+        super.onDestroy()
+    }
+
+    private fun GridNode.hasValidCoordinates(): Boolean =
+        latitude in -90.0..90.0 && longitude in -180.0..180.0 && (latitude != 0.0 || longitude != 0.0)
+
+    private fun formatCapacity(capacity: Double): String = String.format(Locale.getDefault(), "%.1f", capacity)
+
+    companion object {
+        private const val DEFAULT_LATITUDE = 6.9287630357059715
+        private const val DEFAULT_LONGITUDE = 79.83832121953127
+    }
+
+    private data class GridNode(
+        val id: String,
+        val name: String,
+        val location: String,
+        val latitude: Double,
+        val longitude: Double,
+        val capacityKWh: Double,
+        val totalSlots: Int,
+        val availableSlots: Int,
+        val schedule: String
+    )
+
+    private inner class GridNodeAdapter(
+        private val onNodeClick: (GridNode) -> Unit
+    ) : RecyclerView.Adapter<GridNodeAdapter.NodeViewHolder>() {
+        private val items = mutableListOf<GridNode>()
+
+        fun submitList(newItems: List<GridNode>) {
+            items.clear()
+            items.addAll(newItems)
+            notifyDataSetChanged()
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NodeViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_grid_node, parent, false)
+            return NodeViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: NodeViewHolder, position: Int) {
+            val node = items[position]
+            holder.name.text = node.name
+            holder.location.text = "⌖  ${node.location}"
+            holder.capacity.text = "Total capacity  ·  ${formatCapacity(node.capacityKWh)} kWh"
+            holder.slots.text = "Battery slots  ·  ${node.availableSlots} available of ${node.totalSlots}"
+            holder.schedule.text = "Operating hours  ·  ${node.schedule}"
+            holder.itemView.setOnClickListener { onNodeClick(node) }
+        }
+
+        override fun getItemCount(): Int = items.size
+
+        inner class NodeViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val name: TextView = view.findViewById(R.id.tvNodeName)
+            val location: TextView = view.findViewById(R.id.tvNodeLocation)
+            val capacity: TextView = view.findViewById(R.id.tvNodeCapacity)
+            val slots: TextView = view.findViewById(R.id.tvNodeSlots)
+            val schedule: TextView = view.findViewById(R.id.tvNodeSchedule)
+        }
     }
 }

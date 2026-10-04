@@ -1,73 +1,55 @@
-import { useState, useRef } from 'react';
-import { GoogleMap, Marker, Autocomplete, useJsApiLoader } from '@react-google-maps/api';
+import MapboxLocationMap from './MapboxLocationMap';
 
-// Must be defined outside the component to avoid re-loading the script on every render.
-const LIBRARIES = ['places'];
-const DEFAULT_CENTER = { lat: 7.8731, lng: 80.7718 }; // Sri Lanka
-const MAP_STYLE = { width: '100%', height: '280px', borderRadius: '8px' };
+const DEFAULT_CENTER = { lat: 7.8731, lng: 80.7718 };
+const ACCESS_TOKEN = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
 
-// Lets the user search for a place or click the map to pick coordinates.
-// onChange receives { latitude, longitude, address }.
 export default function LocationPicker({ latitude, longitude, onChange }) {
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: LIBRARIES
-  });
-  const autocompleteRef = useRef(null);
-  const mapRef = useRef(null);
-  const [searchText, setSearchText] = useState('');
+  const hasPosition = latitude !== '' && longitude !== '' && Number.isFinite(Number(latitude)) && Number.isFinite(Number(longitude));
+  const position = hasPosition
+    ? { latitude: Number(latitude), longitude: Number(longitude) }
+    : null;
+  const center = position
+    ? { lat: position.latitude, lng: position.longitude }
+    : DEFAULT_CENTER;
 
-  const hasPosition = latitude !== '' && longitude !== '' && !isNaN(latitude) && !isNaN(longitude);
-  const position = hasPosition ? { lat: Number(latitude), lng: Number(longitude) } : null;
-
-  // Map click: set coordinates and reverse-geocode an address.
-  function handleMapClick(e) {
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
-    const geocoder = new window.google.maps.Geocoder();
-    geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-      const address = status === 'OK' && results[0] ? results[0].formatted_address : '';
-      onChange({ latitude: lat.toFixed(6), longitude: lng.toFixed(6), address });
-    });
-  }
-
-  // Search box: pick a suggested place.
-  function handlePlaceChanged() {
-    const place = autocompleteRef.current?.getPlace();
-    if (!place?.geometry?.location) return;
-    const lat = place.geometry.location.lat();
-    const lng = place.geometry.location.lng();
-    mapRef.current?.panTo({ lat, lng });
-    mapRef.current?.setZoom(15);
+  async function handleLocationSelect(location) {
+    let address = location.address || '';
+    if (!address && ACCESS_TOKEN) {
+      try {
+        const url = new URL('https://api.mapbox.com/search/geocode/v6/reverse');
+        url.searchParams.set('longitude', String(location.longitude));
+        url.searchParams.set('latitude', String(location.latitude));
+        url.searchParams.set('access_token', ACCESS_TOKEN);
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          address = data.features?.[0]?.properties?.full_address || data.features?.[0]?.properties?.name || '';
+        }
+      } catch {
+        // The selected coordinates are still saved if address lookup is unavailable.
+      }
+    }
     onChange({
-      latitude: lat.toFixed(6),
-      longitude: lng.toFixed(6),
-      address: place.formatted_address || place.name || ''
+      latitude: Number(location.latitude).toFixed(6),
+      longitude: Number(location.longitude).toFixed(6),
+      address: address || undefined
     });
-    setSearchText('');
   }
-
-  // Marker dragged: update coordinates.
-  function handleDragEnd(e) {
-    onChange({ latitude: e.latLng.lat().toFixed(6), longitude: e.latLng.lng().toFixed(6), address: undefined });
-  }
-
-  if (loadError) return <p className="text-muted">Failed to load Google Maps.</p>;
-  if (!isLoaded) return <p className="text-muted">Loading map...</p>;
 
   return (
     <div className="form-group">
-      <GoogleMap
-        mapContainerStyle={MAP_STYLE}
-        center={position || DEFAULT_CENTER}
+      <MapboxLocationMap
+        center={center}
         zoom={position ? 15 : 7}
-        onLoad={map => (mapRef.current = map)}
-        onClick={handleMapClick}
-      >
-        {position && <Marker position={position} draggable onDragEnd={handleDragEnd} />}
-      </GoogleMap>
+        height="280px"
+        markerPosition={position}
+        draggableMarker
+        onLocationSelect={handleLocationSelect}
+      />
       <small className="text-muted">
-        {hasPosition ? `Selected: ${Number(latitude).toFixed(5)}, ${Number(longitude).toFixed(5)}` : 'Click the map or search to select a location.'}
+        {hasPosition
+          ? `Selected: ${Number(latitude).toFixed(5)}, ${Number(longitude).toFixed(5)}`
+          : 'Search for a place or click the map to select a location.'}
       </small>
     </div>
   );
