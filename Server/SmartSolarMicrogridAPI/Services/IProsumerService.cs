@@ -29,6 +29,9 @@ namespace SmartSolarMicrogridAPI.Services
         // Updates prosumer profile.
         Task<bool> UpdateAsync(string nic, ProsumerUpdateRequest request);
 
+        // Changes a prosumer's own password after verifying the current password.
+        Task<bool> ChangePasswordAsync(string nic, string currentPassword, string newPassword);
+
         // Requests account deactivation (sets status to "Deactivated").
         Task<bool> DeactivateAsync(string nic);
 

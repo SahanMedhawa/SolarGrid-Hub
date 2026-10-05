@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartSolarMicrogridAPI.Models;
 using SmartSolarMicrogridAPI.Models.DTOs;
 using SmartSolarMicrogridAPI.Services;
+using System.Security.Claims;
 
 namespace SmartSolarMicrogridAPI.Controllers
 {
@@ -38,7 +39,7 @@ namespace SmartSolarMicrogridAPI.Controllers
         public async Task<IActionResult> GetAll()
         {
             var prosumers = await _prosumerService.GetAllAsync();
-            return Ok(prosumers);
+            return Ok(prosumers.Select(ToSafeResponse));
         }
 
         // GET api/prosumer/{nic} — Returns a prosumer by NIC.
@@ -49,7 +50,7 @@ namespace SmartSolarMicrogridAPI.Controllers
             var prosumer = await _prosumerService.GetByNicAsync(nic);
             if (prosumer == null)
                 return NotFound(new { message = "Prosumer not found." });
-            return Ok(prosumer);
+            return Ok(ToSafeResponse(prosumer));
         }
 
         // GET api/prosumer/status/{status} — Returns prosumers by status.
@@ -72,7 +73,7 @@ namespace SmartSolarMicrogridAPI.Controllers
                 return Conflict(new { message = "A prosumer with this NIC already exists." });
 
             var prosumer = await _prosumerService.RegisterAsync(request);
-            return CreatedAtAction(nameof(GetByNic), new { nic = prosumer.NIC }, prosumer);
+            return CreatedAtAction(nameof(GetByNic), new { nic = prosumer.NIC }, ToSafeResponse(prosumer));
         }
 
         // PUT api/prosumer/{nic} — Updates prosumer profile.
@@ -84,6 +85,35 @@ namespace SmartSolarMicrogridAPI.Controllers
             if (!success)
                 return NotFound(new { message = "Prosumer not found." });
             return Ok(new { message = "Prosumer updated successfully." });
+        }
+
+        // PATCH api/prosumer/password — changes the authenticated prosumer's own password.
+        [HttpPatch("password")]
+        [Authorize(Roles = "Prosumer")]
+        public async Task<IActionResult> ChangeOwnPassword([FromBody] ChangeProsumerPasswordRequest request)
+        {
+            var nic = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(nic))
+                return Unauthorized(new { message = "Authenticated prosumer identity was not found." });
+
+            try
+            {
+                var success = await _prosumerService.ChangePasswordAsync(
+                    nic, request.CurrentPassword, request.NewPassword);
+
+                if (!success)
+                    return NotFound(new { message = "Prosumer profile not found." });
+
+                return Ok(new { message = "Password changed successfully." });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // PUT api/prosumer/{nic}/deactivate — Requests deactivation.
@@ -126,5 +156,25 @@ namespace SmartSolarMicrogridAPI.Controllers
                 return NotFound(new { message = "Prosumer not found." });
             return Ok(new { message = "Prosumer account activated." });
         }
+
+        private static object ToSafeResponse(Prosumer prosumer) => new
+        {
+            prosumer.Id,
+            prosumer.NIC,
+            prosumer.FirstName,
+            prosumer.LastName,
+            prosumer.Email,
+            prosumer.Phone,
+            prosumer.Address,
+            prosumer.Status,
+            prosumer.CreatedAt,
+            prosumer.UpdatedAt
+        };
+    }
+
+    public class ChangeProsumerPasswordRequest
+    {
+        public string CurrentPassword { get; set; } = null!;
+        public string NewPassword { get; set; } = null!;
     }
 }
