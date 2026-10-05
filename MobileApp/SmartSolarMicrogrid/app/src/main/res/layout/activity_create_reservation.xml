@@ -21,47 +21,6 @@
             android:textColor="@color/primary"
             android:layout_marginBottom="4dp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Reserve an energy drop-off or charging storage slot"
-            android:textSize="14sp"
-            android:textColor="@color/text_secondary"
-            android:layout_marginBottom="20dp" />
-
-        <!-- Policy Card Banner -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="14dp"
-            app:cardBackgroundColor="@color/md_theme_light_primaryContainer"
-            app:cardElevation="0dp"
-            android:layout_marginBottom="20dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="14dp">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="ℹ️ Reservation Rules"
-                    android:textStyle="bold"
-                    android:textSize="13sp"
-                    android:textColor="@color/md_theme_light_onPrimaryContainer"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="• Scheduled slots must be within the next 7 days.\n• Modifications or cancellations require at least 12 hours' notice."
-                    android:textSize="12sp"
-                    android:textColor="@color/md_theme_light_onPrimaryContainer" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
         <!-- Station Selection Label & Spinner Card -->
         <TextView
             android:layout_width="wrap_content"
@@ -90,11 +49,11 @@
                 android:paddingEnd="12dp" />
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Time Window Selection: Start Time and End Time -->
+        <!-- Time Window Selection -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Booking Time Window"
+            android:text="Time"
             android:textStyle="bold"
             android:textSize="14sp"
             android:textColor="@color/text_primary"
@@ -141,13 +100,58 @@
                     android:layout_height="wrap_content"
                     android:textColor="@color/text_primary"
                     android:focusable="false"
-                    android:clickable="true" />
+                    android:clickable="false" />
             </com.google.android.material.textfield.TextInputLayout>
         </LinearLayout>
 
-        <!-- Availability Status Preview Card -->
+        <!-- Availability Status -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardAvailabilityStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/card_background"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="4dp">
+
+                <TextView
+                    android:id="@+id/tvAvailabilityFeedback"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="@color/primary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Date Picker Field -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Reservation Date"
+            app:endIconMode="custom"
+            app:endIconDrawable="@android:drawable/ic_menu_my_calendar"
+            app:endIconTint="@color/primary"
+            android:layout_marginBottom="16dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etDate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:focusable="false"
+                android:clickable="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="12dp"
@@ -164,49 +168,27 @@
                 android:padding="12dp">
 
                 <TextView
-                    android:id="@+id/tvOperatingHours"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Operating Hours: 06:00 - 18:00"
-                    android:textSize="12sp"
-                    android:textColor="@color/text_secondary"
-                    android:layout_marginBottom="4dp" />
-
-                <TextView
-                    android:id="@+id/tvAvailabilityFeedback"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Select date &amp; times to check slot availability. Slots are auto-allocated dynamically."
-                    android:textSize="13sp"
+                    android:text="Available hours"
                     android:textStyle="bold"
-                    android:textColor="@color/primary" />
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginBottom="2dp" />
+
+                <LinearLayout
+                    android:id="@+id/llHourlySlotsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
-        <!-- Date Picker Field -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Reservation Date (within 7 days)"
-            app:endIconMode="custom"
-            app:endIconDrawable="@android:drawable/ic_menu_my_calendar"
-            app:endIconTint="@color/primary"
-            android:layout_marginBottom="16dp">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/etDate"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/text_primary"
-                android:focusable="false"
-                android:clickable="true" />
-        </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Battery Slot Selection Section -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Choose Station Battery Storage Slot(s)"
+            android:text="Battery slots"
             android:textStyle="bold"
             android:textSize="14sp"
             android:textColor="@color/text_primary"
@@ -215,7 +197,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Tap available slots to allocate your energy drop-off. Capacity is calculated directly from your selected slots."
+            android:text="Select one or more available slots"
             android:textSize="12sp"
             android:textColor="@color/text_secondary"
             android:layout_marginBottom="10dp" />
@@ -260,7 +242,7 @@
                     android:id="@+id/tvSelectedSlotsCount"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="CALCULATED ENERGY TO SUPPLY (0 SLOTS SELECTED)"
+                    android:text="TOTAL"
                     android:textSize="10sp"
                     android:textStyle="bold"
                     android:textColor="@color/md_theme_light_onPrimaryContainer" />
@@ -278,7 +260,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="⚡ Determined directly from your physical battery slot choices."
+                    android:text="Selected capacity"
                     android:textSize="11sp"
                     android:textColor="@color/md_theme_light_onPrimaryContainer"
                     android:layout_marginTop="2dp" />

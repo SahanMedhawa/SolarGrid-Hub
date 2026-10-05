@@ -486,16 +486,6 @@ namespace SmartSolarMicrogridAPI.Services
                 return (false, "Cannot update a completed energy transfer.");
             }
 
-            // Business Rule: Updates require at least 12 hours' notice before current reservation date+time
-            var reservationDateTime = reservation.ReservationDate.Date;
-            if (TryParseTime(reservation.StartTime, out var resStart))
-                reservationDateTime = reservationDateTime.Add(resStart.ToTimeSpan());
-
-            if (reservationDateTime <= DateTime.UtcNow.AddHours(12))
-            {
-                return (false, "Updates require at least 12 hours' notice before the scheduled reservation.");
-            }
-
             var updateBuilder = Builders<Reservation>.Update
                 .Set(r => r.UpdatedAt, DateTime.UtcNow);
 
@@ -540,7 +530,6 @@ namespace SmartSolarMicrogridAPI.Services
             {
                 var newDate = request.ReservationDate.Value;
 
-                // Validate new date is at least 12 hours in advance
                 if (newDate.Date < DateTime.UtcNow.Date)
                     return (false, "New reservation date cannot be in the past.");
 
@@ -550,6 +539,15 @@ namespace SmartSolarMicrogridAPI.Services
 
                 updateBuilder = updateBuilder.Set(r => r.ReservationDate, newDate.Date);
             }
+
+            // The notice rule applies to the requested target slot, not the
+            // reservation's previous date and time.
+            if (!TryParseTime(currentStartTime, out var targetStart))
+                return (false, "Start time must be a valid time in HH:mm format.");
+
+            var targetDateTime = currentDate.Date.Add(targetStart.ToTimeSpan());
+            if (targetDateTime <= DateTime.UtcNow.AddHours(12))
+                return (false, "Updates require at least 12 hours' notice before the new reservation time.");
 
             if (!string.IsNullOrWhiteSpace(request.StartTime))
                 updateBuilder = updateBuilder.Set(r => r.StartTime, request.StartTime);

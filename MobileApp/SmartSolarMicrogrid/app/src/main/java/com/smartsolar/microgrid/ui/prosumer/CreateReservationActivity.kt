@@ -44,16 +44,23 @@ class CreateReservationActivity : AppCompatActivity() {
         val isAvailable: Boolean
     )
 
+    data class HourlySlotUI(
+        val startTime: String,
+        val endTime: String,
+        val availableKWh: Double,
+        val isWithinOperatingHours: Boolean
+    )
+
     private lateinit var spinnerNodes: Spinner
     private lateinit var etDate: EditText
     private lateinit var etStartTime: EditText
     private lateinit var etEndTime: EditText
     private lateinit var etEnergyKWh: EditText
-    private lateinit var tvOperatingHours: TextView
     private lateinit var tvAvailabilityFeedback: TextView
     private lateinit var llSlotsListContainer: LinearLayout
     private lateinit var tvSelectedSlotsCount: TextView
     private lateinit var tvCalculatedEnergyTotal: TextView
+    private lateinit var llHourlySlotsContainer: LinearLayout
     private lateinit var session: SessionManager
 
     private val nodesList = ArrayList<MicrogridNode>()
@@ -62,6 +69,9 @@ class CreateReservationActivity : AppCompatActivity() {
 
     private val availableSlotsList = ArrayList<BatterySlotUI>()
     private val selectedSlotIds = HashSet<String>()
+    private val hourlySlotsList = ArrayList<HourlySlotUI>()
+    private var hourlyTotalCapacityKWh = 0.0
+    private var availabilityRequestVersion = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,11 +83,11 @@ class CreateReservationActivity : AppCompatActivity() {
         etStartTime = findViewById(R.id.etStartTime)
         etEndTime = findViewById(R.id.etEndTime)
         etEnergyKWh = findViewById(R.id.etEnergyKWh)
-        tvOperatingHours = findViewById(R.id.tvOperatingHours)
         tvAvailabilityFeedback = findViewById(R.id.tvAvailabilityFeedback)
         llSlotsListContainer = findViewById(R.id.llSlotsListContainer)
         tvSelectedSlotsCount = findViewById(R.id.tvSelectedSlotsCount)
         tvCalculatedEnergyTotal = findViewById(R.id.tvCalculatedEnergyTotal)
+        llHourlySlotsContainer = findViewById(R.id.llHourlySlotsContainer)
         val btnSubmit: Button = findViewById(R.id.btnSubmitReservation)
 
         // Set default time window: 08:00 - 09:00 (strictly 1-hour reservation)
@@ -86,18 +96,12 @@ class CreateReservationActivity : AppCompatActivity() {
 
         etDate.setOnClickListener { showDatePicker() }
         etStartTime.setOnClickListener { showStartTimePicker() }
-        etEndTime.setOnClickListener {
-            Toast.makeText(this, "Every energy reservation is exactly 1 hour. Tap Start Time to select.", Toast.LENGTH_SHORT).show()
-        }
         btnSubmit.setOnClickListener { submitBooking() }
 
         spinnerNodes.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 if (position in nodesList.indices) {
-                    val node = nodesList[position]
-                    val sched = if (node.schedule.isNotEmpty()) node.schedule else "06:00-18:00"
-                    tvOperatingHours.text = "Operating Hours: $sched"
-                    loadStationSlotsDirectly(node.id)
+                    loadHourlyAvailability()
                     checkAvailability()
                 }
             }
@@ -120,6 +124,7 @@ class CreateReservationActivity : AppCompatActivity() {
                 selectedCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
                 val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.US)
                 etDate.setText(sdf.format(selectedCalendar.time))
+                loadHourlyAvailability()
                 checkAvailability()
             },
             selectedCalendar.get(Calendar.YEAR),
@@ -147,6 +152,7 @@ class CreateReservationActivity : AppCompatActivity() {
                 val endFormatted = if (endHour >= 24) "24:00" else String.format(Locale.US, "%02d:%02d", endHour, minute)
                 etStartTime.setText(startFormatted)
                 etEndTime.setText(endFormatted)
+                renderHourlySlots()
                 checkAvailability()
             },
             defaultHour,
@@ -192,9 +198,6 @@ class CreateReservationActivity : AppCompatActivity() {
                         val requestedNodeId = intent.getStringExtra("nodeId")
                         val requestedIndex = nodesList.indexOfFirst { it.id == requestedNodeId }
                         if (requestedIndex >= 0) spinnerNodes.setSelection(requestedIndex)
-                        val firstNode = nodesList[0]
-                        val sched = if (firstNode.schedule.isNotEmpty()) firstNode.schedule else "06:00-18:00"
-                        tvOperatingHours.text = "Operating Hours: $sched"
                     }
                 } catch (_: Exception) { }
             }
@@ -205,37 +208,153 @@ class CreateReservationActivity : AppCompatActivity() {
         })
     }
 
-    // Query actual station battery slots directly upon station selection
-    private fun loadStationSlotsDirectly(nodeId: String) {
-        ApiClient.request("energyslot/node/$nodeId", "GET", null, session.getToken(), object : ApiClient.ApiCallback {
-            override fun onSuccess(response: String) {
-                try {
-                    val arr = JSONArray(response)
-                    availableSlotsList.clear()
-                    selectedSlotIds.clear()
-                    for (i in 0 until arr.length()) {
-                        val sObj = arr.getJSONObject(i)
-                        val status = sObj.optString("status", "Available")
-                        val isMaint = status.equals("Maintenance", ignoreCase = true)
-                        availableSlotsList.add(
-                            BatterySlotUI(
-                                id = sObj.optString("id", ""),
-                                slotNumber = sObj.optInt("slotNumber", i + 1),
-                                capacityKWh = sObj.optDouble("availableKWh", 0.0),
-                                status = status,
-                                isBooked = false,
-                                isAvailable = !isMaint
-                            )
-                        )
+    private fun loadHourlyAvailability() {
+        if (nodesList.isEmpty() || spinnerNodes.selectedItemPosition !in nodesList.indices) return
+        val dateStr = etDate.text.toString().trim()
+        if (dateStr.isEmpty()) {
+            hourlySlotsList.clear()
+            hourlyTotalCapacityKWh = 0.0
+            renderHourlySlots()
+            return
+        }
+
+        val node = nodesList[spinnerNodes.selectedItemPosition]
+        ApiClient.request(
+            "reservation/availability/hourly?nodeId=${node.id}&date=$dateStr",
+            "GET",
+            null,
+            session.getToken(),
+            object : ApiClient.ApiCallback {
+                override fun onSuccess(response: String) {
+                    try {
+                        val obj = JSONObject(response)
+                        hourlyTotalCapacityKWh = obj.optDouble("totalCapacityKWh", 0.0)
+                        val slots = obj.optJSONArray("hourlySlots")
+                        hourlySlotsList.clear()
+                        if (slots != null) {
+                            for (i in 0 until slots.length()) {
+                                val slot = slots.getJSONObject(i)
+                                if (slot.optBoolean("isWithinOperatingHours", false) &&
+                                    slot.optDouble("availableKWh", 0.0) > 0
+                                ) {
+                                    hourlySlotsList.add(
+                                        HourlySlotUI(
+                                            startTime = slot.optString("startTime", ""),
+                                            endTime = slot.optString("endTime", ""),
+                                            availableKWh = slot.optDouble("availableKWh", 0.0),
+                                            isWithinOperatingHours = true
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                        runOnUiThread {
+                            val selected = hourlySlotsList.any {
+                                it.startTime == etStartTime.text.toString() && it.endTime == etEndTime.text.toString()
+                            }
+                            if (!selected && hourlySlotsList.isNotEmpty()) {
+                                val first = hourlySlotsList.first()
+                                etStartTime.setText(first.startTime)
+                                etEndTime.setText(first.endTime)
+                            }
+                            renderHourlySlots()
+                            checkAvailability()
+                        }
+                    } catch (_: Exception) {
+                        runOnUiThread {
+                            hourlySlotsList.clear()
+                            hourlyTotalCapacityKWh = 0.0
+                            renderHourlySlots()
+                        }
                     }
+                }
+
+                override fun onError(error: String) {
                     runOnUiThread {
-                        renderSlotsUI()
-                        updateCalculatedEnergyDisplay()
+                        hourlySlotsList.clear()
+                        hourlyTotalCapacityKWh = 0.0
+                        renderHourlySlots()
                     }
-                } catch (_: Exception) {}
+                }
             }
-            override fun onError(error: String) {}
-        })
+        )
+    }
+
+    private fun renderHourlySlots() {
+        if (!::llHourlySlotsContainer.isInitialized) return
+        llHourlySlotsContainer.removeAllViews()
+
+        if (hourlySlotsList.isEmpty()) {
+            val message = TextView(this).apply {
+                text = if (etDate.text.toString().isBlank()) {
+                    "Choose a reservation date to view available hours."
+                } else {
+                    "No available hours for this station and date."
+                }
+                textSize = 12f
+                setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.text_secondary))
+                setPadding(8, 12, 8, 12)
+            }
+            llHourlySlotsContainer.addView(message)
+            return
+        }
+
+        for (hour in hourlySlotsList) {
+            val selected = etStartTime.text.toString() == hour.startTime &&
+                etEndTime.text.toString() == hour.endTime
+            val card = MaterialCardView(this).apply {
+                radius = 20f
+                strokeWidth = if (selected) 3 else 1
+                strokeColor = if (selected) Color.parseColor("#006D44")
+                else ContextCompat.getColor(this@CreateReservationActivity, R.color.card_border)
+                setCardBackgroundColor(
+                    if (selected) Color.parseColor("#D1FAE5")
+                    else ContextCompat.getColor(this@CreateReservationActivity, R.color.card_background)
+                )
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, 0, 0, 10)
+                }
+                setOnClickListener {
+                    etStartTime.setText(hour.startTime)
+                    etEndTime.setText(hour.endTime)
+                    renderHourlySlots()
+                    checkAvailability()
+                }
+            }
+
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(20, 16, 20, 16)
+            }
+            val label = TextView(this).apply {
+                text = "${hour.startTime} - ${hour.endTime}"
+                textSize = 14f
+                setTypeface(null, android.graphics.Typeface.BOLD)
+                setTextColor(
+                    if (selected) Color.parseColor("#006D44")
+                    else ContextCompat.getColor(this@CreateReservationActivity, R.color.text_primary)
+                )
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            val capacity = TextView(this).apply {
+                text = String.format(
+                    Locale.US,
+                    "%.1f / %.1f kWh available",
+                    hour.availableKWh,
+                    hourlyTotalCapacityKWh
+                )
+                textSize = 12f
+                setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.text_secondary))
+            }
+            row.addView(label)
+            row.addView(capacity)
+            card.addView(row)
+            llHourlySlotsContainer.addView(card)
+        }
     }
 
     // Query real-time availability evaluation from backend for the selected node, date, and time window
@@ -255,9 +374,11 @@ class CreateReservationActivity : AppCompatActivity() {
 
         val selectedNode = nodesList[spinnerNodes.selectedItemPosition]
         val endpoint = "reservation/availability?nodeId=${selectedNode.id}&date=${dateStr}&startTime=${startStr}&endTime=${endStr}"
+        val requestVersion = ++availabilityRequestVersion
 
         ApiClient.request(endpoint, "GET", null, session.getToken(), object : ApiClient.ApiCallback {
             override fun onSuccess(response: String) {
+                if (requestVersion != availabilityRequestVersion) return
                 try {
                     val obj = JSONObject(response)
                     val availableKWh = obj.optDouble("availableKWh", 0.0)
@@ -265,8 +386,8 @@ class CreateReservationActivity : AppCompatActivity() {
                     val operatingSchedule = obj.optString("schedule", selectedNode.schedule)
 
                     val slotsArr = obj.optJSONArray("slots")
+                    availableSlotsList.clear()
                     if (slotsArr != null && slotsArr.length() > 0) {
-                        availableSlotsList.clear()
                         for (i in 0 until slotsArr.length()) {
                             val sObj = slotsArr.getJSONObject(i)
                             availableSlotsList.add(
@@ -283,17 +404,19 @@ class CreateReservationActivity : AppCompatActivity() {
                         // Remove selected slots that are no longer available in this window
                         val validIds = availableSlotsList.filter { it.isAvailable }.map { it.id }.toSet()
                         selectedSlotIds.retainAll(validIds)
+                    } else {
+                        selectedSlotIds.clear()
                     }
 
                     runOnUiThread {
                         if (!isWithinHours) {
-                            tvAvailabilityFeedback.text = "⚠️ Selected window is outside station operating hours ($operatingSchedule)."
+                            tvAvailabilityFeedback.text = "Outside station hours ($operatingSchedule)"
                             tvAvailabilityFeedback.setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.status_cancelled))
                         } else if (availableKWh <= 0) {
-                            tvAvailabilityFeedback.text = "⚠️ Station fully booked or under maintenance during this time window."
+                            tvAvailabilityFeedback.text = "No capacity available"
                             tvAvailabilityFeedback.setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.status_cancelled))
                         } else {
-                            tvAvailabilityFeedback.text = "⚡ Available in this window: $availableKWh kWh across station slots. Tap slots below to select."
+                            tvAvailabilityFeedback.text = String.format(Locale.US, "%.1f kWh available", availableKWh)
                             tvAvailabilityFeedback.setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.primary))
                         }
                         renderSlotsUI()
@@ -303,8 +426,13 @@ class CreateReservationActivity : AppCompatActivity() {
             }
 
             override fun onError(error: String) {
+                if (requestVersion != availabilityRequestVersion) return
                 runOnUiThread {
-                    tvAvailabilityFeedback.text = "Choose slots below to configure your energy drop-off."
+                    availableSlotsList.clear()
+                    selectedSlotIds.clear()
+                    renderSlotsUI()
+                    updateCalculatedEnergyDisplay()
+                    tvAvailabilityFeedback.text = "Select available slots"
                     tvAvailabilityFeedback.setTextColor(ContextCompat.getColor(this@CreateReservationActivity, R.color.text_secondary))
                 }
             }
@@ -433,7 +561,7 @@ class CreateReservationActivity : AppCompatActivity() {
             .filter { selectedSlotIds.contains(it.id) }
             .sumOf { it.capacityKWh }
 
-        tvSelectedSlotsCount.text = "CALCULATED ENERGY TO SUPPLY (${selectedSlotIds.size} SLOTS SELECTED)"
+        tvSelectedSlotsCount.text = "${selectedSlotIds.size} slot(s) selected"
         tvCalculatedEnergyTotal.text = String.format(Locale.US, "%.1f kWh", totalKWh)
         etEnergyKWh.setText(String.format(Locale.US, "%.1f", totalKWh))
     }
