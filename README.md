@@ -14,12 +14,33 @@
 
 ---
 
+## 🔗 Repository and Demonstration Video
+
+- **Git repository:** [SahanMedhawa/SolarGrid-Hub](https://github.com/SahanMedhawa/SolarGrid-Hub.git)
+- **Demonstration video:** [Watch the application demonstration](https://mysliit-my.sharepoint.com/:f:/g/personal/it23212404_my_sliit_lk/IgDAtYG_LuhWT6KLq4CoQV0JAagsa7jc00QOSuqkXJR2gHc?e=xsegQI)
+
+The demonstration video is limited to five minutes and explains the main application workflow across the web application, mobile application, and backend web service.
+
+---
+
 ## 📌 1. Project Overview & Architecture
 The **Smart Solar Microgrid Trading System** is an enterprise-scale, client-server distributed system designed for decentralized solar energy trading. The system follows the strict **FAT Service Architecture Pattern**, where all business rules, data validation, and scheduling logic reside exclusively within the central C# Web API hosted on Windows IIS Server.
 
 - **Web Application:** Dedicated UI for **Backoffice Administrators** and **Grid Operators** built using Bootstrap 5.
 - **Mobile Application:** Pure Native Android application with local **SQLite database** persistence (no third-party cross-platform frameworks) serving both **Solar Prosumers** and **Grid Operators**.
 - **Web Service:** C# .NET 8 RESTful Web API with MongoDB persistence, JWT authentication, and IIS hosting compatibility.
+
+---
+
+## 🖼️ Application Screenshots
+
+### Web Application Landing Page
+
+![SolarGrid-Hub web application landing page](Docs/HeroWebApp.png)
+
+### Mobile Application Login
+
+![Smart Solar Trading mobile application login screen](Docs/LoginMobile.jpg)
 
 ---
 
@@ -148,8 +169,8 @@ To ensure clean individual contributions and clear GitHub commit graphs for grad
 
 ```powershell
 # Clone the repository
-git clone <YOUR_GITHUB_REPO_URL>
-cd EAD
+git clone https://github.com/SahanMedhawa/SolarGrid-Hub.git
+cd SolarGrid-Hub
 
 # Checkout your assigned feature branch
 git checkout member1-web-backoffice           # Member 1
@@ -167,10 +188,11 @@ git push origin <your-branch-name>
 
 ## 📋 7. Submission Checklist for Viva
 
-- [ ] **GitHub Repository Link:** [Add your group repository URL here]
-- [ ] **5-Minute YouTube / OneDrive Demo Video Link:** [Add your video link here]
+- [x] **GitHub Repository Link:** [SahanMedhawa/SolarGrid-Hub](https://github.com/SahanMedhawa/SolarGrid-Hub.git)
+- [x] **5-Minute YouTube / OneDrive Demo Video Link:** [Demonstration Video](https://mysliit-my.sharepoint.com/:f:/g/personal/it23212404_my_sliit_lk/IgDAtYG_LuhWT6KLq4CoQV0JAagsa7jc00QOSuqkXJR2gHc?e=xsegQI)
+- [x] **Individual contributions:** Documented in the [Team Member Work Breakdown](#-2-team-member-work-breakdown-table-2-marking-scheme-mapping) table above, including each member's assigned branch and assessment focus areas.
 - [ ] **Comment Header Blocks:** Present on all `.cs` files.
 - [ ] **Inline Comments:** Present at the beginning of each method.
-- [ ] **Screenshots of UIs:** Included in `Docs/PROJECT_REPORT.md` and submission folder.
+- [x] **Screenshots of UIs:** Included in the `Docs/` directory and referenced above.
 - [ ] **Main App Opening Screenshot:** Captured and named according to IT number.
 - [ ] **Final Zip File:** Named with leader's IT number (e.g., `IT15895623.zip`).
