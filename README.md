@@ -7,11 +7,6 @@
 [![Frontend](https://img.shields.io/badge/Web-Bootstrap_5_Responsive-purple.svg)]()
 [![Architecture](https://img.shields.io/badge/Architecture-FAT_Service_Pattern-red.svg)]()
 
-> **Module:** SE4040 – Enterprise Application Development (Year 4 Semester 2)  
-> **Specialization:** BSc (Hons) in Information Technology Specialized in Software Engineering  
-> **Weightage:** 20% of Module Grade (Group 35% + Individual 65%)  
-> **Submission Deadline:** 30th September 2026, 11:59 PM  
-
 ---
 
 ## 🔗 Repository and Demonstration Video
@@ -146,39 +141,3 @@ EAD/
 | **Grid Operator** | `operator1` | `Operator@123` | Web App & Mobile App (Operator Mode) |
 | **Active Prosumer** | `199012345678` (NIC) | `Kamal@123` | Mobile App (Prosumer Mode) |
 | **Pending Prosumer** | `199587654321` (NIC) | `Nimal@123` | Awaiting Backoffice activation in Web App |
-
----
-
-## 🌿 5. Git Branch Workflow for the 4 Team Members
-
-To ensure clean individual contributions and clear GitHub commit graphs for grading:
-
-```powershell
-# Clone the repository
-git clone https://github.com/SahanMedhawa/SolarGrid-Hub.git
-cd SolarGrid-Hub
-
-# Checkout your assigned feature branch
-git checkout member1-web-backoffice           # Member 1
-git checkout member2-mobile-prosumer-accounts # Member 2
-git checkout member3-mobile-reservation-workflow # Member 3
-git checkout member4-mobile-operator-maps    # Member 4
-
-# Make changes, commit with descriptive messages, and push
-git add .
-git commit -m "feat(prosumer): implement 12-hour booking cancellation constraint"
-git push origin <your-branch-name>
-```
-
----
-
-## 📋 6. Submission Checklist for Viva
-
-- [x] **GitHub Repository Link:** [SahanMedhawa/SolarGrid-Hub](https://github.com/SahanMedhawa/SolarGrid-Hub.git)
-- [x] **5-Minute YouTube / OneDrive Demo Video Link:** [Demonstration Video](https://mysliit-my.sharepoint.com/:f:/g/personal/it23212404_my_sliit_lk/IgDAtYG_LuhWT6KLq4CoQV0JAagsa7jc00QOSuqkXJR2gHc?e=xsegQI)
-- [x] **Individual contributions:** Documented in the [Team Member Work Breakdown](#-2-team-member-work-breakdown-table-2-marking-scheme-mapping) table above, including each member's assigned branch and assessment focus areas.
-- [ ] **Comment Header Blocks:** Present on all `.cs` files.
-- [ ] **Inline Comments:** Present at the beginning of each method.
-- [x] **Screenshots of UIs:** Included in the `Docs/` directory and referenced above.
-- [ ] **Main App Opening Screenshot:** Captured and named according to IT number.
-- [ ] **Final Zip File:** Named with leader's IT number (e.g., `IT15895623.zip`).
