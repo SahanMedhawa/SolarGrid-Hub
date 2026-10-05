@@ -1,86 +1,333 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="24dp"
-    android:background="@color/gray_light">
+    android:fillViewport="true"
+    android:background="@drawable/bg_login_dark">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/login_title"
-        android:textSize="26sp"
-        android:textStyle="bold"
-        android:textColor="@color/primary"
-        android:layout_marginBottom="8dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/login_sub"
-        android:textSize="14sp"
-        android:textColor="@color/gray_text"
-        android:layout_marginBottom="32dp" />
-
-    <RadioGroup
-        android:id="@+id/rgRole"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
-        android:layout_marginBottom="16dp">
-        <RadioButton
-            android:id="@+id/rbProsumer"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingTop="28dp"
+        android:paddingBottom="36dp">
+
+        <!-- ================================= -->
+        <!-- TOP SPACING -->
+        <!-- ================================= -->
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="16dp" />
+
+        <!-- ================================= -->
+        <!-- ENERGY LOGO -->
+        <!-- ================================= -->
+
+        <FrameLayout
+            android:layout_width="120dp"
+            android:layout_height="120dp"
+            android:layout_marginBottom="18dp">
+
+            <!-- Glow -->
+            <View
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:background="@drawable/bg_icon_glow_dark" />
+
+            <!-- Logo Circle -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="94dp"
+                android:layout_height="94dp"
+                android:layout_gravity="center"
+                app:cardCornerRadius="47dp"
+                app:cardBackgroundColor="@color/dark_surface"
+                app:cardElevation="12dp"
+                app:strokeColor="@color/energy_cyan"
+                app:strokeWidth="2dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:text="⚡"
+                    android:textColor="@color/energy_cyan"
+                    android:textSize="44sp"
+                    android:textStyle="bold" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </FrameLayout>
+
+        <!-- ================================= -->
+        <!-- TITLE -->
+        <!-- ================================= -->
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Prosumer"
-            android:checked="true"
-            android:layout_marginEnd="24dp" />
-        <RadioButton
-            android:id="@+id/rbOperator"
+            android:layout_marginBottom="7dp"
+            android:gravity="center"
+            android:text="Smart Solar Trading"
+            android:textColor="@color/white"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:letterSpacing="-0.02" />
+
+        <!-- Accent line -->
+        <View
+            android:layout_width="54dp"
+            android:layout_height="3dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/bg_title_accent" />
+
+        <!-- Subtitle -->
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Grid Operator" />
-    </RadioGroup>
+            android:layout_marginBottom="30dp"
+            android:gravity="center"
+            android:text="Clean Energy Trading &amp; Microgrid Hub"
+            android:textColor="@color/text_dark_secondary"
+            android:textSize="14sp"
+            android:letterSpacing="0.02" />
 
-    <EditText
-        android:id="@+id/etUsername"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:hint="@string/username_hint"
-        android:inputType="text"
-        android:background="@android:drawable/editbox_background"
-        android:padding="12dp"
-        android:layout_marginBottom="16dp" />
+        <!-- ================================= -->
+        <!-- ROLE SELECTOR -->
+        <!-- ================================= -->
 
-    <EditText
-        android:id="@+id/etPassword"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:hint="@string/password_hint"
-        android:inputType="textPassword"
-        android:background="@android:drawable/editbox_background"
-        android:padding="12dp"
-        android:layout_marginBottom="24dp" />
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="22dp"
+            app:cardBackgroundColor="@color/dark_surface"
+            app:cardCornerRadius="22dp"
+            app:cardElevation="2dp"
+            app:strokeColor="@color/dark_border"
+            app:strokeWidth="1dp">
 
-    <Button
-        android:id="@+id/btnLogin"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:text="@string/sign_in"
-        android:backgroundTint="@color/primary"
-        android:textColor="@color/white"
-        android:textStyle="bold"
-        android:layout_marginBottom="16dp" />
+            <RadioGroup
+                android:id="@+id/rgRole"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="6dp"
+                android:weightSum="2">
 
-    <Button
-        android:id="@+id/btnRegister"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:text="@string/register"
-        android:backgroundTint="@color/accent"
-        android:textColor="@color/white" />
+                <!-- Solar Prosumer -->
+                <RadioButton
+                    android:id="@+id/rbProsumer"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_role_item_selector"
+                    android:button="@null"
+                    android:checked="true"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:text="☀  Solar Prosumer"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
 
-</LinearLayout>
+                <!-- Grid Operator -->
+                <RadioButton
+                    android:id="@+id/rbOperator"
+                    android:layout_width="0dp"
+                    android:layout_height="56dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_role_item_selector"
+                    android:button="@null"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:text="⚒  Grid Operator"
+                    android:textColor="@color/white"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+            </RadioGroup>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ================================= -->
+        <!-- USERNAME / NIC -->
+        <!-- ================================= -->
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="15dp"
+            android:hint="Username / NIC"
+            app:boxBackgroundColor="@color/dark_input"
+            app:boxBackgroundMode="outline"
+            app:boxCornerRadiusBottomEnd="17dp"
+            app:boxCornerRadiusBottomStart="17dp"
+            app:boxCornerRadiusTopEnd="17dp"
+            app:boxCornerRadiusTopStart="17dp"
+            app:boxStrokeColor="@color/input_stroke"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeWidthFocused="2dp"
+            app:hintTextColor="@color/text_dark_secondary"
+            app:startIconDrawable="@android:drawable/ic_menu_myplaces"
+            app:startIconTint="@color/icon_blue">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etUsername"
+                android:layout_width="match_parent"
+                android:layout_height="58dp"
+                android:inputType="text"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:textColor="@color/white"
+                android:textColorHint="@color/text_dark_secondary"
+                android:textSize="16sp" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- ================================= -->
+        <!-- PASSWORD -->
+        <!-- ================================= -->
+
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:hint="Password"
+            app:boxBackgroundColor="@color/dark_input"
+            app:boxBackgroundMode="outline"
+            app:boxCornerRadiusBottomEnd="17dp"
+            app:boxCornerRadiusBottomStart="17dp"
+            app:boxCornerRadiusTopEnd="17dp"
+            app:boxCornerRadiusTopStart="17dp"
+            app:boxStrokeColor="@color/input_stroke"
+            app:boxStrokeWidth="1dp"
+            app:boxStrokeWidthFocused="2dp"
+            app:endIconMode="password_toggle"
+            app:endIconTint="@color/icon_blue"
+            app:hintTextColor="@color/text_dark_secondary"
+            app:startIconDrawable="@android:drawable/ic_lock_idle_lock"
+            app:startIconTint="@color/icon_blue">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPassword"
+                android:layout_width="match_parent"
+                android:layout_height="58dp"
+                android:inputType="textPassword"
+                android:paddingStart="4dp"
+                android:paddingEnd="4dp"
+                android:textColor="@color/white"
+                android:textColorHint="@color/text_dark_secondary"
+                android:textSize="16sp" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- ================================= -->
+        <!-- FORGOT PASSWORD LINK -->
+        <!-- ================================= -->
+
+        <TextView
+            android:id="@+id/btnForgotPassword"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginBottom="26dp"
+            android:padding="4dp"
+            android:text="Forgot Password?"
+            android:textColor="@color/energy_cyan"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?android:attr/selectableItemBackground" />
+
+        <!-- ================================= -->
+        <!-- SIGN IN -->
+        <!-- ================================= -->
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLogin"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:layout_marginBottom="24dp"
+            android:text="@string/sign_in"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/energy_cyan"
+            app:cornerRadius="18dp"
+            app:elevation="8dp"
+            app:iconTint="@color/white" />
+
+        <!-- ================================= -->
+        <!-- DIVIDER -->
+        <!-- ================================= -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"
+                android:background="@color/dark_border" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:text="N E W   H E R E"
+                android:textColor="@color/text_dark_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.15" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1"
+                android:background="@color/dark_border" />
+
+        </LinearLayout>
+
+        <!-- ================================= -->
+        <!-- REGISTER -->
+        <!-- ================================= -->
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnRegister"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="@string/register"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/transparent"
+            app:cornerRadius="18dp"
+            app:strokeColor="@color/energy_cyan"
+            app:strokeWidth="1dp" />
+
+        <!-- Bottom spacing -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="14dp" />
+
+    </LinearLayout>
+
+</ScrollView>

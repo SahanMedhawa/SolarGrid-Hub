@@ -13,6 +13,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Allow devices on the local network to reach the API.
+builder.WebHost.UseUrls("http://0.0.0.0:5000");
+
 // --------------- MongoDB Configuration ---------------
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDbSettings"));
@@ -24,6 +27,7 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IProsumerService, ProsumerService>();
 builder.Services.AddScoped<IMicrogridNodeService, MicrogridNodeService>();
 builder.Services.AddScoped<IReservationService, ReservationService>();
+builder.Services.AddHostedService<MaintenanceExpirationService>();
 
 // --------------- JWT Authentication ---------------
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "DefaultSuperSecretKey12345678901234";

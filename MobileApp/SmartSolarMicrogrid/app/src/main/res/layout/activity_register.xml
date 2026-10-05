@@ -1,98 +1,364 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/gray_light">
+    android:background="@color/register_background"
+    android:fillViewport="true"
+    android:clipToPadding="false">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:paddingStart="22dp"
+        android:paddingEnd="22dp"
+        android:paddingTop="28dp"
+        android:paddingBottom="36dp">
 
+        <!-- Brand -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Prosumer Registration"
-            android:textSize="22sp"
+            android:layout_gravity="center_horizontal"
+            android:text="⚡  SMART SOLAR TRADING"
+            android:textColor="@color/register_primary"
+            android:textSize="13sp"
             android:textStyle="bold"
-            android:textColor="@color/primary"
-            android:layout_marginBottom="20dp" />
+            android:letterSpacing="0.05" />
 
-        <EditText
-            android:id="@+id/etNic"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:hint="NIC (National Identity Card) *"
-            android:background="@android:drawable/editbox_background"
-            android:padding="12dp"
-            android:layout_marginBottom="12dp" />
-
-        <EditText
-            android:id="@+id/etFirstName"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:hint="First Name *"
-            android:background="@android:drawable/editbox_background"
-            android:padding="12dp"
-            android:layout_marginBottom="12dp" />
-
-        <EditText
-            android:id="@+id/etLastName"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:hint="Last Name *"
-            android:background="@android:drawable/editbox_background"
-            android:padding="12dp"
-            android:layout_marginBottom="12dp" />
-
-        <EditText
-            android:id="@+id/etEmail"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:hint="Email Address *"
-            android:inputType="textEmailAddress"
-            android:background="@android:drawable/editbox_background"
-            android:padding="12dp"
-            android:layout_marginBottom="12dp" />
-
-        <EditText
-            android:id="@+id/etPhone"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:hint="Phone Number *"
-            android:inputType="phone"
-            android:background="@android:drawable/editbox_background"
-            android:padding="12dp"
-            android:layout_marginBottom="12dp" />
-
-        <EditText
-            android:id="@+id/etAddress"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:hint="Address *"
-            android:background="@android:drawable/editbox_background"
-            android:padding="12dp"
-            android:layout_marginBottom="12dp" />
-
-        <EditText
-            android:id="@+id/etRegPassword"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:hint="Password (min 6 characters) *"
-            android:inputType="textPassword"
-            android:background="@android:drawable/editbox_background"
-            android:padding="12dp"
-            android:layout_marginBottom="24dp" />
-
-        <Button
-            android:id="@+id/btnSubmitRegister"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:text="Submit Registration"
-            android:backgroundTint="@color/primary"
-            android:textColor="@color/white"
+        <!-- Main heading -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="14dp"
+            android:text="Create Prosumer Account"
+            android:textColor="@color/register_text_primary"
+            android:textSize="25sp"
             android:textStyle="bold" />
 
+        <!-- Subtitle -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="22dp"
+            android:gravity="center"
+            android:text="Register to trade surplus solar energy"
+            android:textColor="@color/register_text_secondary"
+            android:textSize="13sp" />
+
+        <!-- Backoffice activation notice -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="22dp"
+            app:cardBackgroundColor="@color/register_notice_background"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/register_notice_border"
+            app:strokeWidth="1dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="13dp"
+                android:paddingBottom="13dp"
+                android:text="🛡  New accounts are activated by the Backoffice Admin before booking."
+                android:textColor="@color/register_primary"
+                android:textSize="12sp"
+                android:lineSpacingExtra="2dp" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- NIC -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutNic"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:hint="National ID Card (NIC) *"
+            app:boxBackgroundColor="@color/register_input"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxStrokeColor="@color/register_border"
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_id_card"
+            app:startIconTint="@color/icon_blue">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etNic"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textCapCharacters"
+                android:maxLength="12"
+                android:textColor="@color/register_text_primary"
+                android:textColorHint="@color/register_text_hint"
+                android:hint="e.g. 199012345678" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- First Name -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutFirstName"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:hint="First Name *"
+            app:boxBackgroundColor="@color/register_input"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxStrokeColor="@color/register_border"
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_person"
+            app:startIconTint="@color/icon_blue">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etFirstName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPersonName"
+                android:textColor="@color/register_text_primary"
+                android:textColorHint="@color/register_text_hint"
+                android:hint="First name" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Last Name -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutLastName"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:hint="Last Name *"
+            app:boxBackgroundColor="@color/register_input"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxStrokeColor="@color/register_border"
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_person"
+            app:startIconTint="@color/icon_blue">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etLastName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPersonName"
+                android:textColor="@color/register_text_primary"
+                android:textColorHint="@color/register_text_hint"
+                android:hint="Last name" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Email -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutEmail"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:hint="Email Address *"
+            app:boxBackgroundColor="@color/register_input"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxStrokeColor="@color/register_border"
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_email"
+            app:startIconTint="@color/icon_blue">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textEmailAddress"
+                android:textColor="@color/register_text_primary"
+                android:textColorHint="@color/register_text_hint"
+                android:hint="name@example.com" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Phone -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutPhone"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:hint="Mobile Number *"
+            app:boxBackgroundColor="@color/register_input"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxStrokeColor="@color/register_border"
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_phone"
+            app:startIconTint="@color/icon_blue">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etPhone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="phone"
+                android:textColor="@color/register_text_primary"
+                android:textColorHint="@color/register_text_hint"
+                android:hint="0771234567" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Address -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutAddress"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:hint="Physical Address *"
+            app:boxBackgroundColor="@color/register_input"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxStrokeColor="@color/register_border"
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_location"
+            app:startIconTint="@color/icon_blue">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etAddress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="top"
+                android:inputType="textPostalAddress"
+                android:maxLines="3"
+                android:minLines="2"
+                android:textColor="@color/register_text_primary"
+                android:textColorHint="@color/register_text_hint"
+                android:hint="123 Solar Way, Colombo" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Password -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutPassword"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="10dp"
+            android:hint="Password *"
+            app:boxBackgroundColor="@color/register_input"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxStrokeColor="@color/register_border"
+            app:endIconMode="password_toggle"
+            app:endIconTint="@color/icon_blue"
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_lock"
+            app:startIconTint="@color/icon_blue">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etRegPassword"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"
+                android:textColor="@color/register_text_primary"
+                android:textColorHint="@color/register_text_hint"
+                android:hint="Minimum 6 characters" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Confirm Password -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/layoutConfirmPassword"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="22dp"
+            android:hint="Confirm Password *"
+            app:boxBackgroundColor="@color/register_input"
+            app:boxCornerRadiusTopStart="12dp"
+            app:boxCornerRadiusTopEnd="12dp"
+            app:boxCornerRadiusBottomStart="12dp"
+            app:boxCornerRadiusBottomEnd="12dp"
+            app:boxStrokeColor="@color/register_border"
+            app:endIconMode="password_toggle"
+            app:endIconTint="@color/icon_blue"
+            app:hintTextColor="@color/register_text_secondary"
+            app:startIconDrawable="@drawable/ic_lock"
+            app:startIconTint="@color/icon_blue">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etConfirmPassword"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"
+                android:textColor="@color/register_text_primary"
+                android:textColorHint="@color/register_text_hint"
+                android:hint="Re-enter your password" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Registration Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSubmitRegister"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:backgroundTint="@color/energy_cyan"
+            android:text="Complete Registration  →"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            app:cornerRadius="18dp" />
+
+        <!-- Sign in message -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="18dp"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Already registered? "
+                android:textColor="@color/register_text_secondary"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvSignIn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Sign in"
+                android:textColor="@color/register_primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true" />
+
+        </LinearLayout>
+
     </LinearLayout>
+
 </ScrollView>

@@ -1,8 +1,11 @@
 // ============================================================
 // File: EnergySlot.cs
 // Project: SmartSolarMicrogridAPI
-// Description: Represents an available energy trading slot
-//              within a microgrid node.
+// Description: Represents a physical battery storage slot
+//              within a microgrid node. Each slot has a fixed
+//              capacity (kWh) and can be Available or under
+//              Maintenance. Capacity availability for reservations
+//              is evaluated per time window, not permanently.
 // ============================================================
 
 using MongoDB.Bson;
@@ -10,9 +13,23 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace SmartSolarMicrogridAPI.Models
 {
+    public static class MaintenanceDateHelper
+    {
+        // Maintenance dates are calendar dates. New values are stored at UTC midnight;
+        // older values may have been shifted by MongoDB from local midnight to UTC.
+        public static DateTime ToCalendarDate(DateTime value)
+        {
+            if (value.Kind == DateTimeKind.Utc && value.TimeOfDay != TimeSpan.Zero)
+                return value.ToLocalTime().Date;
+
+            return value.Date;
+        }
+    }
+
     /// <summary>
-    /// Energy booking slot within a microgrid node.
+    /// Physical battery storage slot within a microgrid node.
     /// </summary>
+    [BsonIgnoreExtraElements]
     public class EnergySlot
     {
         [BsonId]
@@ -25,26 +42,31 @@ namespace SmartSolarMicrogridAPI.Models
         [BsonElement("nodeId")]
         public string NodeId { get; set; } = null!;
 
-        [BsonElement("slotDate")]
-        public DateTime SlotDate { get; set; }
-
-        [BsonElement("startTime")]
-        public string StartTime { get; set; } = null!;
-
-        [BsonElement("endTime")]
-        public string EndTime { get; set; } = null!;
+        [BsonElement("slotNumber")]
+        public int SlotNumber { get; set; }
 
         /// <summary>
-        /// Energy capacity available in this slot (kWh).
+        /// Fixed energy capacity of this battery slot (kWh).
         /// </summary>
         [BsonElement("availableKWh")]
         public double AvailableKWh { get; set; }
 
         /// <summary>
-        /// Status: "Available", "Reserved", "Completed"
+        /// Status: "Available" or "Maintenance"
+        /// Available = operational, can be allocated to reservations.
+        /// Maintenance = under maintenance, excluded from capacity calculations.
         /// </summary>
         [BsonElement("status")]
         public string Status { get; set; } = "Available";
+
+        [BsonElement("maintenanceDate")]
+        public DateTime? MaintenanceDate { get; set; }
+
+        [BsonElement("maintenanceStartTime")]
+        public string? MaintenanceStartTime { get; set; }
+
+        [BsonElement("maintenanceEndTime")]
+        public string? MaintenanceEndTime { get; set; }
 
         [BsonElement("createdAt")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

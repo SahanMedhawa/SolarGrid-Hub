@@ -1,9 +1,69 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.SmartSolarMicrogrid" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
-        <item name="colorPrimary">@color/primary</item>
-        <item name="colorPrimaryVariant">@color/primary_dark</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/accent</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+    <style name="Theme.SmartSolarMicrogrid" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Primary Brand Colors -->
+        <item name="colorPrimary">@color/md_theme_light_primary</item>
+        <item name="colorOnPrimary">@color/md_theme_light_onPrimary</item>
+        <item name="colorPrimaryContainer">@color/md_theme_light_primaryContainer</item>
+        <item name="colorOnPrimaryContainer">@color/md_theme_light_onPrimaryContainer</item>
+
+        <!-- Secondary Colors -->
+        <item name="colorSecondary">@color/md_theme_light_secondary</item>
+        <item name="colorOnSecondary">@color/md_theme_light_onSecondary</item>
+        <item name="colorSecondaryContainer">@color/md_theme_light_secondaryContainer</item>
+        <item name="colorOnSecondaryContainer">@color/md_theme_light_onSecondaryContainer</item>
+
+        <!-- Tertiary Colors -->
+        <item name="colorTertiary">@color/md_theme_light_tertiary</item>
+        <item name="colorOnTertiary">@color/md_theme_light_onTertiary</item>
+        <item name="colorTertiaryContainer">@color/md_theme_light_tertiaryContainer</item>
+        <item name="colorOnTertiaryContainer">@color/md_theme_light_onTertiaryContainer</item>
+
+        <!-- Background & Surface -->
+        <item name="android:colorBackground">@color/md_theme_light_background</item>
+        <item name="colorOnBackground">@color/md_theme_light_onBackground</item>
+        <item name="colorSurface">@color/md_theme_light_surface</item>
+        <item name="colorOnSurface">@color/md_theme_light_onSurface</item>
+        <item name="colorSurfaceVariant">@color/md_theme_light_surfaceVariant</item>
+        <item name="colorOnSurfaceVariant">@color/md_theme_light_onSurfaceVariant</item>
+        <item name="colorOutline">@color/md_theme_light_outline</item>
+        <item name="colorOutlineVariant">@color/md_theme_light_outlineVariant</item>
+
+        <!-- System Window Bar Theming -->
+        <item name="android:statusBarColor">@color/app_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/app_background</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+
+        <!-- Component Styles -->
+        <item name="materialCardViewStyle">@style/Widget.SmartSolar.CardView</item>
+        <item name="materialButtonStyle">@style/Widget.SmartSolar.Button</item>
+        <item name="textInputStyle">@style/Widget.SmartSolar.TextInputLayout</item>
+    </style>
+
+    <!-- Material 3 Expressive Card Style -->
+    <style name="Widget.SmartSolar.CardView" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">@color/card_background</item>
+        <item name="strokeColor">@color/card_border</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">2dp</item>
+    </style>
+
+    <!-- Material 3 Expressive Button Style -->
+    <style name="Widget.SmartSolar.Button" parent="Widget.Material3.Button">
+        <item name="cornerRadius">14dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <!-- Material 3 Outlined Input Style -->
+    <style name="Widget.SmartSolar.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">12dp</item>
+        <item name="boxCornerRadiusTopEnd">12dp</item>
+        <item name="boxCornerRadiusBottomStart">12dp</item>
+        <item name="boxCornerRadiusBottomEnd">12dp</item>
+        <item name="boxStrokeColor">@color/md_theme_light_primary</item>
+        <item name="hintTextColor">@color/md_theme_light_primary</item>
     </style>
 </resources>

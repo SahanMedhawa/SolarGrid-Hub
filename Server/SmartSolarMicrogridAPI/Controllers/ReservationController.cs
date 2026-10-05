@@ -2,7 +2,8 @@
 // File: ReservationController.cs
 // Project: SmartSolarMicrogridAPI
 // Description: Handles endpoints for energy reservation
-//              management including booking, updates, and QR.
+//              management including booking, updates, QR,
+//              and time-based availability queries.
 // ============================================================
 
 using Microsoft.AspNetCore.Authorization;
@@ -72,6 +73,57 @@ namespace SmartSolarMicrogridAPI.Controllers
             return Ok(new { count });
         }
 
+        // GET api/reservation/prosumer/{nic}/pending-count — Returns count of pending reservations.
+        [HttpGet("prosumer/{nic}/pending-count")]
+        public async Task<IActionResult> GetPendingCount(string nic)
+        {
+            var count = await _reservationService.GetPendingCountByProsumerAsync(nic);
+            return Ok(new { count });
+        }
+
+        // GET api/reservation/availability — Returns capacity availability for a station/date/time window.
+        [HttpGet("availability")]
+        public async Task<IActionResult> GetAvailability(
+            [FromQuery] string nodeId,
+            [FromQuery] string date,
+            [FromQuery] string startTime,
+            [FromQuery] string endTime)
+        {
+            try
+            {
+                if (!DateTime.TryParse(date, out var parsedDate))
+                    return BadRequest(new { message = "Invalid date format. Use yyyy-MM-dd." });
+
+                var result = await _reservationService.GetAvailabilityAsync(
+                    nodeId, parsedDate, startTime, endTime);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // GET api/reservation/availability/hourly — Returns hourly capacity breakdown for a station on a date.
+        [HttpGet("availability/hourly")]
+        public async Task<IActionResult> GetHourlyAvailability(
+            [FromQuery] string nodeId,
+            [FromQuery] string date)
+        {
+            try
+            {
+                if (!DateTime.TryParse(date, out var parsedDate))
+                    return BadRequest(new { message = "Invalid date format. Use yyyy-MM-dd." });
+
+                var result = await _reservationService.GetHourlyAvailabilityAsync(nodeId, parsedDate);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // POST api/reservation — Creates a new reservation.
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateReservationRequest request)
@@ -115,7 +167,7 @@ namespace SmartSolarMicrogridAPI.Controllers
 
         // PUT api/reservation/{id}/complete — Completes a reservation via QR verification.
         [HttpPut("{id}/complete")]
-        [Authorize(Roles = "GridOperator")]
+        [Authorize(Roles = "GridOperator,Backoffice")]
         public async Task<IActionResult> Complete(string id, [FromBody] CompleteRequest request)
         {
             var (success, message) = await _reservationService.CompleteAsync(id, request.QrData);

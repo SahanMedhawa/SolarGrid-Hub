@@ -59,8 +59,15 @@ namespace SmartSolarMicrogridAPI.Controllers
         [Authorize(Roles = "Backoffice")]
         public async Task<IActionResult> Create([FromBody] MicrogridNode node)
         {
-            var created = await _nodeService.CreateAsync(node);
-            return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            try
+            {
+                var created = await _nodeService.CreateAsync(node);
+                return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // PUT api/microgridnode/{id} — Updates a node.
@@ -68,10 +75,35 @@ namespace SmartSolarMicrogridAPI.Controllers
         [Authorize(Roles = "Backoffice,GridOperator")]
         public async Task<IActionResult> Update(string id, [FromBody] MicrogridNode node)
         {
-            var success = await _nodeService.UpdateAsync(id, node);
-            if (!success)
-                return NotFound(new { message = "Node not found." });
-            return Ok(new { message = "Node updated successfully." });
+            try
+            {
+                var success = await _nodeService.UpdateAsync(id, node);
+                if (!success)
+                    return NotFound(new { message = "Node not found." });
+                return Ok(new { message = "Node updated successfully." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // PATCH api/microgridnode/{id}/battery-slots — Updates available battery slots directly.
+        [HttpPatch("{id}/battery-slots")]
+        [Authorize(Roles = "Backoffice,GridOperator")]
+        public async Task<IActionResult> UpdateBatterySlots(string id, [FromBody] UpdateBatterySlotsRequest request)
+        {
+            try
+            {
+                var success = await _nodeService.UpdateBatterySlotsAsync(id, request.AvailableBatterySlots);
+                if (!success)
+                    return NotFound(new { message = "Node not found." });
+                return Ok(new { message = "Battery slot availability updated successfully." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // DELETE api/microgridnode/{id} — Deactivates a node (Backoffice only).
@@ -84,5 +116,24 @@ namespace SmartSolarMicrogridAPI.Controllers
                 return BadRequest(new { message });
             return Ok(new { message });
         }
+
+        // PUT api/microgridnode/{id}/activate — Reactivates a node (Backoffice only).
+        [HttpPut("{id}/activate")]
+        [Authorize(Roles = "Backoffice")]
+        public async Task<IActionResult> Activate(string id)
+        {
+            var success = await _nodeService.ActivateAsync(id);
+            if (!success)
+                return NotFound(new { message = "Node not found." });
+            return Ok(new { message = "Node reactivated successfully." });
+        }
+    }
+
+    /// <summary>
+    /// Request DTO for updating battery slot availability.
+    /// </summary>
+    public class UpdateBatterySlotsRequest
+    {
+        public int AvailableBatterySlots { get; set; }
     }
 }

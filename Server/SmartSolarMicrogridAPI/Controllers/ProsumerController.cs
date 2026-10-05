@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using SmartSolarMicrogridAPI.Models;
 using SmartSolarMicrogridAPI.Models.DTOs;
 using SmartSolarMicrogridAPI.Services;
+using System.Security.Claims;
 
 namespace SmartSolarMicrogridAPI.Controllers
 {
@@ -21,11 +22,15 @@ namespace SmartSolarMicrogridAPI.Controllers
     public class ProsumerController : ControllerBase
     {
         private readonly IProsumerService _prosumerService;
+        private readonly IReservationService _reservationService;
 
-        // Constructor — injects prosumer service.
-        public ProsumerController(IProsumerService prosumerService)
+        // Constructor — injects required services.
+        public ProsumerController(
+        IProsumerService prosumerService,
+        IReservationService reservationService)
         {
             _prosumerService = prosumerService;
+            _reservationService = reservationService;
         }
 
         // GET api/prosumer — Returns all prosumers (Backoffice only).
@@ -34,7 +39,7 @@ namespace SmartSolarMicrogridAPI.Controllers
         public async Task<IActionResult> GetAll()
         {
             var prosumers = await _prosumerService.GetAllAsync();
-            return Ok(prosumers);
+            return Ok(prosumers.Select(ToSafeResponse));
         }
 
         // GET api/prosumer/{nic} — Returns a prosumer by NIC.
@@ -45,7 +50,7 @@ namespace SmartSolarMicrogridAPI.Controllers
             var prosumer = await _prosumerService.GetByNicAsync(nic);
             if (prosumer == null)
                 return NotFound(new { message = "Prosumer not found." });
-            return Ok(prosumer);
+            return Ok(ToSafeResponse(prosumer));
         }
 
         // GET api/prosumer/status/{status} — Returns prosumers by status.
@@ -68,29 +73,77 @@ namespace SmartSolarMicrogridAPI.Controllers
                 return Conflict(new { message = "A prosumer with this NIC already exists." });
 
             var prosumer = await _prosumerService.RegisterAsync(request);
-            return CreatedAtAction(nameof(GetByNic), new { nic = prosumer.NIC }, prosumer);
+            return CreatedAtAction(nameof(GetByNic), new { nic = prosumer.NIC }, ToSafeResponse(prosumer));
         }
 
         // PUT api/prosumer/{nic} — Updates prosumer profile.
         [HttpPut("{nic}")]
         [Authorize]
-        public async Task<IActionResult> Update(string nic, [FromBody] Prosumer prosumer)
+        public async Task<IActionResult> Update(string nic, [FromBody] ProsumerUpdateRequest request)
         {
-            var success = await _prosumerService.UpdateAsync(nic, prosumer);
+            var success = await _prosumerService.UpdateAsync(nic, request);
             if (!success)
                 return NotFound(new { message = "Prosumer not found." });
             return Ok(new { message = "Prosumer updated successfully." });
         }
 
+        // PATCH api/prosumer/password — changes the authenticated prosumer's own password.
+        [HttpPatch("password")]
+        [Authorize(Roles = "Prosumer")]
+        public async Task<IActionResult> ChangeOwnPassword([FromBody] ChangeProsumerPasswordRequest request)
+        {
+            var nic = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(nic))
+                return Unauthorized(new { message = "Authenticated prosumer identity was not found." });
+
+            try
+            {
+                var success = await _prosumerService.ChangePasswordAsync(
+                    nic, request.CurrentPassword, request.NewPassword);
+
+                if (!success)
+                    return NotFound(new { message = "Prosumer profile not found." });
+
+                return Ok(new { message = "Password changed successfully." });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // PUT api/prosumer/{nic}/deactivate — Requests deactivation.
+        // PUT api/prosumer/{nic}/deactivate — Deactivates prosumer account.
         [HttpPut("{nic}/deactivate")]
         [Authorize]
         public async Task<IActionResult> Deactivate(string nic)
         {
+            var reservations = await _reservationService.GetByProsumerNicAsync(nic);
+
+            var hasActiveReservations = reservations.Any(r =>
+               r.Status == "Pending" || r.Status == "Approved");
+
+            if (hasActiveReservations)
+            {
+                return BadRequest(new
+                {
+                    message = "Account cannot be deactivated while pending or approved reservations exist."
+                });
+            }
+
             var success = await _prosumerService.DeactivateAsync(nic);
+
             if (!success)
                 return NotFound(new { message = "Prosumer not found." });
-            return Ok(new { message = "Prosumer deactivation requested." });
+
+            return Ok(new
+            {
+                message = "Prosumer account deactivated successfully."
+            });
         }
 
         // PUT api/prosumer/{nic}/activate — Reactivates account (Backoffice only).
@@ -103,5 +156,25 @@ namespace SmartSolarMicrogridAPI.Controllers
                 return NotFound(new { message = "Prosumer not found." });
             return Ok(new { message = "Prosumer account activated." });
         }
+
+        private static object ToSafeResponse(Prosumer prosumer) => new
+        {
+            prosumer.Id,
+            prosumer.NIC,
+            prosumer.FirstName,
+            prosumer.LastName,
+            prosumer.Email,
+            prosumer.Phone,
+            prosumer.Address,
+            prosumer.Status,
+            prosumer.CreatedAt,
+            prosumer.UpdatedAt
+        };
+    }
+
+    public class ChangeProsumerPasswordRequest
+    {
+        public string CurrentPassword { get; set; } = null!;
+        public string NewPassword { get; set; } = null!;
     }
 }

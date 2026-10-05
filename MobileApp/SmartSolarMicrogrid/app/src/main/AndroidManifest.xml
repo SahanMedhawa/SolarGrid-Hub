@@ -3,24 +3,26 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@drawable/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.SmartSolarMicrogrid"
         android:usesCleartextTraffic="true">
-
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE" />
+        <activity
+            android:name=".ui.prosumer.EditProfileActivity"
+            android:exported="false" />
 
         <!-- Login is the default launcher activity -->
         <activity
@@ -28,10 +30,10 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
         <activity android:name=".ui.auth.RegisterActivity" />
         <activity android:name=".ui.prosumer.ProsumerMainActivity" />
         <activity android:name=".ui.prosumer.ProfileActivity" />
@@ -39,11 +41,17 @@
         <activity android:name=".ui.prosumer.ReservationListActivity" />
         <activity android:name=".ui.prosumer.ReservationDetailActivity" />
         <activity android:name=".ui.prosumer.NearbyNodesActivity" />
+        <activity android:name=".ui.backoffice.BackofficeMainActivity" />
+        <activity android:name=".ui.backoffice.ProsumerListActivity" />
         <activity android:name=".ui.operator.OperatorMainActivity" />
+        <activity android:name=".ui.operator.NodeManagementActivity" />
         <activity
             android:name=".ui.operator.QrScannerActivity"
             android:screenOrientation="portrait"
             android:stateNotNeeded="true" />
+        <activity android:name=".ui.operator.ProfileActivity" />
+        <activity android:name=".ui.auth.ForgotPasswordActivity" />
+        <activity android:name=".ui.auth.ResetPasswordActivity" />
 
     </application>
 

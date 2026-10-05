@@ -7,6 +7,32 @@
 *.sln.docstates
 .vs/
 
+# Android / Gradle build files
+**/.gradle/
+**/.idea/
+**/build/
+**/local.properties
+
 # Configuration / secrets
 **/appsettings.json
 **/appsettings.Development.json
+
+# Android Studio
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Generated files
+.gradle/
+build/
+gradle-daemon-jvm.properties
+local.properties
+
+# Configuration / secrets
+**/appsettings.json
+**/appsettings.Development.json
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example

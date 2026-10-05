@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/gray_light">
+    android:background="@color/app_background"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -13,77 +15,277 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Book Energy Trading Slot"
-            android:textSize="22sp"
+            android:text="Book Energy Slot"
+            android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="@color/primary"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="4dp" />
+
+        <!-- Station Selection Label & Spinner Card -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Select Grid Hub Node"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="6dp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/card_background"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="16dp">
+
+            <Spinner
+                android:id="@+id/spinnerNodes"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Time Window Selection -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Time"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="6dp"
+                android:hint="Start Time"
+                app:endIconMode="custom"
+                app:endIconDrawable="@android:drawable/ic_menu_recent_history"
+                app:endIconTint="@color/primary">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etStartTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_primary"
+                    android:focusable="false"
+                    android:clickable="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:hint="End Time (1-Hr Fixed)"
+                app:endIconMode="custom"
+                app:endIconDrawable="@android:drawable/ic_menu_recent_history"
+                app:endIconTint="@color/primary">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etEndTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_primary"
+                    android:focusable="false"
+                    android:clickable="false" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <!-- Availability Status -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardAvailabilityStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/card_background"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="4dp">
+
+                <TextView
+                    android:id="@+id/tvAvailabilityFeedback"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="@color/primary" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Date Picker Field -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Reservation Date"
+            app:endIconMode="custom"
+            app:endIconDrawable="@android:drawable/ic_menu_my_calendar"
+            app:endIconTint="@color/primary"
+            android:layout_marginBottom="16dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etDate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:focusable="false"
+                android:clickable="true" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/card_background"
+            app:strokeColor="@color/card_border"
+            app:strokeWidth="1dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Available hours"
+                    android:textStyle="bold"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginBottom="2dp" />
+
+                <LinearLayout
+                    android:id="@+id/llHourlySlotsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Battery Slot Selection Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Battery slots"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="4dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="* Notice: Slots must be scheduled within 7 days."
+            android:text="Select one or more available slots"
             android:textSize="12sp"
-            android:textColor="@color/gray_text"
-            android:layout_marginBottom="20dp" />
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="10dp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Select Grid Hub Node:"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
-
-        <Spinner
-            android:id="@+id/spinnerNodes"
+        <!-- Container where actual station slots will be dynamically populated -->
+        <LinearLayout
+            android:id="@+id/llSlotsListContainer"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@android:drawable/btn_dropdown"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Reservation Date (YYYY-MM-DD):"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            android:orientation="vertical"
+            android:layout_marginBottom="12dp">
 
-        <EditText
-            android:id="@+id/etDate"
+            <TextView
+                android:id="@+id/tvSlotsLoadingPrompt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Select station, date, and times above to load actual station battery slots."
+                android:textSize="12sp"
+                android:padding="12dp"
+                android:textColor="@color/text_secondary"
+                android:gravity="center"
+                android:background="@color/card_background_elevated" />
+        </LinearLayout>
+
+        <!-- Calculated Energy Summary Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardCalculatedEnergy"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:hint="Click to select date"
-            android:focusable="false"
-            android:clickable="true"
-            android:background="@android:drawable/editbox_background"
-            android:padding="12dp"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Energy Amount (kWh):"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+            app:cardCornerRadius="12dp"
+            app:cardBackgroundColor="@color/md_theme_light_primaryContainer"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="24dp">
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:id="@+id/tvSelectedSlotsCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TOTAL"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/md_theme_light_onPrimaryContainer" />
+
+                <TextView
+                    android:id="@+id/tvCalculatedEnergyTotal"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.0 kWh"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/md_theme_light_onPrimaryContainer"
+                    android:layout_marginTop="2dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Selected capacity"
+                    android:textSize="11sp"
+                    android:textColor="@color/md_theme_light_onPrimaryContainer"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Hidden backward-compatibility input -->
         <EditText
             android:id="@+id/etEnergyKWh"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:hint="e.g. 25.5"
-            android:inputType="numberDecimal"
-            android:background="@android:drawable/editbox_background"
-            android:padding="12dp"
-            android:layout_marginBottom="24dp" />
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:text="0.0" />
 
-        <Button
+        <!-- Submit Button -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSubmitReservation"
             android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:text="Confirm &amp; Book Slot"
+            android:layout_height="56dp"
+            android:text="Confirm &amp; Book Energy Slot"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:cornerRadius="14dp"
             android:backgroundTint="@color/primary"
-            android:textColor="@color/white"
-            android:textStyle="bold" />
+            android:textColor="@color/white" />
 
     </LinearLayout>
 </ScrollView>

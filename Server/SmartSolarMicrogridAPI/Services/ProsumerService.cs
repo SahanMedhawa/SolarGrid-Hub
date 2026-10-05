@@ -65,14 +65,44 @@ namespace SmartSolarMicrogridAPI.Services
         }
 
         // Updates editable fields of a prosumer profile.
-        public async Task<bool> UpdateAsync(string nic, Prosumer prosumer)
+        // Updates editable fields of a prosumer profile.
+public async Task<bool> UpdateAsync(string nic, ProsumerUpdateRequest request)
+{
+    var update = Builders<Prosumer>.Update
+        .Set(p => p.FirstName, request.FirstName)
+        .Set(p => p.LastName, request.LastName)
+        .Set(p => p.Email, request.Email)
+        .Set(p => p.Phone, request.Phone)
+        .Set(p => p.Address, request.Address)
+        .Set(p => p.UpdatedAt, DateTime.UtcNow);
+
+    var result = await _context.Prosumers.UpdateOneAsync(
+        p => p.NIC == nic, update);
+
+    return result.ModifiedCount > 0;
+}
+
+        // Changes a prosumer's password after verifying the current password.
+        public async Task<bool> ChangePasswordAsync(string nic, string currentPassword, string newPassword)
         {
+            if (string.IsNullOrWhiteSpace(currentPassword) || string.IsNullOrWhiteSpace(newPassword))
+                throw new ArgumentException("Current password and new password are required.");
+
+            if (newPassword.Length < 6)
+                throw new ArgumentException("New password must be at least 6 characters long.");
+
+            if (currentPassword == newPassword)
+                throw new ArgumentException("New password must be different from the current password.");
+
+            var prosumer = await GetByNicAsync(nic);
+            if (prosumer == null)
+                return false;
+
+            if (!BCrypt.Net.BCrypt.Verify(currentPassword, prosumer.PasswordHash))
+                throw new UnauthorizedAccessException("Current password is incorrect.");
+
             var update = Builders<Prosumer>.Update
-                .Set(p => p.FirstName, prosumer.FirstName)
-                .Set(p => p.LastName, prosumer.LastName)
-                .Set(p => p.Email, prosumer.Email)
-                .Set(p => p.Phone, prosumer.Phone)
-                .Set(p => p.Address, prosumer.Address)
+                .Set(p => p.PasswordHash, BCrypt.Net.BCrypt.HashPassword(newPassword))
                 .Set(p => p.UpdatedAt, DateTime.UtcNow);
 
             var result = await _context.Prosumers.UpdateOneAsync(
@@ -101,6 +131,21 @@ namespace SmartSolarMicrogridAPI.Services
 
             var result = await _context.Prosumers.UpdateOneAsync(
                 p => p.NIC == nic, update);
+            return result.ModifiedCount > 0;
+        }
+
+        public async Task<bool> ResetPasswordAsync(string nic, string newPassword)
+        {
+            var prosumer = await GetByNicAsync(nic);
+            if (prosumer == null)
+                return false;
+
+            var newHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            var update = Builders<Prosumer>.Update
+                .Set(p => p.PasswordHash, newHash)
+                .Set(p => p.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.Prosumers.UpdateOneAsync(p => p.NIC == nic, update);
             return result.ModifiedCount > 0;
         }
     }
