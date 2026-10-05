@@ -13,6 +13,7 @@ def mapboxAccessToken = localProperties.getProperty("MAPBOX_ACCESS_TOKEN") ?: Sy
 android {
     namespace 'com.smartsolar.microgrid'
     compileSdk 34
+    ndkVersion "27.2.12479018"
 
     defaultConfig {
         applicationId "com.smartsolar.microgrid"
@@ -53,7 +54,7 @@ dependencies {
     implementation 'com.google.android.gms:play-services-location:21.1.0'
 
     // Mapbox Maps SDK for Android
-    implementation 'com.mapbox.maps:android:11.31.1'
+    implementation 'com.mapbox.maps:android-ndk27:11.32.0'
 
     // ZXing for QR Code generation and barcode scanning
     implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
@@ -83,4 +84,3 @@ afterEvaluate {
         }
     }
 }
-

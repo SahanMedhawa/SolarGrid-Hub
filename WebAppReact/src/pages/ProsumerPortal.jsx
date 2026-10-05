@@ -20,7 +20,6 @@ import {
   deactivateProsumer,
   getAvailability,
   getHourlyAvailability,
-  getSlotsByNode
 } from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import { toast } from 'react-toastify';
@@ -30,7 +29,7 @@ import MapboxLocationMap from '../components/MapboxLocationMap';
 const DEFAULT_MAP_CENTER = { lat: 7.8731, lng: 80.7718 };
 
 function isBookableHour(slot) {
-  return slot.isWithinOperatingHours && Number(slot.availableKWh) > 0 && Number(slot.reservedKWh) <= 0;
+  return slot.isWithinOperatingHours && Number(slot.availableKWh) > 0;
 }
 
 function getHourlySlots(availability) {
@@ -76,6 +75,9 @@ export default function ProsumerPortal() {
   const [modifyingRes, setModifyingRes] = useState(null);
   const [modifyData, setModifyData] = useState({ reservationDate: '', startTime: '08:00', endTime: '09:00', energyKWh: 10, selectedSlotIds: [] });
   const [modifySlots, setModifySlots] = useState([]);
+  const [modifyHourlyAvailability, setModifyHourlyAvailability] = useState(null);
+  const [modifyWindowAvailability, setModifyWindowAvailability] = useState(null);
+  const [loadingModifyAvailability, setLoadingModifyAvailability] = useState(false);
 
   // Filter state
   const [statusFilter, setStatusFilter] = useState('All');
@@ -298,6 +300,32 @@ export default function ProsumerPortal() {
   const selectedSlots = displayedSlots.filter(s => (bookingForm.selectedSlotIds || []).includes(s.id));
   const totalCalculatedKWh = selectedSlots.reduce((sum, s) => sum + (s.capacityKWh || 0), 0);
 
+  useEffect(() => {
+    if (!modifyingRes || !modifyData.reservationDate) return;
+    let active = true;
+    setLoadingModifyAvailability(true);
+    setModifyHourlyAvailability(null);
+    getHourlyAvailability(modifyingRes.nodeId, modifyData.reservationDate)
+      .then(data => { if (active) setModifyHourlyAvailability(data); })
+      .catch(err => { if (active) toast.error(err.message || 'Failed to load hourly availability.'); })
+      .finally(() => { if (active) setLoadingModifyAvailability(false); });
+    return () => { active = false; };
+  }, [modifyingRes, modifyData.reservationDate]);
+
+  useEffect(() => {
+    if (!modifyingRes || !modifyData.reservationDate || !modifyData.startTime || !modifyData.endTime) return;
+    let active = true;
+    getAvailability(modifyingRes.nodeId, modifyData.reservationDate, modifyData.startTime, modifyData.endTime)
+      .then(data => {
+        if (active) {
+          setModifyWindowAvailability(data);
+          setModifySlots(Array.isArray(data.slots) ? data.slots : []);
+        }
+      })
+      .catch(err => { if (active) toast.error(err.message || 'Failed to load battery slots.'); });
+    return () => { active = false; };
+  }, [modifyingRes, modifyData.reservationDate, modifyData.startTime, modifyData.endTime]);
+
   // --- Handlers: Modify Booking (12-hour rule) ---
   function openModifyModal(res) {
     if (!canModifyOrCancel(res)) {
@@ -313,9 +341,9 @@ export default function ProsumerPortal() {
       energyKWh: res.energyKWh,
       selectedSlotIds: res.allocatedSlotIds || []
     });
-    getSlotsByNode(res.nodeId)
-      .then(data => setModifySlots(data || []))
-      .catch(() => setModifySlots([]));
+    setModifyHourlyAvailability(null);
+    setModifyWindowAvailability(null);
+    setModifySlots([]);
   }
 
   async function handleSaveModify(e) {
@@ -327,6 +355,10 @@ export default function ProsumerPortal() {
     }
     const activeModifySlots = modifySlots.filter(s => (modifyData.selectedSlotIds || []).includes(s.id));
     const newEnergy = activeModifySlots.reduce((sum, s) => sum + (s.availableKWh || 0), 0);
+    if (!modifyData.selectedSlotIds || modifyData.selectedSlotIds.length === 0 || newEnergy <= 0) {
+      toast.error('Please select at least one available battery slot.');
+      return;
+    }
 
     try {
       await updateReservation(modifyingRes.id, {
@@ -1472,21 +1504,8 @@ export default function ProsumerPortal() {
             </div>
             <form onSubmit={handleSaveModify}>
               <div className="modal-body">
-                <div
-                  style={{
-                    background: 'rgba(59, 130, 246, 0.1)',
-                    border: '1px solid var(--color-accent)',
-                    padding: '0.75rem',
-                    borderRadius: 'var(--radius-sm)',
-                    marginBottom: '1rem',
-                    fontSize: '0.8rem'
-                  }}
-                >
-                  ℹ️ 12-Hour Notice Rule applies. Changes must be finalized at least 12 hours before slot time.
-                </div>
-
                 <div className="form-group">
-                  <label className="form-label">New Reservation Date</label>
+                  <label className="form-label">Reservation Date</label>
                   <input
                     type="date"
                     className="form-input"
@@ -1498,20 +1517,44 @@ export default function ProsumerPortal() {
                   />
                 </div>
 
+                <div style={{ margin: '1rem 0' }}>
+                  <label className="form-label">Available Hours</label>
+                  {loadingModifyAvailability ? (
+                    <div className="text-muted">Loading available hours...</div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.5rem' }}>
+                      {getHourlySlots(modifyHourlyAvailability).filter(isBookableHour).map(hour => {
+                        const selected = modifyData.startTime === hour.startTime && modifyData.endTime === hour.endTime;
+                        return (
+                          <button
+                            key={hour.startTime}
+                            type="button"
+                            onClick={() => setModifyData(prev => ({ ...prev, startTime: hour.startTime, endTime: hour.endTime, selectedSlotIds: [] }))}
+                            style={{
+                              padding: '0.7rem',
+                              borderRadius: 'var(--radius-sm)',
+                              border: selected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                              background: selected ? 'rgba(34, 197, 94, 0.15)' : 'var(--color-surface)',
+                              color: 'var(--color-text)',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                          >
+                            <strong>{hour.startTime}–{hour.endTime}</strong>
+                            <div style={{ fontSize: '0.75rem', marginTop: '0.2rem', color: 'var(--color-text-secondary)' }}>
+                              {hour.availableKWh} kWh available
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                   <div className="form-group">
                     <label className="form-label">Start Time</label>
-                    <input
-                      type="time"
-                      className="form-input"
-                      value={modifyData.startTime}
-                      onChange={e => {
-                        const start = e.target.value;
-                        const end = addOneHour(start);
-                        setModifyData(prev => ({ ...prev, startTime: start, endTime: end }));
-                      }}
-                      required
-                    />
+                    <input type="time" className="form-input" value={modifyData.startTime} readOnly required />
                   </div>
                   <div className="form-group">
                     <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1532,16 +1575,53 @@ export default function ProsumerPortal() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">New Energy Amount (kWh)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0.5"
-                    className="form-input"
-                    value={modifyData.energyKWh}
-                    onChange={e => setModifyData({ ...modifyData, energyKWh: e.target.value })}
-                    required
-                  />
+                  <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Battery Slots</span>
+                    <span style={{ color: 'var(--color-primary-light)' }}>
+                      {modifyData.selectedSlotIds.length} selected · {Number(modifyData.energyKWh || 0).toFixed(1)} kWh
+                    </span>
+                  </label>
+                  {modifyWindowAvailability?.slots?.length ? (
+                    <div style={{ display: 'grid', gap: '0.5rem' }}>
+                      {modifySlots.map(slot => {
+                        const selected = (modifyData.selectedSlotIds || []).includes(slot.id);
+                        const selectable = slot.isAvailable && (!slot.isBooked || selected);
+                        return (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            disabled={!selectable}
+                            onClick={() => setModifyData(prev => ({
+                              ...prev,
+                              selectedSlotIds: selected
+                                ? prev.selectedSlotIds.filter(id => id !== slot.id)
+                                : [...prev.selectedSlotIds, slot.id],
+                              energyKWh: modifySlots
+                                .filter(item => (selected
+                                  ? prev.selectedSlotIds.filter(id => id !== slot.id).includes(item.id)
+                                  : item.id === slot.id || prev.selectedSlotIds.includes(item.id)))
+                                .reduce((sum, item) => sum + (item.capacityKWh || 0), 0)
+                            }))}
+                            style={{
+                              padding: '0.7rem',
+                              textAlign: 'left',
+                              borderRadius: 'var(--radius-sm)',
+                              border: selected ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
+                              background: selected ? 'rgba(34, 197, 94, 0.15)' : 'var(--color-surface)',
+                              color: 'var(--color-text)',
+                              opacity: selectable ? 1 : 0.45,
+                              cursor: selectable ? 'pointer' : 'not-allowed'
+                            }}
+                          >
+                            <strong>🔋 Slot #{slot.slotNumber}</strong>
+                            <span style={{ float: 'right' }}>{selected ? '✓ Selected' : `${slot.capacityKWh} kWh`}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-muted">Select an available hour to view battery slots.</div>
+                  )}
                 </div>
               </div>
               <div className="modal-footer">

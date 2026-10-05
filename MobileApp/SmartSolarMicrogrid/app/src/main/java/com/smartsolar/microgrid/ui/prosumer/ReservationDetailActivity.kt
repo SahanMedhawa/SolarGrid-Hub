@@ -6,12 +6,14 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -19,6 +21,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.zxing.BarcodeFormat
 import com.journeyapps.barcodescanner.BarcodeEncoder
+import com.google.android.material.card.MaterialCardView
 import com.smartsolar.microgrid.R
 import com.smartsolar.microgrid.api.ApiClient
 import com.smartsolar.microgrid.data.SessionManager
@@ -33,6 +36,15 @@ import java.util.Locale
  * secure QR transaction pass dispatch, modification/rescheduling, and cancellation.
  */
 class ReservationDetailActivity : AppCompatActivity() {
+
+    private data class BatterySlotUI(
+        val id: String,
+        val slotNumber: Int,
+        val capacityKWh: Double,
+        val status: String,
+        val isBooked: Boolean,
+        val isAvailable: Boolean
+    )
 
     private var resId: String? = null
     private lateinit var session: SessionManager
@@ -261,12 +273,16 @@ class ReservationDetailActivity : AppCompatActivity() {
         (spinnerNodes.parent as? View)?.visibility = View.GONE
 
         val cardAvailabilityStatus = dialogView.findViewById<View>(R.id.cardAvailabilityStatus)
-        cardAvailabilityStatus?.visibility = View.GONE
+        cardAvailabilityStatus?.visibility = View.VISIBLE
+        val hourlyContainer = dialogView.findViewById<LinearLayout>(R.id.llHourlySlotsContainer)
+        val slotsContainer = dialogView.findViewById<LinearLayout>(R.id.llSlotsListContainer)
 
         val etDate = dialogView.findViewById<EditText>(R.id.etDate)
         val etStartTime = dialogView.findViewById<EditText>(R.id.etStartTime)
         val etEndTime = dialogView.findViewById<EditText>(R.id.etEndTime)
         val etEnergyKWh = dialogView.findViewById<EditText>(R.id.etEnergyKWh)
+        val tvSelectedSlotsCount = dialogView.findViewById<TextView>(R.id.tvSelectedSlotsCount)
+        val tvCalculatedEnergyTotal = dialogView.findViewById<TextView>(R.id.tvCalculatedEnergyTotal)
         val btnSubmit = dialogView.findViewById<Button>(R.id.btnSubmitReservation)
 
         val cal = Calendar.getInstance()
@@ -286,6 +302,222 @@ class ReservationDetailActivity : AppCompatActivity() {
 
         btnSubmit.text = "Save Updated Reservation"
 
+        val modifySlots = ArrayList<BatterySlotUI>()
+        val selectedModifySlotIds = HashSet<String>(currentAllocatedSlots)
+        if (selectedModifySlotIds.isEmpty() && currentSlotId.isNotEmpty()) {
+            selectedModifySlotIds.add(currentSlotId)
+        }
+
+        fun updateModifyEnergyTotal() {
+            val total = modifySlots
+                .filter { selectedModifySlotIds.contains(it.id) }
+                .sumOf { it.capacityKWh }
+            tvSelectedSlotsCount.text = "${selectedModifySlotIds.size} slot(s) selected"
+            tvCalculatedEnergyTotal.text = String.format(Locale.US, "%.1f kWh", total)
+            etEnergyKWh.setText(String.format(Locale.US, "%.1f", total))
+        }
+
+        fun renderModifySlots() {
+            slotsContainer.removeAllViews()
+            if (modifySlots.isEmpty()) {
+                val empty = TextView(this).apply {
+                    text = "No battery slots available for this hour"
+                    textSize = 12f
+                    setTextColor(ContextCompat.getColor(this@ReservationDetailActivity, R.color.text_secondary))
+                    setPadding(8, 12, 8, 12)
+                }
+                slotsContainer.addView(empty)
+                return
+            }
+            modifySlots.forEach { slot ->
+                val selected = selectedModifySlotIds.contains(slot.id)
+                val card = MaterialCardView(this).apply {
+                    radius = 20f
+                    strokeWidth = if (selected) 3 else 1
+                    strokeColor = if (selected) Color.parseColor("#006D44")
+                    else ContextCompat.getColor(this@ReservationDetailActivity, R.color.card_border)
+                    setCardBackgroundColor(
+                        if (selected) Color.parseColor("#D1FAE5")
+                        else ContextCompat.getColor(this@ReservationDetailActivity, R.color.card_background)
+                    )
+                    alpha = if (slot.isAvailable || selected) 1f else 0.5f
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        setMargins(0, 0, 0, 10)
+                    }
+                    setOnClickListener {
+                        if (!slot.isAvailable && !selected) return@setOnClickListener
+                        if (selected) selectedModifySlotIds.remove(slot.id) else selectedModifySlotIds.add(slot.id)
+                        updateModifyEnergyTotal()
+                        renderModifySlots()
+                    }
+                }
+
+                val content = LinearLayout(this).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(20, 16, 20, 16)
+                }
+                val header = LinearLayout(this).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                }
+                val title = TextView(this).apply {
+                    text = "🔋 Slot #${slot.slotNumber}"
+                    textSize = 14f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(
+                        if (selected) Color.parseColor("#006D44")
+                        else ContextCompat.getColor(this@ReservationDetailActivity, R.color.text_primary)
+                    )
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                }
+                val badge = TextView(this).apply {
+                    text = when {
+                        selected -> "SELECTED"
+                        !slot.isAvailable -> "UNAVAILABLE"
+                        else -> "AVAILABLE"
+                    }
+                    textSize = 10f
+                    setTypeface(null, android.graphics.Typeface.BOLD)
+                    setTextColor(
+                        when {
+                            selected -> Color.parseColor("#006D44")
+                            !slot.isAvailable -> Color.parseColor("#B45309")
+                            else -> Color.parseColor("#059669")
+                        }
+                    )
+                }
+                header.addView(title)
+                header.addView(badge)
+                content.addView(header)
+                val capacity = TextView(this).apply {
+                    text = String.format(Locale.US, "%.1f kWh capacity", slot.capacityKWh)
+                    textSize = 13f
+                    setTextColor(ContextCompat.getColor(this@ReservationDetailActivity, R.color.text_secondary))
+                    setPadding(0, 6, 0, 0)
+                }
+                content.addView(capacity)
+                card.addView(content)
+                slotsContainer.addView(card)
+            }
+        }
+
+        fun loadModifyWindow() {
+            val nodeId = currentNodeId
+            val date = etDate.text.toString().trim()
+            val start = etStartTime.text.toString().trim()
+            val end = etEndTime.text.toString().trim()
+            if (nodeId.isEmpty() || date.isEmpty() || start.isEmpty() || end.isEmpty()) return
+
+            ApiClient.request(
+                "reservation/availability?nodeId=$nodeId&date=$date&startTime=$start&endTime=$end",
+                "GET",
+                null,
+                session.getToken(),
+                object : ApiClient.ApiCallback {
+                    override fun onSuccess(response: String) {
+                        try {
+                            val obj = JSONObject(response)
+                            val slots = obj.optJSONArray("slots")
+                            modifySlots.clear()
+                            if (slots != null) {
+                                for (i in 0 until slots.length()) {
+                                    val slot = slots.getJSONObject(i)
+                                    modifySlots.add(
+                                        BatterySlotUI(
+                                            id = slot.optString("id", ""),
+                                            slotNumber = slot.optInt("slotNumber", i + 1),
+                                            capacityKWh = slot.optDouble("capacityKWh", 0.0),
+                                            status = slot.optString("status", "Available"),
+                                            isBooked = slot.optBoolean("isBooked", false),
+                                            isAvailable = slot.optBoolean("isAvailable", false) ||
+                                                selectedModifySlotIds.contains(slot.optString("id", ""))
+                                        )
+                                    )
+                                }
+                            }
+                            runOnUiThread {
+                                updateModifyEnergyTotal()
+                                renderModifySlots()
+                            }
+                        } catch (_: Exception) {
+                            runOnUiThread {
+                                modifySlots.clear()
+                                updateModifyEnergyTotal()
+                                renderModifySlots()
+                            }
+                        }
+                    }
+
+                    override fun onError(error: String) {
+                        runOnUiThread {
+                            modifySlots.clear()
+                            updateModifyEnergyTotal()
+                            renderModifySlots()
+                        }
+                    }
+                }
+            )
+        }
+
+        fun loadModifyHourly() {
+            val date = etDate.text.toString().trim()
+            if (currentNodeId.isEmpty() || date.isEmpty()) return
+            ApiClient.request(
+                "reservation/availability/hourly?nodeId=$currentNodeId&date=$date",
+                "GET",
+                null,
+                session.getToken(),
+                object : ApiClient.ApiCallback {
+                    override fun onSuccess(response: String) {
+                        try {
+                            val slots = JSONObject(response).optJSONArray("hourlySlots")
+                            hourlyContainer.removeAllViews()
+                            if (slots != null) {
+                                for (i in 0 until slots.length()) {
+                                    val slot = slots.getJSONObject(i)
+                                    if (!slot.optBoolean("isWithinOperatingHours", false) ||
+                                        slot.optDouble("availableKWh", 0.0) <= 0
+                                    ) continue
+                                    val slotStart = slot.optString("startTime", "")
+                                    val slotEnd = slot.optString("endTime", "")
+                                    val selected = etStartTime.text.toString() == slotStart &&
+                                        etEndTime.text.toString() == slotEnd
+                                    val item = TextView(this@ReservationDetailActivity).apply {
+                                        text = "$slotStart - $slotEnd  •  ${slot.optDouble("availableKWh", 0.0)} kWh"
+                                        textSize = 13f
+                                        setTextColor(ContextCompat.getColor(this@ReservationDetailActivity, R.color.text_primary))
+                                        setPadding(16, 16, 16, 16)
+                                        setBackgroundColor(
+                                            ContextCompat.getColor(
+                                                this@ReservationDetailActivity,
+                                                if (selected) R.color.md_theme_light_primaryContainer else R.color.card_background
+                                            )
+                                        )
+                                        setOnClickListener {
+                                            selectedModifySlotIds.clear()
+                                            etStartTime.setText(slotStart)
+                                            etEndTime.setText(slotEnd)
+                                            loadModifyWindow()
+                                            loadModifyHourly()
+                                        }
+                                    }
+                                    hourlyContainer.addView(item)
+                                }
+                            }
+                            runOnUiThread { loadModifyWindow() }
+                        } catch (_: Exception) { }
+                    }
+
+                    override fun onError(error: String) {
+                        runOnUiThread { hourlyContainer.removeAllViews() }
+                    }
+                }
+            )
+        }
+
         val dialog = AlertDialog.Builder(this)
             .setTitle("Modify Reservation")
             .setView(dialogView)
@@ -303,6 +535,8 @@ class ReservationDetailActivity : AppCompatActivity() {
                     cal.set(Calendar.MONTH, month)
                     cal.set(Calendar.DAY_OF_MONTH, dayOfMonth)
                     etDate.setText(sdf.format(cal.time))
+                    selectedModifySlotIds.clear()
+                    loadModifyHourly()
                 },
                 cal.get(Calendar.YEAR),
                 cal.get(Calendar.MONTH),
@@ -323,11 +557,10 @@ class ReservationDetailActivity : AppCompatActivity() {
                 val newEnd = if (newEndH >= 24) "24:00" else String.format(Locale.US, "%02d:%02d", newEndH, minute)
                 etStartTime.setText(newStart)
                 etEndTime.setText(newEnd)
+                selectedModifySlotIds.clear()
+                loadModifyWindow()
+                loadModifyHourly()
             }, h, m, true).show()
-        }
-
-        etEndTime.setOnClickListener {
-            Toast.makeText(this, "Every energy reservation is exactly 1 hour. Tap Start Time to select.", Toast.LENGTH_SHORT).show()
         }
 
         btnSubmit.setOnClickListener {
@@ -352,12 +585,22 @@ class ReservationDetailActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
+            if (selectedModifySlotIds.isEmpty()) {
+                Toast.makeText(this, "Select at least one available battery slot", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
             try {
                 val updateBody = JSONObject().apply {
                     put("reservationDate", "${newDateStr}T00:00:00Z")
                     put("startTime", newStartStr)
                     put("endTime", newEndStr)
                     put("energyKWh", newKwh)
+                    val selectedSlots = JSONArray()
+                    selectedModifySlotIds.forEach { selectedSlots.put(it) }
+                    if (selectedSlots.length() > 0) {
+                        put("selectedSlotIds", selectedSlots)
+                    }
                 }
 
                 ApiClient.request("reservation/$resId", "PUT", updateBody, session.getToken(), object : ApiClient.ApiCallback {
@@ -376,6 +619,8 @@ class ReservationDetailActivity : AppCompatActivity() {
             }
         }
 
+        loadModifyHourly()
+        updateModifyEnergyTotal()
         dialog.show()
     }
 
