@@ -125,12 +125,28 @@ export default function ProsumerPortal() {
   const [windowAvailability, setWindowAvailability] = useState(null);
   const [evaluatingWindow, setEvaluatingWindow] = useState(false);
   const [submittingBooking, setSubmittingBooking] = useState(false);
+  const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
 
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 
   useEffect(() => {
     loadProsumerData();
   }, [prosumerNic]);
+
+  // Maintenance can be scheduled from the mobile app. Recheck availability
+  // while this page is open and whenever the user returns to the browser tab.
+  useEffect(() => {
+    const refreshAvailability = () => setAvailabilityRefreshKey(key => key + 1);
+    const intervalId = window.setInterval(refreshAvailability, 10000);
+    window.addEventListener('focus', refreshAvailability);
+    document.addEventListener('visibilitychange', refreshAvailability);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshAvailability);
+      document.removeEventListener('visibilitychange', refreshAvailability);
+    };
+  }, []);
 
   async function loadProsumerData() {
     if (!prosumerNic) return;
@@ -239,7 +255,7 @@ export default function ProsumerPortal() {
         .finally(() => { if (active) setLoadingHourly(false); });
       return () => { active = false; };
     }
-  }, [bookingForm.nodeId, bookingForm.reservationDate]);
+  }, [bookingForm.nodeId, bookingForm.reservationDate, availabilityRefreshKey]);
 
   useEffect(() => {
     if (!hourlyAvailability?.slots) return;
@@ -269,7 +285,7 @@ export default function ProsumerPortal() {
         .finally(() => { if (active) setEvaluatingWindow(false); });
       return () => { active = false; };
     }
-  }, [bookingForm.nodeId, bookingForm.reservationDate, bookingForm.startTime, bookingForm.endTime]);
+  }, [bookingForm.nodeId, bookingForm.reservationDate, bookingForm.startTime, bookingForm.endTime, availabilityRefreshKey]);
 
   // Helper: Computes Date object with reservation start time
   function getReservationDateTime(r) {

@@ -189,6 +189,9 @@ class CreateReservationActivity : AppCompatActivity() {
                     spinnerNodes.adapter = adapter
 
                     if (nodesList.isNotEmpty()) {
+                        val requestedNodeId = intent.getStringExtra("nodeId")
+                        val requestedIndex = nodesList.indexOfFirst { it.id == requestedNodeId }
+                        if (requestedIndex >= 0) spinnerNodes.setSelection(requestedIndex)
                         val firstNode = nodesList[0]
                         val sched = if (firstNode.schedule.isNotEmpty()) firstNode.schedule else "06:00-18:00"
                         tvOperatingHours.text = "Operating Hours: $sched"
