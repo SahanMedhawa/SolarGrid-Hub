@@ -38,15 +38,27 @@ class NodeManagementActivity : AppCompatActivity() {
         ApiClient.request("microgridnode", "GET", null, session.getToken(), object : ApiClient.ApiCallback {
             override fun onSuccess(response: String) {
                 try {
-                    renderOperatorNodes(JSONArray(response))
+                    val nodes = JSONArray(response)
+                    session.dbHelper.cacheOperatorNodes(nodes)
+                    renderOperatorNodes(nodes)
                 } catch (_: Exception) {
-                    Toast.makeText(this@NodeManagementActivity, "Could not read nodes", Toast.LENGTH_SHORT).show()
+                    renderCachedNodes("Could not read nodes. Showing saved data.")
                 }
             }
             override fun onError(error: String) {
-                Toast.makeText(this@NodeManagementActivity, "Nodes: $error", Toast.LENGTH_SHORT).show()
+                renderCachedNodes("Offline mode: showing saved grid data.")
             }
         })
+    }
+
+    private fun renderCachedNodes(message: String) {
+        val cachedNodes = session.dbHelper.getCachedOperatorNodes()
+        if (cachedNodes.length() > 0) {
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            renderOperatorNodes(cachedNodes)
+        } else {
+            Toast.makeText(this, "No saved grid data is available.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun renderOperatorNodes(nodes: JSONArray) {
@@ -128,13 +140,28 @@ class NodeManagementActivity : AppCompatActivity() {
         ApiClient.request("energyslot/node/$nodeId", "GET", null, session.getToken(), object : ApiClient.ApiCallback {
             override fun onSuccess(response: String) {
                 if (selectedNodeId != nodeId) return
-                try { renderOperatorSlots(nodeId, node, JSONArray(response)) }
-                catch (_: Exception) { Toast.makeText(this@NodeManagementActivity, "Could not read battery slots", Toast.LENGTH_SHORT).show() }
+                try {
+                    val slots = JSONArray(response)
+                    session.dbHelper.cacheOperatorSlots(nodeId, slots)
+                    renderOperatorSlots(nodeId, node, slots)
+                } catch (_: Exception) {
+                    renderCachedSlots(nodeId, node, "Could not read battery slots. Showing saved data.")
+                }
             }
             override fun onError(error: String) {
-                Toast.makeText(this@NodeManagementActivity, "Slots: $error", Toast.LENGTH_SHORT).show()
+                renderCachedSlots(nodeId, node, "Offline mode: showing saved slot data.")
             }
         })
+    }
+
+    private fun renderCachedSlots(nodeId: String, node: JSONObject, message: String) {
+        val cachedSlots = session.dbHelper.getCachedOperatorSlots(nodeId)
+        if (cachedSlots != null) {
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            renderOperatorSlots(nodeId, node, cachedSlots)
+        } else {
+            Toast.makeText(this, "No saved slot data is available.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun renderOperatorSlots(nodeId: String, node: JSONObject, slots: JSONArray) {

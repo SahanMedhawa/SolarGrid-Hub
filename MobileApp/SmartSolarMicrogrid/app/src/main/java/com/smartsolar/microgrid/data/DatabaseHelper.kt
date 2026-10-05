@@ -5,6 +5,8 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import com.smartsolar.microgrid.models.Reservation
+import org.json.JSONArray
+import org.json.JSONObject
 
 /**
  * Pure native SQLite Database Helper for local user management and offline caching.
@@ -15,7 +17,7 @@ class DatabaseHelper(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "SmartSolarMicrogrid.db"
-        private const val DATABASE_VERSION = 3
+        private const val DATABASE_VERSION = 4
 
         // Table: Local User
         const val TABLE_USER = "local_user"
@@ -38,6 +40,17 @@ class DatabaseHelper(context: Context) :
         const val COL_RES_KWH = "energy_kwh"
         const val COL_RES_STATUS = "status"
         const val COL_RES_QR = "qr_data"
+
+        // Cached operator grid-management data
+        const val TABLE_OPERATOR_NODES = "cached_operator_nodes"
+        const val COL_NODE_ID = "node_id"
+        const val COL_NODE_JSON = "node_json"
+        const val COL_NODE_UPDATED_AT = "updated_at"
+
+        const val TABLE_OPERATOR_SLOTS = "cached_operator_slots"
+        const val COL_SLOT_NODE_ID = "node_id"
+        const val COL_SLOT_JSON = "slot_json"
+        const val COL_SLOT_UPDATED_AT = "updated_at"
     }
 
     override fun onCreate(db: SQLiteDatabase) {
@@ -69,12 +82,28 @@ class DatabaseHelper(context: Context) :
 
         db.execSQL(createUserTable)
         db.execSQL(createResTable)
+        createOperatorCacheTables(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_USER")
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_RESERVATIONS")
-        onCreate(db)
+        if (oldVersion < 4) createOperatorCacheTables(db)
+    }
+
+    private fun createOperatorCacheTables(db: SQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS $TABLE_OPERATOR_NODES (
+                $COL_NODE_ID TEXT PRIMARY KEY,
+                $COL_NODE_JSON TEXT NOT NULL,
+                $COL_NODE_UPDATED_AT INTEGER NOT NULL
+            )
+        """.trimIndent())
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS $TABLE_OPERATOR_SLOTS (
+                $COL_SLOT_NODE_ID TEXT PRIMARY KEY,
+                $COL_SLOT_JSON TEXT NOT NULL,
+                $COL_SLOT_UPDATED_AT INTEGER NOT NULL
+            )
+        """.trimIndent())
     }
 
     // Save or update active logged-in user in SQLite
@@ -189,5 +218,63 @@ class DatabaseHelper(context: Context) :
     fun clearCachedReservations() {
         val db = writableDatabase
         db.delete(TABLE_RESERVATIONS, null, null)
+    }
+
+    fun cacheOperatorNodes(nodes: JSONArray) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete(TABLE_OPERATOR_NODES, null, null)
+            for (index in 0 until nodes.length()) {
+                val node = nodes.optJSONObject(index) ?: continue
+                val values = ContentValues().apply {
+                    put(COL_NODE_ID, node.optString("id"))
+                    put(COL_NODE_JSON, node.toString())
+                    put(COL_NODE_UPDATED_AT, System.currentTimeMillis())
+                }
+                db.insertWithOnConflict(TABLE_OPERATOR_NODES, null, values, SQLiteDatabase.CONFLICT_REPLACE)
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    fun getCachedOperatorNodes(): JSONArray {
+        val result = JSONArray()
+        readableDatabase.query(TABLE_OPERATOR_NODES, arrayOf(COL_NODE_JSON), null, null, null, null, COL_NODE_ID).use { cursor ->
+            while (cursor.moveToNext()) result.put(JSONObject(cursor.getString(0)))
+        }
+        return result
+    }
+
+    fun cacheOperatorSlots(nodeId: String, slots: JSONArray) {
+        val values = ContentValues().apply {
+            put(COL_SLOT_NODE_ID, nodeId)
+            put(COL_SLOT_JSON, slots.toString())
+            put(COL_SLOT_UPDATED_AT, System.currentTimeMillis())
+        }
+        writableDatabase.insertWithOnConflict(TABLE_OPERATOR_SLOTS, null, values, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
+    fun getCachedOperatorSlots(nodeId: String): JSONArray? {
+        readableDatabase.query(
+            TABLE_OPERATOR_SLOTS,
+            arrayOf(COL_SLOT_JSON),
+            "$COL_SLOT_NODE_ID = ?",
+            arrayOf(nodeId),
+            null,
+            null,
+            null
+        ).use { cursor ->
+            if (cursor.moveToFirst()) return JSONArray(cursor.getString(0))
+        }
+        return null
+    }
+
+    fun clearCachedOperatorData() {
+        val db = writableDatabase
+        db.delete(TABLE_OPERATOR_NODES, null, null)
+        db.delete(TABLE_OPERATOR_SLOTS, null, null)
     }
 }
