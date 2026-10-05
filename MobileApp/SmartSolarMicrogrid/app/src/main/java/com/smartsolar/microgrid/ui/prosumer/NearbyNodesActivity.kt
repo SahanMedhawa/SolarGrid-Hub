@@ -1,5 +1,6 @@
 package com.smartsolar.microgrid.ui.prosumer
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,6 +10,8 @@ import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.core.content.ContextCompat
+import com.google.android.material.card.MaterialCardView
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.EdgeInsets
@@ -56,7 +59,10 @@ class NearbyNodesActivity : FragmentActivity() {
             selectedNodeId = null
             renderMapSelection()
         }
-        nodeAdapter = GridNodeAdapter { node -> focusNode(node) }
+        nodeAdapter = GridNodeAdapter(
+            onNodeClick = { node -> focusNode(node) },
+            onBookClick = { node -> openBooking(node) }
+        )
         findViewById<RecyclerView>(R.id.rvGridNodes).apply {
             layoutManager = LinearLayoutManager(this@NearbyNodesActivity)
             adapter = nodeAdapter
@@ -121,6 +127,12 @@ class NearbyNodesActivity : FragmentActivity() {
         }
         selectedNodeId = node.id
         renderMapSelection()
+    }
+
+    private fun openBooking(node: GridNode) {
+        startActivity(Intent(this, CreateReservationActivity::class.java).apply {
+            putExtra("nodeId", node.id)
+        })
     }
 
     private fun renderMapSelection() {
@@ -223,7 +235,8 @@ class NearbyNodesActivity : FragmentActivity() {
     )
 
     private inner class GridNodeAdapter(
-        private val onNodeClick: (GridNode) -> Unit
+        private val onNodeClick: (GridNode) -> Unit,
+        private val onBookClick: (GridNode) -> Unit
     ) : RecyclerView.Adapter<GridNodeAdapter.NodeViewHolder>() {
         private val items = mutableListOf<GridNode>()
 
@@ -241,21 +254,30 @@ class NearbyNodesActivity : FragmentActivity() {
         override fun onBindViewHolder(holder: NodeViewHolder, position: Int) {
             val node = items[position]
             holder.name.text = node.name
-            holder.location.text = "⌖  ${node.location}"
-            holder.capacity.text = "Total capacity  ·  ${formatCapacity(node.capacityKWh)} kWh"
-            holder.slots.text = "Battery slots  ·  ${node.availableSlots} available of ${node.totalSlots}"
-            holder.schedule.text = "Operating hours  ·  ${node.schedule}"
+            holder.location.text = "Location: ${node.location}"
+            holder.capacity.text = "Total capacity: ${formatCapacity(node.capacityKWh)} kWh"
+            holder.schedule.text = "Operating hours: ${node.schedule}"
+            val slotsAvailable = node.availableSlots > 0
+            holder.status.text = if (slotsAvailable) "AVAILABLE" else "FULL"
+            val statusColor = ContextCompat.getColor(
+                this@NearbyNodesActivity,
+                if (slotsAvailable) R.color.status_active else R.color.status_cancelled
+            )
+            holder.status.setTextColor(statusColor)
+            (holder.itemView as? MaterialCardView)?.strokeColor = statusColor
             holder.itemView.setOnClickListener { onNodeClick(node) }
+            holder.book.setOnClickListener { onBookClick(node) }
         }
 
         override fun getItemCount(): Int = items.size
 
         inner class NodeViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val name: TextView = view.findViewById(R.id.tvNodeName)
+            val status: TextView = view.findViewById(R.id.tvNodeStatus)
             val location: TextView = view.findViewById(R.id.tvNodeLocation)
             val capacity: TextView = view.findViewById(R.id.tvNodeCapacity)
-            val slots: TextView = view.findViewById(R.id.tvNodeSlots)
             val schedule: TextView = view.findViewById(R.id.tvNodeSchedule)
+            val book: View = view.findViewById(R.id.btnBookNode)
         }
     }
 }

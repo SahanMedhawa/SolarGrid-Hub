@@ -66,8 +66,12 @@ class NodeManagementActivity : AppCompatActivity() {
             val card = MaterialCardView(this).apply {
                 radius = 14f * resources.displayMetrics.density
                 strokeWidth = (1f * resources.displayMetrics.density).toInt()
-                strokeColor = ContextCompat.getColor(this@NodeManagementActivity, R.color.card_border)
-                setCardBackgroundColor(ContextCompat.getColor(this@NodeManagementActivity, R.color.card_background))
+                val isActive = node.optBoolean("isActive", true)
+                strokeColor = ContextCompat.getColor(
+                    this@NodeManagementActivity,
+                    if (isActive) R.color.status_active else R.color.status_cancelled
+                )
+                setCardBackgroundColor(ContextCompat.getColor(this@NodeManagementActivity, R.color.card_background_elevated))
                 layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
                     bottomMargin = (8 * resources.displayMetrics.density).toInt()
                 }
@@ -78,19 +82,22 @@ class NodeManagementActivity : AppCompatActivity() {
                 setPadding(p, p, p, p)
             }
             body.addView(TextView(this).apply {
-                text = "${node.optString("nodeName", "Microgrid Node")}  ·  ${if (node.optBoolean("isActive", true)) "Active" else "Inactive"}"
+                val isActive = node.optBoolean("isActive", true)
+                text = "${node.optString("nodeName", "Microgrid Node")}  |  ${if (isActive) "Active" else "Inactive"}"
                 textSize = 16f
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setTextColor(ContextCompat.getColor(this@NodeManagementActivity, R.color.text_primary))
+                setTextColor(ContextCompat.getColor(this@NodeManagementActivity, if (isActive) R.color.status_active else R.color.status_cancelled))
             })
             body.addView(TextView(this).apply {
-                text = "${node.optString("location", "Location unavailable")}\nCapacity: ${node.optDouble("capacityKWh", 0.0)} kWh  ·  Schedule: ${node.optString("schedule", "—")}"
+                text = "${node.optString("location", "Location unavailable")}\nCapacity: ${node.optDouble("capacityKWh", 0.0)} kWh  |  Schedule: ${node.optString("schedule", "Not specified")}"
                 textSize = 13f
-                setTextColor(ContextCompat.getColor(this@NodeManagementActivity, R.color.text_secondary))
+                setTextColor(ContextCompat.getColor(this@NodeManagementActivity, R.color.accent))
                 setPadding(0, (5 * resources.displayMetrics.density).toInt(), 0, (8 * resources.displayMetrics.density).toInt())
             })
             val action = Button(this).apply {
                 text = if (selectedNodeId == id) "Hide battery slots" else "Manage battery slots"
+                setBackgroundColor(ContextCompat.getColor(this@NodeManagementActivity, if (selectedNodeId == id) R.color.accent else R.color.primary))
+                setTextColor(ContextCompat.getColor(this@NodeManagementActivity, R.color.white))
                 setOnClickListener {
                     if (selectedNodeId == id) {
                         selectedNodeId = null
@@ -106,7 +113,7 @@ class NodeManagementActivity : AppCompatActivity() {
                 tag = "operator_slots_$id"
                 orientation = LinearLayout.VERTICAL
                 addView(TextView(this@NodeManagementActivity).apply {
-                    text = "Loading battery slots…"
+                    text = "Loading battery slots..."
                     textSize = 13f
                     setTextColor(ContextCompat.getColor(this@NodeManagementActivity, R.color.text_secondary))
                 })
@@ -147,9 +154,9 @@ class NodeManagementActivity : AppCompatActivity() {
             if (slot.optString("status") == "Maintenance") maintenanceKwh += slot.optDouble("availableKWh") else activeKwh += slot.optDouble("availableKWh")
         }
         container.addView(TextView(this).apply {
-            text = "Active capacity: $activeKwh kWh  ·  Maintenance: $maintenanceKwh kWh  ·  Station total: ${node.optDouble("capacityKWh", 0.0)} kWh"
+            text = "Active capacity: $activeKwh kWh  |  Maintenance: $maintenanceKwh kWh  |  Station total: ${node.optDouble("capacityKWh", 0.0)} kWh"
             textSize = 12f
-            setTextColor(ContextCompat.getColor(this@NodeManagementActivity, R.color.text_secondary))
+            setTextColor(ContextCompat.getColor(this@NodeManagementActivity, R.color.accent))
             setPadding(0, 4, 0, 8)
         })
         if (slots.length() == 0) container.addView(TextView(this).apply { text = "No battery slots configured."; textSize = 13f })
@@ -163,10 +170,10 @@ class NodeManagementActivity : AppCompatActivity() {
                 setPadding(0, 6, 0, 6)
             }
             line.addView(TextView(this).apply {
-                val window = if (maintenance && slot.optString("maintenanceDate").isNotEmpty()) "\n${slot.optString("maintenanceDate").take(10)} · ${slot.optString("maintenanceStartTime")}–${slot.optString("maintenanceEndTime")}" else ""
-                text = "Slot $number · ${slot.optDouble("availableKWh")} kWh · ${slot.optString("status")}$window"
+                val window = if (maintenance && slot.optString("maintenanceDate").isNotEmpty()) "\n${slot.optString("maintenanceDate").take(10)} | ${slot.optString("maintenanceStartTime")}-${slot.optString("maintenanceEndTime")}" else ""
+                text = "Slot $number | ${slot.optDouble("availableKWh")} kWh | ${slot.optString("status")}$window"
                 textSize = 13f
-                setTextColor(ContextCompat.getColor(this@NodeManagementActivity, R.color.text_primary))
+                setTextColor(ContextCompat.getColor(this@NodeManagementActivity, if (maintenance) R.color.status_pending else R.color.status_active))
             })
             val button = Button(this).apply {
                 text = if (maintenance) "Return to service" else "Schedule maintenance"
