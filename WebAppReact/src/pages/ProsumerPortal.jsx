@@ -37,24 +37,6 @@ function getHourlySlots(availability) {
   return availability?.hourlySlots || availability?.slots || [];
 }
 
-function getBookableStartTimes(availability) {
-  return getHourlySlots(availability).filter(isBookableHour).map(slot => slot.startTime);
-}
-
-function getBookableEndTimes(availability, startTime) {
-  if (!startTime) return [];
-  const slotsByStart = new Map(getHourlySlots(availability).map(slot => [slot.startTime, slot]));
-  const endTimes = [];
-  let currentTime = startTime;
-  while (true) {
-    const slot = slotsByStart.get(currentTime);
-    if (!slot || !isBookableHour(slot)) break;
-    endTimes.push(slot.endTime);
-    currentTime = slot.endTime;
-  }
-  return endTimes;
-}
-
 export default function ProsumerPortal() {
   const { user, logout } = useAuth();
   const prosumerNic = user?.userId || user?.nic || user?.displayName;
@@ -116,8 +98,8 @@ export default function ProsumerPortal() {
   const [bookingForm, setBookingForm] = useState({
     nodeId: '',
     reservationDate: tomorrowDateStr,
-    startTime: '08:00',
-    endTime: '09:00',
+    startTime: '',
+    endTime: '',
     selectedSlotIds: []
   });
   const [hourlyAvailability, setHourlyAvailability] = useState(null);
@@ -125,28 +107,12 @@ export default function ProsumerPortal() {
   const [windowAvailability, setWindowAvailability] = useState(null);
   const [evaluatingWindow, setEvaluatingWindow] = useState(false);
   const [submittingBooking, setSubmittingBooking] = useState(false);
-  const [availabilityRefreshKey, setAvailabilityRefreshKey] = useState(0);
 
   const [showDeactivateModal, setShowDeactivateModal] = useState(false);
 
   useEffect(() => {
     loadProsumerData();
   }, [prosumerNic]);
-
-  // Maintenance can be scheduled from the mobile app. Recheck availability
-  // while this page is open and whenever the user returns to the browser tab.
-  useEffect(() => {
-    const refreshAvailability = () => setAvailabilityRefreshKey(key => key + 1);
-    const intervalId = window.setInterval(refreshAvailability, 10000);
-    window.addEventListener('focus', refreshAvailability);
-    document.addEventListener('visibilitychange', refreshAvailability);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', refreshAvailability);
-      document.removeEventListener('visibilitychange', refreshAvailability);
-    };
-  }, []);
 
   async function loadProsumerData() {
     if (!prosumerNic) return;
@@ -255,20 +221,7 @@ export default function ProsumerPortal() {
         .finally(() => { if (active) setLoadingHourly(false); });
       return () => { active = false; };
     }
-  }, [bookingForm.nodeId, bookingForm.reservationDate, availabilityRefreshKey]);
-
-  useEffect(() => {
-    if (!hourlyAvailability?.slots) return;
-    const startTimes = getBookableStartTimes(hourlyAvailability);
-    setBookingForm(current => {
-      const startTime = startTimes.includes(current.startTime) ? current.startTime : (startTimes[0] || '');
-      const endTimes = getBookableEndTimes(hourlyAvailability, startTime);
-      const endTime = endTimes.includes(current.endTime) ? current.endTime : (endTimes[0] || '');
-      return startTime === current.startTime && endTime === current.endTime
-        ? current
-        : { ...current, startTime, endTime };
-    });
-  }, [hourlyAvailability]);
+  }, [bookingForm.nodeId, bookingForm.reservationDate]);
 
   // Load window availability when node, date, and times change
   useEffect(() => {
@@ -285,7 +238,7 @@ export default function ProsumerPortal() {
         .finally(() => { if (active) setEvaluatingWindow(false); });
       return () => { active = false; };
     }
-  }, [bookingForm.nodeId, bookingForm.reservationDate, bookingForm.startTime, bookingForm.endTime, availabilityRefreshKey]);
+  }, [bookingForm.nodeId, bookingForm.reservationDate, bookingForm.startTime, bookingForm.endTime]);
 
   // Helper: Computes Date object with reservation start time
   function getReservationDateTime(r) {
@@ -767,7 +720,13 @@ export default function ProsumerPortal() {
                 <select
                   className="form-select"
                   value={bookingForm.nodeId}
-                  onChange={e => setBookingForm({ ...bookingForm, nodeId: e.target.value })}
+                  onChange={e => setBookingForm(prev => ({
+                    ...prev,
+                    nodeId: e.target.value,
+                    startTime: '',
+                    endTime: '',
+                    selectedSlotIds: []
+                  }))}
                   required
                 >
                   <option value="">-- Choose a Station --</option>
@@ -779,8 +738,8 @@ export default function ProsumerPortal() {
                 </select>
               </div>
 
-              {/* Date & Time Window */}
-              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '0.75rem' }}>
+              {/* Reservation Date */}
+              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
                 <div className="form-group">
                   <label className="form-label">Reservation Date</label>
                   <input
@@ -789,36 +748,18 @@ export default function ProsumerPortal() {
                     min={todayDateStr}
                     max={maxDateStr}
                     value={bookingForm.reservationDate}
-                    onChange={e => setBookingForm({ ...bookingForm, reservationDate: e.target.value })}
+                    onChange={e => setBookingForm(prev => ({
+                      ...prev,
+                      reservationDate: e.target.value,
+                      startTime: '',
+                      endTime: '',
+                      selectedSlotIds: []
+                    }))}
                     required
                   />
                   <span className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
                     Within 7 days
                   </span>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Start Time</label>
-                  <select
-                    className="form-select"
-                    value={bookingForm.startTime}
-                    onChange={e => setBookingForm({ ...bookingForm, startTime: e.target.value })}
-                    required
-                    disabled={loadingHourly || getBookableStartTimes(hourlyAvailability).length === 0}
-                  >
-                    {getBookableStartTimes(hourlyAvailability).length === 0
-                      ? <option value="">No unbooked times available</option>
-                      : getBookableStartTimes(hourlyAvailability).map(time => <option key={time} value={time}>{time}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">End Time</label>
-                  <input
-                    type="time"
-                    className="form-input"
-                    value={bookingForm.endTime}
-                    onChange={e => setBookingForm({ ...bookingForm, endTime: e.target.value })}
-                    required
-                  />
                 </div>
               </div>
 
@@ -842,15 +783,18 @@ export default function ProsumerPortal() {
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '0.5rem' }}>
                     {getHourlySlots(hourlyAvailability).filter(isBookableHour).map(s => {
-                      const isSelected = bookingForm.startTime <= s.startTime && bookingForm.endTime > s.startTime;
+                      const isSelected = bookingForm.startTime === s.startTime && bookingForm.endTime === s.endTime;
                       return (
                         <div
                           key={s.startTime}
                           onClick={() => {
                             if (s.isWithinOperatingHours) {
-                              const start = `${String(s.hour).padStart(2, '0')}:00`;
-                              const end = `${String(Math.min(23, s.hour + 2)).padStart(2, '0')}:00`;
-                              setBookingForm(prev => ({ ...prev, startTime: start, endTime: end }));
+                              setBookingForm(prev => ({
+                                ...prev,
+                                startTime: s.startTime,
+                                endTime: s.endTime,
+                                selectedSlotIds: []
+                              }));
                             }
                           }}
                           style={{
@@ -864,7 +808,7 @@ export default function ProsumerPortal() {
                               ? 'rgba(34, 197, 94, 0.15)'
                               : 'var(--color-bg)'
                           }}
-                          title="Click to select this unbooked time"
+                          title="Click to select this available time slot"
                         >
                           <div style={{ fontWeight: 600 }}>{s.startTime}–{s.endTime}</div>
                           <div style={{ color: 'var(--color-primary-light)' }}>
@@ -873,7 +817,7 @@ export default function ProsumerPortal() {
                         </div>
                       );
                     })}
-                    {getBookableStartTimes(hourlyAvailability).length === 0 && (
+                    {getHourlySlots(hourlyAvailability).filter(isBookableHour).length === 0 && (
                       <div className="text-muted">No unbooked times are available for this date.</div>
                     )}
                   </div>

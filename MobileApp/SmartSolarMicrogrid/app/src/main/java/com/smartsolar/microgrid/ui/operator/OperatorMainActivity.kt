@@ -54,6 +54,10 @@ class OperatorMainActivity : AppCompatActivity() {
             startActivity(Intent(this, QrScannerActivity::class.java))
         }
 
+        findViewById<Button>(R.id.btnNodeManagement).setOnClickListener {
+            startActivity(Intent(this, NodeManagementActivity::class.java))
+        }
+
         findViewById<Button>(R.id.btnManualVerify).setOnClickListener { handleManualVerification() }
 
         findViewById<Button>(R.id.btnRefreshOperator).setOnClickListener { loadBookings() }
