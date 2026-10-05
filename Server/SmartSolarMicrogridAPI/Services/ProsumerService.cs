@@ -81,6 +81,35 @@ public async Task<bool> UpdateAsync(string nic, ProsumerUpdateRequest request)
 
     return result.ModifiedCount > 0;
 }
+
+        // Changes a prosumer's password after verifying the current password.
+        public async Task<bool> ChangePasswordAsync(string nic, string currentPassword, string newPassword)
+        {
+            if (string.IsNullOrWhiteSpace(currentPassword) || string.IsNullOrWhiteSpace(newPassword))
+                throw new ArgumentException("Current password and new password are required.");
+
+            if (newPassword.Length < 6)
+                throw new ArgumentException("New password must be at least 6 characters long.");
+
+            if (currentPassword == newPassword)
+                throw new ArgumentException("New password must be different from the current password.");
+
+            var prosumer = await GetByNicAsync(nic);
+            if (prosumer == null)
+                return false;
+
+            if (!BCrypt.Net.BCrypt.Verify(currentPassword, prosumer.PasswordHash))
+                throw new UnauthorizedAccessException("Current password is incorrect.");
+
+            var update = Builders<Prosumer>.Update
+                .Set(p => p.PasswordHash, BCrypt.Net.BCrypt.HashPassword(newPassword))
+                .Set(p => p.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.Prosumers.UpdateOneAsync(
+                p => p.NIC == nic, update);
+            return result.ModifiedCount > 0;
+        }
+
         // Sets prosumer status to "Deactivated".
         public async Task<bool> DeactivateAsync(string nic)
         {
@@ -102,6 +131,21 @@ public async Task<bool> UpdateAsync(string nic, ProsumerUpdateRequest request)
 
             var result = await _context.Prosumers.UpdateOneAsync(
                 p => p.NIC == nic, update);
+            return result.ModifiedCount > 0;
+        }
+
+        public async Task<bool> ResetPasswordAsync(string nic, string newPassword)
+        {
+            var prosumer = await GetByNicAsync(nic);
+            if (prosumer == null)
+                return false;
+
+            var newHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            var update = Builders<Prosumer>.Update
+                .Set(p => p.PasswordHash, newHash)
+                .Set(p => p.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.Prosumers.UpdateOneAsync(p => p.NIC == nic, update);
             return result.ModifiedCount > 0;
         }
     }

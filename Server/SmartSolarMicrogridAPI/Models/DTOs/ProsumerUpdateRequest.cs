@@ -15,6 +15,7 @@ namespace SmartSolarMicrogridAPI.Models.DTOs
         public string Email { get; set; } = null!;
 
         [Required]
+        [RegularExpression(@"^07\d{8}$", ErrorMessage = "Enter a valid Sri Lankan mobile number (e.g. 0771234567).")]
         public string Phone { get; set; } = null!;
 
         [Required]

@@ -1,5 +1,5 @@
 package com.smartsolar.microgrid.ui.backoffice
-import com.smartsolar.microgrid.ui.operator.ProfileActivity
+
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -10,18 +10,21 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.smartsolar.microgrid.R
 import com.smartsolar.microgrid.api.ApiClient
 import com.smartsolar.microgrid.data.SessionManager
 import com.smartsolar.microgrid.ui.auth.LoginActivity
+import com.smartsolar.microgrid.ui.operator.ProfileActivity
 import org.json.JSONArray
 import org.json.JSONObject
 
 /**
  * Backoffice Administration Dashboard Activity.
  * Provides system admin functions: prosumer activation/reactivation,
- * node management overview, and pending booking counts.
+ * prosumer management overview, node management overview, and pending booking counts.
  */
 class BackofficeMainActivity : AppCompatActivity() {
 
@@ -49,16 +52,32 @@ class BackofficeMainActivity : AppCompatActivity() {
 
         tvAdminWelcome.text = "Welcome, ${session.getDisplayName()}"
 
-        findViewById<Button>(R.id.btnRefreshBackoffice).setOnClickListener { loadPortalData() }
-
-        findViewById<Button>(R.id.btnBackofficeLogout).setOnClickListener {
-            session.logout()
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
+        // Open Manage Prosumers list screen
+        findViewById<Button>(R.id.btnManageProsumers).setOnClickListener {
+            startActivity(Intent(this, ProsumerListActivity::class.java))
         }
 
-        findViewById<Button>(R.id.btnMyProfile).setOnClickListener {
-            startActivity(Intent(this, ProfileActivity::class.java))
+        findViewById<Button>(R.id.btnRefreshBackoffice).setOnClickListener { loadPortalData() }
+
+        // Bottom navigation: Home / Profile / Logout
+        val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavBackoffice)
+        bottomNav.selectedItemId = R.id.navHome
+        bottomNav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.navHome -> true
+                R.id.navProfile -> {
+                    startActivity(Intent(this, ProfileActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    true
+                }
+                R.id.navLogout -> {
+                    session.logout()
+                    startActivity(Intent(this, LoginActivity::class.java))
+                    finish()
+                    true
+                }
+                else -> false
+            }
         }
     }
 
@@ -146,7 +165,7 @@ class BackofficeMainActivity : AppCompatActivity() {
 
         tvPendingProsumersCount.text = pendingCount.toString()
 
-        val textSecondaryColor = ContextCompat.getColor(this, R.color.text_secondary)
+        val textSecondaryColor = ContextCompat.getColor(this, R.color.register_text_secondary)
         if (pendingCount == 0) {
             val emptyTv = TextView(this).apply {
                 text = "No pending prosumer registrations."
@@ -171,14 +190,15 @@ class BackofficeMainActivity : AppCompatActivity() {
         container: LinearLayout, nic: String, name: String,
         status: String, phone: String, isActivate: Boolean
     ) {
-        val textPrimaryColor = ContextCompat.getColor(this, R.color.text_primary)
-        val textSecondaryColor = ContextCompat.getColor(this, R.color.text_secondary)
+        val textPrimaryColor = ContextCompat.getColor(this, R.color.register_text_primary)
+        val textSecondaryColor = ContextCompat.getColor(this, R.color.register_text_secondary)
 
         val card = MaterialCardView(this).apply {
             radius = 14f * resources.displayMetrics.density
             strokeWidth = (1f * resources.displayMetrics.density).toInt()
-            strokeColor = ContextCompat.getColor(this@BackofficeMainActivity, R.color.card_border)
-            setCardBackgroundColor(ContextCompat.getColor(this@BackofficeMainActivity, R.color.card_background))
+            strokeColor = ContextCompat.getColor(this@BackofficeMainActivity, R.color.register_border)
+            setCardBackgroundColor(ContextCompat.getColor(this@BackofficeMainActivity, R.color.register_surface))
+            cardElevation = 0f
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
@@ -208,14 +228,19 @@ class BackofficeMainActivity : AppCompatActivity() {
         }
         item.addView(tvSub)
 
-        val btnAction = Button(this).apply {
+        val btnAction = MaterialButton(this).apply {
             text = if (isActivate) "✅ Approve & Activate" else "🔄 Reactivate Account"
-            setBackgroundColor(if (isActivate) ContextCompat.getColor(this@BackofficeMainActivity, R.color.primary) else ContextCompat.getColor(this@BackofficeMainActivity, R.color.accent))
-            setTextColor(Color.WHITE)
-            textSize = 12f
+            backgroundTintList = ContextCompat.getColorStateList(
+                this@BackofficeMainActivity,
+                if (isActivate) R.color.energy_cyan else R.color.register_primary
+            )
+            setTextColor(ContextCompat.getColor(this@BackofficeMainActivity, R.color.white))
+            textSize = 13f
+            isAllCaps = false
+            cornerRadius = (12 * resources.displayMetrics.density).toInt()
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                (46 * resources.displayMetrics.density).toInt()
+                (48 * resources.displayMetrics.density).toInt()
             ).apply { setMargins(0, (6 * resources.displayMetrics.density).toInt(), 0, 0) }
         }
 
@@ -254,8 +279,7 @@ class BackofficeMainActivity : AppCompatActivity() {
         llNodesList.removeAllViews()
         var activeCount = 0
 
-        val textPrimaryColor = ContextCompat.getColor(this, R.color.text_primary)
-        val textSecondaryColor = ContextCompat.getColor(this, R.color.text_secondary)
+        val textSecondaryColor = ContextCompat.getColor(this, R.color.register_text_secondary)
 
         for (i in 0 until nodes.length()) {
             try {
@@ -266,8 +290,9 @@ class BackofficeMainActivity : AppCompatActivity() {
                 val card = MaterialCardView(this).apply {
                     radius = 14f * resources.displayMetrics.density
                     strokeWidth = (1f * resources.displayMetrics.density).toInt()
-                    strokeColor = ContextCompat.getColor(this@BackofficeMainActivity, R.color.card_border)
-                    setCardBackgroundColor(ContextCompat.getColor(this@BackofficeMainActivity, R.color.card_background))
+                    strokeColor = ContextCompat.getColor(this@BackofficeMainActivity, R.color.register_border)
+                    setCardBackgroundColor(ContextCompat.getColor(this@BackofficeMainActivity, R.color.register_surface))
+                    cardElevation = 0f
                     layoutParams = LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.MATCH_PARENT,
                         LinearLayout.LayoutParams.WRAP_CONTENT
@@ -284,7 +309,7 @@ class BackofficeMainActivity : AppCompatActivity() {
                     text = "${node.optString("nodeName")} (${if (isActive) "ACTIVE" else "INACTIVE"})"
                     textSize = 14f
                     setTypeface(typeface, android.graphics.Typeface.BOLD)
-                    setTextColor(if (isActive) ContextCompat.getColor(this@BackofficeMainActivity, R.color.primary) else ContextCompat.getColor(this@BackofficeMainActivity, R.color.status_cancelled))
+                    setTextColor(if (isActive) ContextCompat.getColor(this@BackofficeMainActivity, R.color.register_primary) else ContextCompat.getColor(this@BackofficeMainActivity, R.color.register_error))
                 }
                 item.addView(tvNodeName)
 

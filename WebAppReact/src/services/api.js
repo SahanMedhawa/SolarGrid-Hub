@@ -105,6 +105,11 @@ export async function updateProsumer(nic, data) {
   return apiRequest(`prosumer/${nic}`, 'PUT', data);
 }
 
+// Changes the authenticated prosumer's own password.
+export async function changeProsumerPassword(currentPassword, newPassword) {
+  return apiRequest('prosumer/password', 'PATCH', { currentPassword, newPassword });
+}
+
 // Activates a pending prosumer account (Backoffice only).
 export async function activateProsumer(nic) {
   return apiRequest(`prosumer/${nic}/activate`, 'PUT');
@@ -311,4 +316,12 @@ export async function deactivateMyAccount() {
 // Reactivates a previously deactivated system user (Backoffice only).
 export async function activateUser(id) {
   return apiRequest(`user/${id}/activate`, 'PATCH');
+}
+
+export async function verifyForgotPassword(usernameOrNic, loginType) {
+  return apiRequest('auth/forgot-password/verify', 'POST', { usernameOrNic, loginType });
+}
+
+export async function resetForgotPassword(usernameOrNic, loginType, newPassword) {
+  return apiRequest('auth/forgot-password/reset', 'POST', { usernameOrNic, loginType, newPassword });
 }

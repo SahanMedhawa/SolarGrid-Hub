@@ -310,11 +310,11 @@
             android:layout_height="58dp"
             android:text="⚡   Reserve Energy Slot   →"
             android:textAllCaps="false"
-            android:textSize="15sp"
+            android:textSize="17sp"
             android:textStyle="bold"
-            android:textColor="@color/register_background"
-            android:backgroundTint="@color/register_primary"
-            app:cornerRadius="14dp"
+            android:textColor="@color/white"
+            android:backgroundTint="@color/energy_cyan"
+            app:cornerRadius="18dp"
             android:layout_marginBottom="12dp" />
 
         <!-- My Bookings -->
