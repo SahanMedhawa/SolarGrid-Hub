@@ -3,39 +3,43 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/app_background"
-    android:fillViewport="true">
+    android:background="@color/register_background"
+    android:fillViewport="true"
+    android:clipToPadding="false">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="20dp">
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:paddingTop="24dp"
+        android:paddingBottom="32dp">
 
         <!-- Header Card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="16dp"
-            app:cardBackgroundColor="@color/card_background"
-            app:strokeColor="@color/card_border"
+            app:cardBackgroundColor="@color/register_surface"
+            app:strokeColor="@color/register_border"
             app:strokeWidth="1dp"
-            app:cardElevation="2dp"
+            app:cardElevation="0dp"
             android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="18dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Backoffice Admin Portal"
-                    android:textSize="20sp"
+                    android:text="⚡  Backoffice Admin Portal"
+                    android:textSize="22sp"
                     android:textStyle="bold"
-                    android:textColor="@color/primary" />
+                    android:textColor="@color/energy_cyan" />
 
                 <TextView
                     android:id="@+id/tvAdminWelcome"
@@ -43,17 +47,18 @@
                     android:layout_height="wrap_content"
                     android:text="Welcome, Backoffice Admin"
                     android:textSize="14sp"
-                    android:textColor="@color/text_secondary"
+                    android:textColor="@color/register_text_secondary"
                     android:layout_marginTop="4dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="ROLE: BACKOFFICE"
+                    android:text="ROLE: BACKOFFICE ADMINISTRATOR"
                     android:textSize="11sp"
                     android:textStyle="bold"
-                    android:textColor="@color/accent"
-                    android:layout_marginTop="2dp" />
+                    android:letterSpacing="0.08"
+                    android:textColor="@color/register_primary"
+                    android:layout_marginTop="6dp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -63,7 +68,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:weightSum="3"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="18dp">
 
             <!-- Card 1: Active Nodes -->
             <com.google.android.material.card.MaterialCardView
@@ -71,10 +76,11 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginEnd="4dp"
-                app:cardCornerRadius="12dp"
-                app:cardBackgroundColor="@color/card_background"
-                app:strokeColor="@color/card_border"
-                app:strokeWidth="1dp">
+                app:cardCornerRadius="14dp"
+                app:cardBackgroundColor="@color/register_surface"
+                app:strokeColor="@color/register_border"
+                app:strokeWidth="1dp"
+                app:cardElevation="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -90,14 +96,14 @@
                         android:text="--"
                         android:textSize="22sp"
                         android:textStyle="bold"
-                        android:textColor="@color/primary" />
+                        android:textColor="@color/register_primary" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Active Nodes"
                         android:textSize="11sp"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="@color/register_text_secondary"
                         android:gravity="center" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -109,10 +115,11 @@
                 android:layout_weight="1"
                 android:layout_marginStart="2dp"
                 android:layout_marginEnd="2dp"
-                app:cardCornerRadius="12dp"
-                app:cardBackgroundColor="@color/card_background"
-                app:strokeColor="@color/card_border"
-                app:strokeWidth="1dp">
+                app:cardCornerRadius="14dp"
+                app:cardBackgroundColor="@color/register_surface"
+                app:strokeColor="@color/register_border"
+                app:strokeWidth="1dp"
+                app:cardElevation="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -128,14 +135,14 @@
                         android:text="--"
                         android:textSize="22sp"
                         android:textStyle="bold"
-                        android:textColor="@color/status_pending" />
+                        android:textColor="@color/solar_gold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Pending Reg"
                         android:textSize="11sp"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="@color/register_text_secondary"
                         android:gravity="center" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -146,10 +153,11 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="4dp"
-                app:cardCornerRadius="12dp"
-                app:cardBackgroundColor="@color/card_background"
-                app:strokeColor="@color/card_border"
-                app:strokeWidth="1dp">
+                app:cardCornerRadius="14dp"
+                app:cardBackgroundColor="@color/register_surface"
+                app:strokeColor="@color/register_border"
+                app:strokeWidth="1dp"
+                app:cardElevation="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -165,62 +173,79 @@
                         android:text="--"
                         android:textSize="22sp"
                         android:textStyle="bold"
-                        android:textColor="@color/accent" />
+                        android:textColor="@color/energy_blue" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Pending Slots"
                         android:textSize="11sp"
-                        android:textColor="@color/text_secondary"
+                        android:textColor="@color/register_text_secondary"
                         android:gravity="center" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
+        <!-- Manage Prosumers Primary Action Button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnManageProsumers"
+            android:layout_width="match_parent"
+            android:layout_height="58dp"
+            android:text="👥   Manage All Prosumers   →"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/white"
+            android:backgroundTint="@color/energy_cyan"
+            app:cornerRadius="18dp"
+            android:layout_marginBottom="22dp" />
+
         <!-- Section: Pending Prosumer Approvals -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pending Prosumer Registrations"
-            android:textSize="16sp"
+            android:text="PENDING PROSUMER REGISTRATIONS"
+            android:textSize="11sp"
             android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
+            android:letterSpacing="0.08"
+            android:textColor="@color/register_text_secondary"
+            android:layout_marginBottom="10dp" />
 
         <LinearLayout
             android:id="@+id/llPendingProsumersList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="20dp" />
 
         <!-- Section: Deactivated Prosumers (Reactivation) -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Deactivated Accounts (Can Reactivate)"
-            android:textSize="16sp"
+            android:text="DEACTIVATED ACCOUNTS"
+            android:textSize="11sp"
             android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
+            android:letterSpacing="0.08"
+            android:textColor="@color/register_text_secondary"
+            android:layout_marginBottom="10dp" />
 
         <LinearLayout
             android:id="@+id/llDeactivatedProsumersList"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="20dp" />
 
         <!-- Section: Active Grid Hub Nodes -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Microgrid Node Hubs"
-            android:textSize="16sp"
+            android:text="MICROGRID NODE HUBS"
+            android:textSize="11sp"
             android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginBottom="8dp" />
+            android:letterSpacing="0.08"
+            android:textColor="@color/register_text_secondary"
+            android:layout_marginBottom="10dp" />
 
         <LinearLayout
             android:id="@+id/llNodesList"
@@ -233,32 +258,48 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRefreshBackoffice"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="🔄 Refresh Portal Data"
-            app:cornerRadius="12dp"
-            android:backgroundTint="@color/primary"
-            android:textColor="@color/white"
+            android:layout_height="52dp"
+            android:text="🔄   Refresh Portal Data"
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/register_text_primary"
+            android:backgroundTint="@color/register_surface"
+            app:strokeColor="@color/register_border"
+            app:strokeWidth="1dp"
+            app:cornerRadius="14dp"
             android:layout_marginBottom="12dp" />
 
         <!-- My Profile Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnMyProfile"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:text="👤 My Profile"
-            app:cornerRadius="12dp"
-            android:backgroundTint="@color/accent"
-            android:textColor="@color/white"
-            android:layout_marginBottom="12dp" />
+            android:layout_height="52dp"
+            android:text="👤   My Profile"
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/register_text_primary"
+            android:backgroundTint="@color/register_surface"
+            app:strokeColor="@color/register_border"
+            app:strokeWidth="1dp"
+            app:cornerRadius="14dp"
+            android:layout_marginBottom="20dp" />
 
         <!-- Logout Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnBackofficeLogout"
-            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="50dp"
             android:text="Log Out"
-            android:textColor="@color/status_cancelled" />
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/register_error"
+            android:backgroundTint="@color/register_surface"
+            app:strokeColor="@color/register_error"
+            app:strokeWidth="1dp"
+            app:cornerRadius="12dp" />
 
     </LinearLayout>
 </ScrollView>

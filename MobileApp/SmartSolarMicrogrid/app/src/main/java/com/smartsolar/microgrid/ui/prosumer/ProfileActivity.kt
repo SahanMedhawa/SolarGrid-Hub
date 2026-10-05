@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -20,7 +21,7 @@ import org.json.JSONObject
  *
  * Displays the currently logged-in prosumer's profile information.
  * Profile editing is handled separately by EditProfileActivity.
- * The prosumer can also request account deactivation from this screen.
+ * Allows changing account password and requesting account deactivation.
  */
 class ProfileActivity : AppCompatActivity() {
 
@@ -34,6 +35,11 @@ class ProfileActivity : AppCompatActivity() {
     private lateinit var etProfEmail: EditText
     private lateinit var etProfPhone: EditText
     private lateinit var etProfAddress: EditText
+
+    private lateinit var etCurrentPassword: EditText
+    private lateinit var etNewPassword: EditText
+    private lateinit var etConfirmNewPassword: EditText
+    private lateinit var btnChangePassword: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,8 +58,19 @@ class ProfileActivity : AppCompatActivity() {
         etProfPhone = findViewById(R.id.etProfPhone)
         etProfAddress = findViewById(R.id.etProfAddress)
 
+        // Initialize change password views
+        etCurrentPassword = findViewById(R.id.etCurrentPassword)
+        etNewPassword = findViewById(R.id.etNewPassword)
+        etConfirmNewPassword = findViewById(R.id.etConfirmNewPassword)
+        btnChangePassword = findViewById(R.id.btnChangePassword)
+
         // Make Profile page view-only
         setProfileFieldsReadOnly()
+
+        // Back navigation to Prosumer Dashboard
+        findViewById<ImageView>(R.id.ivProfileBack).setOnClickListener {
+            finish()
+        }
 
         // Open Edit Profile screen
         findViewById<Button>(R.id.btnUpdateProfile).setOnClickListener {
@@ -64,6 +81,11 @@ class ProfileActivity : AppCompatActivity() {
             )
 
             startActivity(intent)
+        }
+
+        // Change Password action
+        btnChangePassword.setOnClickListener {
+            performChangePassword()
         }
 
         // Account deactivation
@@ -231,6 +253,113 @@ class ProfileActivity : AppCompatActivity() {
                 }
             }
         )
+    }
+
+    /**
+     * Validates and submits the Change Password request to the central API.
+     */
+    private fun performChangePassword() {
+
+        val currentPassword = etCurrentPassword.text.toString()
+        val newPassword = etNewPassword.text.toString()
+        val confirmNewPassword = etConfirmNewPassword.text.toString()
+
+        etCurrentPassword.error = null
+        etNewPassword.error = null
+        etConfirmNewPassword.error = null
+
+        if (currentPassword.isEmpty()) {
+            etCurrentPassword.error = "Current password is required"
+            etCurrentPassword.requestFocus()
+            return
+        }
+
+        if (newPassword.isEmpty()) {
+            etNewPassword.error = "New password is required"
+            etNewPassword.requestFocus()
+            return
+        }
+
+        if (newPassword.length < 6) {
+            etNewPassword.error = "Password must be at least 6 characters"
+            etNewPassword.requestFocus()
+            return
+        }
+
+        if (confirmNewPassword.isEmpty()) {
+            etConfirmNewPassword.error = "Confirm new password is required"
+            etConfirmNewPassword.requestFocus()
+            return
+        }
+
+        if (newPassword != confirmNewPassword) {
+            etConfirmNewPassword.error = "Passwords do not match"
+            etConfirmNewPassword.requestFocus()
+            return
+        }
+
+        btnChangePassword.isEnabled = false
+        btnChangePassword.text = "Updating..."
+
+        try {
+            val payload = JSONObject().apply {
+                put("currentPassword", currentPassword)
+                put("newPassword", newPassword)
+            }
+
+            ApiClient.request(
+                "prosumer/password",
+                "PATCH",
+                payload,
+                session.getToken(),
+                object : ApiClient.ApiCallback {
+
+                    override fun onSuccess(response: String) {
+                        btnChangePassword.isEnabled = true
+                        btnChangePassword.text = "Change Password"
+
+                        etCurrentPassword.setText("")
+                        etNewPassword.setText("")
+                        etConfirmNewPassword.setText("")
+
+                        Toast.makeText(
+                            this@ProfileActivity,
+                            "Password changed successfully.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+
+                    override fun onError(error: String) {
+                        btnChangePassword.isEnabled = true
+                        btnChangePassword.text = "Change Password"
+
+                        if (error.contains("incorrect", ignoreCase = true)) {
+                            etCurrentPassword.error = "Current password is incorrect."
+                            etCurrentPassword.requestFocus()
+                            Toast.makeText(
+                                this@ProfileActivity,
+                                "Current password is incorrect.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            Toast.makeText(
+                                this@ProfileActivity,
+                                error,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            )
+        } catch (e: Exception) {
+            btnChangePassword.isEnabled = true
+            btnChangePassword.text = "Change Password"
+            Toast.makeText(
+                this,
+                "Unable to change password: ${e.message}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 
     /**
