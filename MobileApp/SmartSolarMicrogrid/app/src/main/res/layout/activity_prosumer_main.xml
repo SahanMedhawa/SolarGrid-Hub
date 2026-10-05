@@ -1,209 +1,112 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/register_background"
-    android:fillViewport="true"
-    android:clipToPadding="false">
+    android:background="@color/register_background">
 
-    <LinearLayout
+    <ScrollView
+        android:id="@+id/scrollContent"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingStart="22dp"
-        android:paddingEnd="22dp"
-        android:paddingTop="28dp"
-        android:paddingBottom="32dp">
+        android:layout_height="0dp"
+        android:fillViewport="true"
+        android:clipToPadding="false"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavProsumer">
 
-        <!-- Brand -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:text="⚡  SMART SOLAR TRADING"
-            android:textColor="@color/register_primary"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.08"
-            android:layout_marginBottom="26dp" />
-
-        <!-- Welcome Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginBottom="6dp">
+            android:orientation="vertical"
+            android:paddingStart="22dp"
+            android:paddingEnd="22dp"
+            android:paddingTop="28dp"
+            android:paddingBottom="32dp">
 
-            <LinearLayout
-                android:layout_width="0dp"
+            <!-- Brand -->
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:layout_gravity="center_horizontal"
+                android:text="⚡  SMART SOLAR TRADING"
+                android:textColor="@color/register_primary"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="26dp" />
 
-                <TextView
-                    android:id="@+id/tvWelcome"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Welcome, Prosumer"
-                    android:textColor="@color/register_text_primary"
-                    android:textSize="25sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Manage your solar energy activities"
-                    android:textColor="@color/register_text_secondary"
-                    android:textSize="13sp"
-                    android:layout_marginTop="4dp" />
-
-            </LinearLayout>
-
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                app:cardCornerRadius="24dp"
-                app:cardBackgroundColor="@color/register_notice_background"
-                app:strokeColor="@color/register_notice_border"
-                app:strokeWidth="1dp"
-                app:cardElevation="0dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:text="☀️"
-                    android:textSize="21sp"
-                    android:gravity="center" />
-
-            </com.google.android.material.card.MaterialCardView>
-
-        </LinearLayout>
-
-        <!-- Subtitle -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Solar Microgrid Trading Portal"
-            android:textColor="@color/register_text_hint"
-            android:textSize="12sp"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Google Stitch: Live Inverter Telemetry Bento Card -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="18dp"
-            app:cardBackgroundColor="@color/register_surface"
-            app:strokeColor="@color/register_border"
-            app:strokeWidth="1dp"
-            app:cardElevation="0dp"
-            android:layout_marginBottom="20dp">
-
+            <!-- Welcome Header -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="16dp">
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="6dp">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="10dp">
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
                     <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="☀️  INVERTER LIVE TELEMETRY"
-                        android:textColor="@color/register_primary"
-                        android:textSize="11sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.05" />
-
-                    <TextView
+                        android:id="@+id/tvWelcome"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="● PEAK SOLAR"
-                        android:textColor="@color/register_primary"
-                        android:textSize="10sp"
-                        android:textStyle="bold"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:paddingTop="2dp"
-                        android:paddingBottom="2dp"
-                        android:background="@drawable/badge_status_bg" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="6dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="4.2 kW"
+                        android:text="Welcome, Prosumer"
                         android:textColor="@color/register_text_primary"
-                        android:textSize="26sp"
+                        android:textSize="25sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Rate: Rs. 42.50/kWh"
+                        android:text="Manage your solar energy activities"
                         android:textColor="@color/register_text_secondary"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
+                        android:textSize="13sp"
+                        android:layout_marginTop="4dp" />
+
                 </LinearLayout>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Colombo Central Hub • Real-time Microgrid Load Balancing"
-                    android:textColor="@color/register_text_secondary"
-                    android:textSize="11sp" />
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    app:cardCornerRadius="24dp"
+                    app:cardBackgroundColor="@color/register_notice_background"
+                    app:strokeColor="@color/register_notice_border"
+                    app:strokeWidth="1dp"
+                    app:cardElevation="0dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:text="☀️"
+                        android:textSize="21sp"
+                        android:gravity="center" />
+
+                </com.google.android.material.card.MaterialCardView>
 
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
-        <!-- Account Overview Heading -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Account Overview"
-            android:textColor="@color/register_text_primary"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Statistics Row -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:weightSum="2"
-            android:layout_marginBottom="28dp">
-
-            <!-- Approved -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
+            <!-- Subtitle -->
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="7dp"
-                app:cardCornerRadius="16dp"
+                android:text="Solar Microgrid Trading Portal"
+                android:textColor="@color/register_text_hint"
+                android:textSize="12sp"
+                android:layout_marginBottom="16dp" />
+
+            <!-- Google Stitch: Live Inverter Telemetry Bento Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="18dp"
                 app:cardBackgroundColor="@color/register_surface"
                 app:strokeColor="@color/register_border"
                 app:strokeWidth="1dp"
-                app:cardElevation="0dp">
+                app:cardElevation="0dp"
+                android:layout_marginBottom="20dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -211,185 +114,301 @@
                     android:orientation="vertical"
                     android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="✓  APPROVED"
-                        android:textColor="@color/register_primary"
-                        android:textSize="10sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.05" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="☀️  INVERTER LIVE TELEMETRY"
+                            android:textColor="@color/register_primary"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.05" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="● PEAK SOLAR"
+                            android:textColor="@color/register_primary"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:paddingTop="2dp"
+                            android:paddingBottom="2dp"
+                            android:background="@drawable/badge_status_bg" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="6dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="4.2 kW"
+                            android:textColor="@color/register_text_primary"
+                            android:textSize="26sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Rate: Rs. 42.50/kWh"
+                            android:textColor="@color/register_text_secondary"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
 
                     <TextView
-                        android:id="@+id/tvApprovedCount"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textColor="@color/register_text_primary"
-                        android:textSize="30sp"
-                        android:textStyle="bold"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginBottom="2dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Active QR Passes"
+                        android:text="Colombo Central Hub • Real-time Microgrid Load Balancing"
                         android:textColor="@color/register_text_secondary"
                         android:textSize="11sp" />
 
                 </LinearLayout>
-
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Pending -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="0dp"
+            <!-- Account Overview Heading -->
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="7dp"
-                app:cardCornerRadius="16dp"
-                app:cardBackgroundColor="@color/register_surface"
+                android:text="Account Overview"
+                android:textColor="@color/register_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Statistics Row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="2"
+                android:layout_marginBottom="28dp">
+
+                <!-- Approved -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="7dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardBackgroundColor="@color/register_surface"
+                    app:strokeColor="@color/register_border"
+                    app:strokeWidth="1dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="✓  APPROVED"
+                            android:textColor="@color/register_primary"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.05" />
+
+                        <TextView
+                            android:id="@+id/tvApprovedCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/register_text_primary"
+                            android:textSize="30sp"
+                            android:textStyle="bold"
+                            android:layout_marginTop="8dp"
+                            android:layout_marginBottom="2dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Active QR Passes"
+                            android:textColor="@color/register_text_secondary"
+                            android:textSize="11sp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Pending -->
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="7dp"
+                    app:cardCornerRadius="16dp"
+                    app:cardBackgroundColor="@color/register_surface"
+                    app:strokeColor="@color/register_border"
+                    app:strokeWidth="1dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⏳  PENDING"
+                            android:textColor="@color/solar_gold"
+                            android:textSize="10sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.05" />
+
+                        <TextView
+                            android:id="@+id/tvPendingCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textColor="@color/register_text_primary"
+                            android:textSize="30sp"
+                            android:textStyle="bold"
+                            android:layout_marginTop="8dp"
+                            android:layout_marginBottom="2dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Awaiting Approval"
+                            android:textColor="@color/register_text_secondary"
+                            android:textSize="11sp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+
+            <!-- Quick Actions -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Quick Actions"
+                android:textColor="@color/register_text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Reserve Energy -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBookSlot"
+                android:layout_width="match_parent"
+                android:layout_height="58dp"
+                android:text="⚡   Reserve Energy Slot   →"
+                android:textAllCaps="false"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="@color/white"
+                android:backgroundTint="@color/energy_cyan"
+                app:cornerRadius="18dp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- My Bookings -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnMyBookings"
+                android:layout_width="match_parent"
+                android:layout_height="58dp"
+                android:text="🎫   My Bookings &amp; QR Passes"
+                android:textAllCaps="false"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/register_text_primary"
+                android:backgroundTint="@color/register_surface"
+                app:cornerRadius="14dp"
                 app:strokeColor="@color/register_border"
                 app:strokeWidth="1dp"
-                app:cardElevation="0dp">
+                android:layout_marginBottom="12dp" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+            <!-- Nearby Grid Stations -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNearbyNodes"
+                android:layout_width="match_parent"
+                android:layout_height="58dp"
+                android:text="📍   Nearby Grid Stations"
+                android:textAllCaps="false"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/register_text_primary"
+                android:backgroundTint="@color/register_surface"
+                app:cornerRadius="14dp"
+                app:strokeColor="@color/register_border"
+                app:strokeWidth="1dp"
+                android:layout_marginBottom="12dp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="⏳  PENDING"
-                        android:textColor="@color/solar_gold"
-                        android:textSize="10sp"
-                        android:textStyle="bold"
-                        android:letterSpacing="0.05" />
+            <!-- Profile -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnProfile"
+                android:layout_width="match_parent"
+                android:layout_height="58dp"
+                android:text="👤   Profile &amp; Account Settings"
+                android:textAllCaps="false"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/register_text_primary"
+                android:backgroundTint="@color/register_surface"
+                app:cornerRadius="14dp"
+                app:strokeColor="@color/register_border"
+                app:strokeWidth="1dp"
+                android:layout_marginBottom="28dp" />
 
-                    <TextView
-                        android:id="@+id/tvPendingCount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0"
-                        android:textColor="@color/register_text_primary"
-                        android:textSize="30sp"
-                        android:textStyle="bold"
-                        android:layout_marginTop="8dp"
-                        android:layout_marginBottom="2dp" />
+            <!-- Account -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Account"
+                android:textColor="@color/register_text_secondary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Awaiting Approval"
-                        android:textColor="@color/register_text_secondary"
-                        android:textSize="11sp" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
+            <!-- Logout -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLogout"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:text="Log Out"
+                android:textAllCaps="false"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/register_error"
+                android:backgroundTint="@color/register_surface"
+                app:cornerRadius="12dp"
+                app:strokeColor="@color/register_error"
+                app:strokeWidth="1dp" />
 
         </LinearLayout>
 
-        <!-- Quick Actions -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Quick Actions"
-            android:textColor="@color/register_text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="12dp" />
+    </ScrollView>
 
-        <!-- Reserve Energy -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnBookSlot"
-            android:layout_width="match_parent"
-            android:layout_height="58dp"
-            android:text="⚡   Reserve Energy Slot   →"
-            android:textAllCaps="false"
-            android:textSize="17sp"
-            android:textStyle="bold"
-            android:textColor="@color/white"
-            android:backgroundTint="@color/energy_cyan"
-            app:cornerRadius="18dp"
-            android:layout_marginBottom="12dp" />
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavProsumer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/register_surface"
+        app:elevation="8dp"
+        app:itemIconTint="@color/bottom_nav_item_color"
+        app:itemTextColor="@color/bottom_nav_item_color"
+        app:labelVisibilityMode="labeled"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:menu="@menu/bottom_nav_prosumer" />
 
-        <!-- My Bookings -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnMyBookings"
-            android:layout_width="match_parent"
-            android:layout_height="58dp"
-            android:text="🎫   My Bookings &amp; QR Passes"
-            android:textAllCaps="false"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/register_text_primary"
-            android:backgroundTint="@color/register_surface"
-            app:cornerRadius="14dp"
-            app:strokeColor="@color/register_border"
-            app:strokeWidth="1dp"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Nearby Grid Stations -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnNearbyNodes"
-            android:layout_width="match_parent"
-            android:layout_height="58dp"
-            android:text="📍   Nearby Grid Stations"
-            android:textAllCaps="false"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/register_text_primary"
-            android:backgroundTint="@color/register_surface"
-            app:cornerRadius="14dp"
-            app:strokeColor="@color/register_border"
-            app:strokeWidth="1dp"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Profile -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnProfile"
-            android:layout_width="match_parent"
-            android:layout_height="58dp"
-            android:text="👤   Profile &amp; Account Settings"
-            android:textAllCaps="false"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/register_text_primary"
-            android:backgroundTint="@color/register_surface"
-            app:cornerRadius="14dp"
-            app:strokeColor="@color/register_border"
-            app:strokeWidth="1dp"
-            android:layout_marginBottom="28dp" />
-
-        <!-- Account -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Account"
-            android:textColor="@color/register_text_secondary"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
-
-        <!-- Logout -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnLogout"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:text="Log Out"
-            android:textAllCaps="false"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:textColor="@color/register_error"
-            android:backgroundTint="@color/register_surface"
-            app:cornerRadius="12dp"
-            app:strokeColor="@color/register_error"
-            app:strokeWidth="1dp" />
-
-    </LinearLayout>
-
-</ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

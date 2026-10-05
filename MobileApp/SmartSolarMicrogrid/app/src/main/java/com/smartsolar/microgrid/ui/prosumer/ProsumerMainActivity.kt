@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.smartsolar.microgrid.R
 import com.smartsolar.microgrid.api.ApiClient
 import com.smartsolar.microgrid.data.SessionManager
@@ -56,11 +57,34 @@ class ProsumerMainActivity : AppCompatActivity() {
             startActivity(Intent(this, LoginActivity::class.java))
             finish()
         }
+
+        // Bottom navigation: Home / Profile / Logout
+        val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavProsumer)
+        bottomNav.selectedItemId = R.id.navHome
+        bottomNav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.navHome -> true
+                R.id.navProfile -> {
+                    startActivity(Intent(this, ProfileActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    true
+                }
+                R.id.navLogout -> {
+                    session.logout()
+                    startActivity(Intent(this, LoginActivity::class.java))
+                    finish()
+                    true
+                }
+                else -> false
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
         loadDashboardData()
+        val bottomNav = findViewById<BottomNavigationView?>(R.id.bottomNavProsumer)
+        bottomNav?.selectedItemId = R.id.navHome
     }
 
     // Fetch dashboard counts from the central API, falling back to local SQLite cache
