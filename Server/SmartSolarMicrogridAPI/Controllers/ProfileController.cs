@@ -11,6 +11,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SmartSolarMicrogridAPI.Services;
+using SmartSolarMicrogridAPI.Utils;
 
 namespace SmartSolarMicrogridAPI.Controllers
 {
@@ -84,6 +85,12 @@ namespace SmartSolarMicrogridAPI.Controllers
         [HttpPatch("password")]
         public async Task<IActionResult> ChangeOwnPassword([FromBody] ChangePasswordRequest request)
         {
+            if (!PasswordValidator.IsValid(request.NewPassword, out var passwordError))
+                return BadRequest(new { message = passwordError });
+
+            if (request.NewPassword == request.CurrentPassword)
+                return BadRequest(new { message = "New password must be different from your current password." });
+
             var id = GetCurrentUserId();
             try
             {

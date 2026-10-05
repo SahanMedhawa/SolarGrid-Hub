@@ -42,7 +42,9 @@
         <activity android:name=".ui.prosumer.ReservationDetailActivity" />
         <activity android:name=".ui.prosumer.NearbyNodesActivity" />
         <activity android:name=".ui.backoffice.BackofficeMainActivity" />
+        <activity android:name=".ui.backoffice.ProsumerListActivity" />
         <activity android:name=".ui.operator.OperatorMainActivity" />
+        <activity android:name=".ui.operator.NodeManagementActivity" />
         <activity
             android:name=".ui.operator.QrScannerActivity"
             android:screenOrientation="portrait"

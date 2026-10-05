@@ -11,7 +11,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.card.MaterialCardView
 import com.smartsolar.microgrid.R
 import com.smartsolar.microgrid.api.ApiClient
@@ -19,6 +18,7 @@ import com.smartsolar.microgrid.data.SessionManager
 import com.smartsolar.microgrid.ui.auth.LoginActivity
 import org.json.JSONArray
 import org.json.JSONObject
+import com.smartsolar.microgrid.ui.operator.ProfileActivity
 
 /**
  * Grid Operator Main Dashboard Activity.
@@ -56,27 +56,20 @@ class OperatorMainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnManualVerify).setOnClickListener { handleManualVerification() }
 
+        findViewById<Button>(R.id.btnOpenNodeManagement).setOnClickListener {
+            startActivity(Intent(this, NodeManagementActivity::class.java))
+        }
+
         findViewById<Button>(R.id.btnRefreshOperator).setOnClickListener { loadBookings() }
 
-        // Bottom navigation: Home / Profile / Logout
-        val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavOperator)
-        bottomNav.selectedItemId = R.id.navHome
-        bottomNav.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.navHome -> true
-                R.id.navProfile -> {
-                    startActivity(Intent(this, ProfileActivity::class.java))
-                    overridePendingTransition(0, 0)
-                    true
-                }
-                R.id.navLogout -> {
-                    session.logout()
-                    startActivity(Intent(this, LoginActivity::class.java))
-                    finish()
-                    true
-                }
-                else -> false
-            }
+        findViewById<Button>(R.id.btnOperatorLogout).setOnClickListener {
+            session.logout()
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+        }
+
+        findViewById<Button>(R.id.btnMyProfile).setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
         }
     }
 
@@ -150,14 +143,14 @@ class OperatorMainActivity : AppCompatActivity() {
 
                     // Prompt Operator to finalize transfer
                     AlertDialog.Builder(this@OperatorMainActivity)
-                        .setTitle("Verify Server Data ⚡")
+                        .setTitle("Verify Server Data")
                         .setMessage(
                             "Verified Reservation Record:\n" +
-                                    "• Prosumer NIC: $nic\n" +
-                                    "• Time Window: $timeWindow\n" +
-                                    "• Battery Slots: $slotDisplay\n" +
-                                    "• Transfer Energy: $energy kWh\n\n" +
-                                    "Do you want to finalize this energy transfer and release battery storage capacity?"
+                            "- Prosumer NIC: $nic\n" +
+                            "- Time Window: $timeWindow\n" +
+                            "- Battery Slots: $slotDisplay\n" +
+                            "- Transfer Energy: $energy kWh\n\n" +
+                            "Do you want to finalize this energy transfer and release battery storage capacity?"
                         )
                         .setPositiveButton("Finalize Transfer") { _, _ ->
                             completeEnergyTransfer(resId, tokenInput)
@@ -187,7 +180,7 @@ class OperatorMainActivity : AppCompatActivity() {
             ApiClient.request("reservation/$resId/complete", "PUT", body, session.getToken(), object : ApiClient.ApiCallback {
                 override fun onSuccess(response: String) {
                     AlertDialog.Builder(this@OperatorMainActivity)
-                        .setTitle("Energy Transfer Completed! ⚡")
+                        .setTitle("Energy Transfer Completed!")
                         .setMessage("Successfully verified QR token and finalized energy transfer for reservation #$resId.\nBattery storage slot has been recycled back to available capacity.")
                         .setPositiveButton("OK") { _, _ ->
                             etManualQrToken.setText("")
@@ -387,7 +380,7 @@ class OperatorMainActivity : AppCompatActivity() {
                 val formattedDate = if (date.length >= 10) date.substring(0, 10) else date
                 val timeWindow = if (startTime.isNotEmpty() && endTime.isNotEmpty()) " [$startTime - $endTime]" else ""
                 val tvDetails = TextView(this).apply {
-                    text = "⚡ Energy: $energy kWh • Slots: $slotDisplay\n📅 Date: $formattedDate$timeWindow"
+                    text = "Energy: $energy kWh - Slots: $slotDisplay\nDate: $formattedDate$timeWindow"
                     textSize = 13f
                     setTextColor(textSecondaryColor)
                     setLineSpacing(4f, 1f)
@@ -399,7 +392,7 @@ class OperatorMainActivity : AppCompatActivity() {
                 // Actions according to status
                 if ("Pending".equals(status, ignoreCase = true)) {
                     val btnApprove = Button(this).apply {
-                        text = "✅ Approve & Generate QR"
+                        text = "Approve & Generate QR"
                         setBackgroundColor(ContextCompat.getColor(this@OperatorMainActivity, R.color.primary))
                         setTextColor(Color.WHITE)
                         textSize = 13f
@@ -424,7 +417,7 @@ class OperatorMainActivity : AppCompatActivity() {
                     cardContent.addView(btnApprove)
                 } else if ("Approved".equals(status, ignoreCase = true) && qrToken.isNotEmpty()) {
                     val btnFill = Button(this).apply {
-                        text = "⚡ Verify & Finalize Transfer"
+                        text = "Verify & Finalize Transfer"
                         setBackgroundColor(ContextCompat.getColor(this@OperatorMainActivity, R.color.accent))
                         setTextColor(Color.WHITE)
                         textSize = 13f

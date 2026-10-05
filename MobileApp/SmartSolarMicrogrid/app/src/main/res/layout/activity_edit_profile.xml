@@ -18,17 +18,39 @@
         android:paddingTop="28dp"
         android:paddingBottom="36dp">
 
-        <!-- Brand -->
-        <TextView
-            android:layout_width="wrap_content"
+        <!-- Top Action Bar / Back Navigation -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:text="⚡  SMART SOLAR TRADING"
-            android:textColor="@color/register_primary"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.08"
-            android:layout_marginBottom="20dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="16dp">
+
+            <ImageView
+                android:id="@+id/ivEditProfileBack"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_arrow_back"
+                app:tint="@color/register_text_primary"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="Back to Profile" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:text="⚡  SMART SOLAR TRADING"
+                android:textColor="@color/register_primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginEnd="40dp" />
+
+        </LinearLayout>
 
         <!-- Header -->
         <TextView
@@ -278,14 +300,14 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSaveProfile"
             android:layout_width="match_parent"
-            android:layout_height="54dp"
+            android:layout_height="58dp"
             android:text="Save Changes  →"
             android:textAllCaps="false"
-            android:textSize="15sp"
+            android:textSize="17sp"
             android:textStyle="bold"
-            android:textColor="@color/register_background"
-            android:backgroundTint="@color/register_primary"
-            app:cornerRadius="11dp" />
+            android:textColor="@color/white"
+            android:backgroundTint="@color/energy_cyan"
+            app:cornerRadius="18dp" />
 
 
         <!-- CANCEL BUTTON -->
@@ -300,7 +322,7 @@
             android:textSize="14sp"
             android:textColor="@color/register_text_secondary"
             app:strokeColor="@color/register_border"
-            app:cornerRadius="11dp" />
+            app:cornerRadius="14dp" />
 
     </LinearLayout>
 
