@@ -42,22 +42,8 @@ The **Smart Solar Microgrid Trading System** is an enterprise-scale, client-serv
 
 ![Smart Solar Trading mobile application login screen](Docs/LoginMobile.jpg)
 
----
 
-## 👥 2. Team Member Work Breakdown (Table 2 Marking Scheme Mapping)
-
-The project is divided into four distinct member roles aligned with the 65 individual marks in the SE4040 specification:
-
-| Member | Assigned Git Branch | Individual Assessment Focus Areas (Table 2) | Marks |
-|---|---|---|---|
-| **Member 1** (Lead / Backoffice Web & API) | `member1-web-backoffice` | **Web Application Features and Business Rules**<br>• Login & Role-based access (4)<br>• User Management (Backoffice & Operator) (4)<br>• Microgrid Node Hub Management with GPS & Capacity (5)<br>• Slot Booking Management & Business Logic (5) | **18** |
-| **Member 2** (Mobile Prosumer Accounts) | `member2-mobile-prosumer-accounts` | **Mobile Authentication & Account Management**<br>• Login with role-based routing (2)<br>• Pending activation view & approval in Web App (2)<br>• Pure Android Prosumer Registration (NIC as PK) (3)<br>• Profile editing (1)<br>• Prosumer deactivation request (1) | **9** |
-| **Member 3** (Mobile Reservation Workflow) | `member3-mobile-reservation-workflow` | **Reservation Workflow & Booking Management**<br>• Create energy slot booking request (7-day rule) (3)<br>• Update booking (12-hour notice rule) (2)<br>• Cancel booking (12-hour notice rule) (2)<br>• Summary dialog/page after each action (2) | **9** |
-| **Member 4** (Mobile Dashboards, Maps & Operator QR) | `member4-mobile-operator-maps` | **Dashboards, Maps, Operator Verification & Integration**<br>• Active/pending booking views & Search filter (4)<br>• Prosumer dashboard (Pending & Future Approved counts) (6)<br>• Grid Operator QR scanner & server verification finalize (4)<br>• Google Maps API station plotting (5)<br>• SQLite local persistence & FAT Service integration (11) | **29** |
-
----
-
-## 📂 3. Repository Directory Structure
+## 📂 2. Repository Directory Structure
 
 ```text
 EAD/
@@ -110,7 +96,7 @@ EAD/
 
 ---
 
-## ⚡ 4. Quick Start & Setup Instructions
+## ⚡ 3. Quick Start & Setup Instructions
 
 ### Prerequisites
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
@@ -152,7 +138,7 @@ EAD/
 
 ---
 
-## 🔑 5. Pre-seeded Demo Credentials
+## 🔑 4. Pre-seeded Demo Credentials
 
 | Role | Username / Identifier | Password | Portal / App |
 |---|---|---|---|
@@ -163,7 +149,7 @@ EAD/
 
 ---
 
-## 🌿 6. Git Branch Workflow for the 4 Team Members
+## 🌿 5. Git Branch Workflow for the 4 Team Members
 
 To ensure clean individual contributions and clear GitHub commit graphs for grading:
 
@@ -186,7 +172,7 @@ git push origin <your-branch-name>
 
 ---
 
-## 📋 7. Submission Checklist for Viva
+## 📋 6. Submission Checklist for Viva
 
 - [x] **GitHub Repository Link:** [SahanMedhawa/SolarGrid-Hub](https://github.com/SahanMedhawa/SolarGrid-Hub.git)
 - [x] **5-Minute YouTube / OneDrive Demo Video Link:** [Demonstration Video](https://mysliit-my.sharepoint.com/:f:/g/personal/it23212404_my_sliit_lk/IgDAtYG_LuhWT6KLq4CoQV0JAagsa7jc00QOSuqkXJR2gHc?e=xsegQI)
