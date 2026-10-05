@@ -133,5 +133,20 @@ public async Task<bool> UpdateAsync(string nic, ProsumerUpdateRequest request)
                 p => p.NIC == nic, update);
             return result.ModifiedCount > 0;
         }
+
+        public async Task<bool> ResetPasswordAsync(string nic, string newPassword)
+        {
+            var prosumer = await GetByNicAsync(nic);
+            if (prosumer == null)
+                return false;
+
+            var newHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            var update = Builders<Prosumer>.Update
+                .Set(p => p.PasswordHash, newHash)
+                .Set(p => p.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.Prosumers.UpdateOneAsync(p => p.NIC == nic, update);
+            return result.ModifiedCount > 0;
+        }
     }
 }

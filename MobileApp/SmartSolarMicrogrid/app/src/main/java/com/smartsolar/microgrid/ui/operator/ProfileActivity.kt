@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -19,7 +20,6 @@ import org.json.JSONObject
  * Self-service profile screen for any logged-in staff user
  * (Backoffice or GridOperator): view/update own info,
  * change password, or deactivate own account.
- * Mirrors MyProfilePage.jsx on the web app.
  */
 class ProfileActivity : AppCompatActivity() {
 
@@ -54,6 +54,10 @@ class ProfileActivity : AppCompatActivity() {
         btnChangePassword = findViewById(R.id.btnChangePassword)
 
         btnDeactivateAccount = findViewById(R.id.btnDeactivateAccount)
+
+        findViewById<ImageButton>(R.id.btnBack).setOnClickListener {
+            finish() // returns to whichever dashboard (Backoffice or Operator) launched this screen
+        }
 
         btnSaveProfile.setOnClickListener { handleUpdateProfile() }
         btnChangePassword.setOnClickListener { handleChangePassword() }
@@ -92,6 +96,11 @@ class ProfileActivity : AppCompatActivity() {
             return
         }
 
+        if (email.isNotEmpty() && !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+            Toast.makeText(this, "Please enter a valid email address", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val payload = JSONObject().apply {
             put("username", username)
             put("email", email)
@@ -109,19 +118,43 @@ class ProfileActivity : AppCompatActivity() {
         })
     }
 
+    // Validates password strength — must match backend rules exactly:
+    // at least 8 characters, with uppercase, lowercase, a number, and a special character.
+    private fun validatePassword(password: String): String? {
+        if (password.isEmpty()) return "Password is required."
+        if (password.length < 8) return "Password must be at least 8 characters long."
+        if (!password.any { it.isUpperCase() }) return "Password must contain at least one uppercase letter."
+        if (!password.any { it.isLowerCase() }) return "Password must contain at least one lowercase letter."
+        if (!password.any { it.isDigit() }) return "Password must contain at least one number."
+        val specialChars = "!@#\$%^&*()_+-=[]{}|;:,.<>?"
+        if (!password.any { it in specialChars }) return "Password must contain at least one special character (e.g. ! @ # $ % ^ & *)."
+        return null
+    }
+
     // PATCH api/profile/password — change own password
     private fun handleChangePassword() {
         val current = etCurrentPassword.text.toString().trim()
         val newPass = etNewPassword.text.toString().trim()
         val confirm = etConfirmPassword.text.toString().trim()
 
-        if (current.isEmpty() || newPass.isEmpty() || confirm.isEmpty()) {
-            Toast.makeText(this, "Please fill in all password fields", Toast.LENGTH_SHORT).show()
+        if (current.isEmpty()) {
+            Toast.makeText(this, "Please enter your current password", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val validationError = validatePassword(newPass)
+        if (validationError != null) {
+            Toast.makeText(this, validationError, Toast.LENGTH_LONG).show()
             return
         }
 
         if (newPass != confirm) {
             Toast.makeText(this, "New passwords do not match", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (newPass == current) {
+            Toast.makeText(this, "New password must be different from current password", Toast.LENGTH_SHORT).show()
             return
         }
 

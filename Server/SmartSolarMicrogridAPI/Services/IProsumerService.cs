@@ -37,5 +37,7 @@ namespace SmartSolarMicrogridAPI.Services
 
         // Reactivates a prosumer account (Backoffice only).
         Task<bool> ActivateAsync(string nic);
+
+        Task<bool> ResetPasswordAsync(string nic, string newPassword);
     }
 }

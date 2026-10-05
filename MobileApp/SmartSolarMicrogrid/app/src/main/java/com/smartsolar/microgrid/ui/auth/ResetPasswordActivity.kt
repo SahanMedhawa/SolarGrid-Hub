@@ -42,14 +42,29 @@ class ResetPasswordActivity : AppCompatActivity() {
         btnResetPassword.setOnClickListener { handleReset() }
     }
 
+    // Validates password strength — must match backend rules exactly:
+    // at least 8 characters, with uppercase, lowercase, a number, and a special character.
+    private fun validatePassword(password: String): String? {
+        if (password.isEmpty()) return "Password is required."
+        if (password.length < 8) return "Password must be at least 8 characters long."
+        if (!password.any { it.isUpperCase() }) return "Password must contain at least one uppercase letter."
+        if (!password.any { it.isLowerCase() }) return "Password must contain at least one lowercase letter."
+        if (!password.any { it.isDigit() }) return "Password must contain at least one number."
+        val specialChars = "!@#\$%^&*()_+-=[]{}|;:,.<>?"
+        if (!password.any { it in specialChars }) return "Password must contain at least one special character (e.g. ! @ # $ % ^ & *)."
+        return null
+    }
+
     private fun handleReset() {
         val newPass = etNewPassword.text.toString().trim()
         val confirm = etConfirmPassword.text.toString().trim()
 
-        if (newPass.length < 6) {
-            Toast.makeText(this, "Password must be at least 6 characters", Toast.LENGTH_SHORT).show()
+        val validationError = validatePassword(newPass)
+        if (validationError != null) {
+            Toast.makeText(this, validationError, Toast.LENGTH_LONG).show()
             return
         }
+
         if (newPass != confirm) {
             Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show()
             return

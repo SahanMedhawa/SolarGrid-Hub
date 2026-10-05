@@ -34,6 +34,8 @@ import QrVerifyPage from './pages/QrVerifyPage';
 
 // Self-service profile page — available to any logged-in staff user
 import MyProfilePage from './pages/MyProfilePage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // Layout wrapper that renders navbar and footer
 function AppLayout({ children }) {
@@ -128,7 +130,11 @@ function AppRoutes() {
             <MyProfilePage />      
           </ProtectedRoute>
         }/>
-        
+
+        <Route path="/forgot-password" element={<ForgotPasswordPage />}/>
+
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
         {/* Catch-all redirect */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

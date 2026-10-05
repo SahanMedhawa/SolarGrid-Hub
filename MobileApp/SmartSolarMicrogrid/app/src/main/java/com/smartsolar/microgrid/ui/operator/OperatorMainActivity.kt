@@ -11,6 +11,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.card.MaterialCardView
 import com.smartsolar.microgrid.R
 import com.smartsolar.microgrid.api.ApiClient
@@ -18,7 +19,6 @@ import com.smartsolar.microgrid.data.SessionManager
 import com.smartsolar.microgrid.ui.auth.LoginActivity
 import org.json.JSONArray
 import org.json.JSONObject
-import com.smartsolar.microgrid.ui.operator.ProfileActivity
 
 /**
  * Grid Operator Main Dashboard Activity.
@@ -58,14 +58,25 @@ class OperatorMainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnRefreshOperator).setOnClickListener { loadBookings() }
 
-        findViewById<Button>(R.id.btnOperatorLogout).setOnClickListener {
-            session.logout()
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
-        }
-
-        findViewById<Button>(R.id.btnMyProfile).setOnClickListener {
-            startActivity(Intent(this, ProfileActivity::class.java))
+        // Bottom navigation: Home / Profile / Logout
+        val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavOperator)
+        bottomNav.selectedItemId = R.id.navHome
+        bottomNav.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.navHome -> true
+                R.id.navProfile -> {
+                    startActivity(Intent(this, ProfileActivity::class.java))
+                    overridePendingTransition(0, 0)
+                    true
+                }
+                R.id.navLogout -> {
+                    session.logout()
+                    startActivity(Intent(this, LoginActivity::class.java))
+                    finish()
+                    true
+                }
+                else -> false
+            }
         }
     }
 
@@ -142,11 +153,11 @@ class OperatorMainActivity : AppCompatActivity() {
                         .setTitle("Verify Server Data ⚡")
                         .setMessage(
                             "Verified Reservation Record:\n" +
-                            "• Prosumer NIC: $nic\n" +
-                            "• Time Window: $timeWindow\n" +
-                            "• Battery Slots: $slotDisplay\n" +
-                            "• Transfer Energy: $energy kWh\n\n" +
-                            "Do you want to finalize this energy transfer and release battery storage capacity?"
+                                    "• Prosumer NIC: $nic\n" +
+                                    "• Time Window: $timeWindow\n" +
+                                    "• Battery Slots: $slotDisplay\n" +
+                                    "• Transfer Energy: $energy kWh\n\n" +
+                                    "Do you want to finalize this energy transfer and release battery storage capacity?"
                         )
                         .setPositiveButton("Finalize Transfer") { _, _ ->
                             completeEnergyTransfer(resId, tokenInput)

@@ -142,5 +142,20 @@ namespace SmartSolarMicrogridAPI.Services
             return await _context.Users.CountDocumentsAsync(
                 u => u.Role == "Backoffice" && u.IsActive);
         }
+
+        public async Task<bool> ResetPasswordAsync(string username, string newPassword)
+        {
+            var user = await GetByUsernameAsync(username);
+            if (user == null)
+                return false;
+
+            var newHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            var update = Builders<User>.Update
+                .Set(u => u.PasswordHash, newHash)
+                .Set(u => u.UpdatedAt, DateTime.UtcNow);
+
+            var result = await _context.Users.UpdateOneAsync(u => u.Id == user.Id, update);
+            return result.ModifiedCount > 0;
+        }
     }
 }

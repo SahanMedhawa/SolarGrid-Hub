@@ -39,5 +39,7 @@ namespace SmartSolarMicrogridAPI.Services
         // Counts currently active Backoffice users — used to prevent total lockout.
         Task<long> CountActiveBackofficeAsync();
 
+        Task<bool> ResetPasswordAsync(string username, string newPassword);
+
     }
 }
